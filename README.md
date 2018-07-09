@@ -107,7 +107,7 @@ To interact with the smart-contract, we reccomend using an ingested web3 environ
 
 For reference purposes, we have included a few sample loops for the UX below.
 
-![UX Overview][https://github.com/SamuelLJackson/AngelHackTeam/blob/master/MOCgif.gif]
+![UX Overview](https://github.com/SamuelLJackson/AngelHackTeam/blob/master/MOCgif.gif)
 
 Rinkeby Contract Address:  '0x34f65d2d9da5022592ba7e921783b9f5b1697333'
 
