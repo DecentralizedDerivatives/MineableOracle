@@ -1,6 +1,23 @@
 /*this contract tests the typical workflow from the dApp (user contract, cash out)*/
 var oracleToken = artifacts.require("OracleToken");
 
+
+
+function promisifyLogWatch(_event) {
+  return new Promise((resolve, reject) => {
+    _event.watch((error, log) => {
+      _event.stopWatching();
+      if (error !== null)
+        reject(error);
+
+      resolve(log);
+    });
+  });
+}
+
+  logNewPriceWatcher_d = promisifyLogWatch(dappBridge.LogUpdated({ fromBlock: 'latest' }));
+  
+
 contract('Base Tests', function(accounts) {
   let oracletoken;
   

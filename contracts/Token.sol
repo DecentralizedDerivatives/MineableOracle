@@ -4,7 +4,6 @@ pragma solidity ^0.4.21;
 contract Token  {
 
     uint public total_supply;
-    address owner;
     mapping(address => uint) internal balances;
     mapping(address => mapping (address => uint)) internal allowed;
     
@@ -16,8 +15,7 @@ contract Token  {
 
      */
     constructor() public{
-        owner = msg.sender;
-        total_supply = 21000000;
+        total_supply = 2**256 - 1;
         balances[address(this)] = total_supply;
     }
 
@@ -48,18 +46,6 @@ contract Token  {
         }
     }
 
-        function iTransfer(address _to, uint _amount) internal returns (bool) {
-        if (balances[address(this)] >= _amount
-        && _amount > 0
-        && balances[_to] + _amount > balances[_to]) {
-            balances[address(this)] = balances[address(this)] - _amount;
-            balances[_to] = balances[_to] + _amount;
-            emit Transfer(address(this), _to, _amount);
-            return true;
-        } else {
-            return false;
-        }
-    }
 
     /**
     *@dev Allows an address with sufficient spending allowance to send tokens on the behalf of _from
