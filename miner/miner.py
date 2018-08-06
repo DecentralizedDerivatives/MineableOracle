@@ -12,6 +12,8 @@ from Naked.toolshed.shell import execute_js, muterun_js, run_js
 public_address = "0xb204edaf0410675e00e6c8a7e448a9e8e2db69aa";
 private_key = "fe5f52e7e0381448fe7d4a99e409b6da987b31362125ccb7bca781949cf61710";
 contract_address =  "0x5f6554749e44f166445d08d51aa05b9cff64d1b0"
+node_url ="http://localhost:8545" #https://rinkeby.infura.io/
+net_id = 60 #eth network ID
 
 
 def generate_random_number():
@@ -47,7 +49,6 @@ def getAPIvalue():
 	price =response.json()['price']
 	return int(float(price))
 
-# In[58]:
 def masterMiner():
 	while True:
 		challenge,difficulty = getVariables();
@@ -62,11 +63,10 @@ def masterMiner():
 			time.sleep(30)
 		else:
 			pass
-# In[59]:
 
 def getVariables():
-	payload = {"jsonrpc":"2.0","id":3,"method":"eth_call","params":[{"to":contract_address,"data":"0x94aef022"}, "latest"]}
-	r = requests.post("https://rinkeby.infura.io/", data=json.dumps(payload));
+	payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_call","params":[{"to":contract_address,"data":"0x94aef022"}, "latest"]}
+	r = requests.post(node_url, data=json.dumps(payload));
 	val = r.content
 	val2 = val[100:]
 	val2 = val2[:-3]
@@ -87,6 +87,9 @@ def bytes_to_int(bytes):
     return result
 
 
+
+masterMiner();
+
 def testHash():
 	challenge = "0x6ea5c1031c390399bdeeef830f5ad748eba64ff30dfefdd1778ba9ba371478e3";
 	nonce = Web3.toHex(str.encode(str(330608)));
@@ -98,7 +101,6 @@ def testHash():
 	print('n: ',n);
 	print('n_int: ', n_int);
 
-masterMiner();
 
 def working():
 	challenge = "0x6ea5c1031c390399bdeeef830f5ad748eba64ff30dfefdd1778ba9ba371478e3";
