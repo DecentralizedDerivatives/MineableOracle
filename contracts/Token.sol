@@ -1,7 +1,10 @@
 pragma solidity ^0.4.21;
 
+import "./libraries/SafeMath.sol";
 
 contract Token  {
+
+    using SafeMath for uint256;
 
     uint public total_supply;
     mapping(address => uint) internal balances;
@@ -36,10 +39,8 @@ contract Token  {
     function transfer(address _to, uint _amount) public returns (bool) {
         if (balances[msg.sender] >= _amount
         && _amount > 0
-        && balances[_to] + _amount > balances[_to]) {
-            balances[msg.sender] = balances[msg.sender] - _amount;
-            balances[_to] = balances[_to] + _amount;
-            emit Transfer(msg.sender, _to, _amount);
+        && balances[_to].add(_amount) > balances[_to]) {
+            xfer(msg.sender,_to,_amount);
             return true;
         } else {
             return false;
@@ -57,11 +58,9 @@ contract Token  {
         if (balances[_from] >= _amount
         && allowed[_from][msg.sender] >= _amount
         && _amount > 0
-        && balances[_to] + _amount > balances[_to]) {
-            balances[_from] = balances[_from] - _amount;
+        && balances[_to].add() + _amount > balances[_to]) {
             allowed[_from][msg.sender] = allowed[_from][msg.sender] - _amount;
-            balances[_to] = balances[_to] + _amount;
-            emit Transfer(_from, _to, _amount);
+            xfer(_from,_to,_amount);
             return true;
         } else {
             return false;
@@ -94,6 +93,12 @@ contract Token  {
     */
     function totalSupply() public constant returns (uint) {
        return total_supply;
+    }
+
+    function xfer(address _from, address _to, uint _amount)) internal returns(bool){
+        balances[_from] = balances[_from].sub(_amount);
+        balances[_to] = balances[_to].add(_amount);
+        emit Transfer(_from, _to, _amount);
     }
 
 }
