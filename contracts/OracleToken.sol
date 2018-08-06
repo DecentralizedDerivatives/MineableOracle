@@ -93,11 +93,7 @@ contract OracleToken{
     }
 
     function pushValue(uint _time) internal {
-        quickSort(first_five,0,4);
-        if(valuePool > 0){
-
-        }
-        else pa
+        insertionSort(first_five,0,4);
         master.iTransfer(first_five[2].miner, 10.mul(payoutMultiplier)); // reward to winner grows over time
         master.iTransfer(first_five[1].miner, 5.mul(payoutMultiplier)); // reward to winner grows over time
         master.iTransfer(first_five[3].miner, 5.mul(payoutMultiplier)); // reward to winner grows over time
@@ -120,24 +116,16 @@ contract OracleToken{
       values[_timestamp] = _value;
     }
 
-     function quickSort(Details[5] storage arr, uint left, uint right) internal {
-        uint i = left;
-        uint j = right;
-        uint pivot = arr[left + (right - left) / 2].value;
-        while (i <= j && j>0) {
-            while (arr[i].value < pivot) i++;
-            while (pivot < arr[j].value) j--;
-            if (i <= j) {
-                (arr[i].value, arr[j].value) = (arr[j].value, arr[i].value);
-                (arr[i].miner, arr[j].miner) = (arr[j].miner, arr[i].miner);
-                i++;
-                j--;
-            }
-        }
-        if (left < j)
-            quickSort(arr, left, j);
-        if (i < right)
-            quickSort(arr, i, right);
+    function insertionSort(Details[5] storage a)internal {
+       for (uint i = 1;i < a.length;i++){
+        uint temp = a[i].value;
+        uint j;
+        for (j = i -1; j >= 0 && temp < a[j].value; j--)
+            a[j+1].value = a[j].value;
+            a[j + 1].value = temp;
+            a[j+1].miner = a[j].miner;
+            a[j + 1].value = miner;
+       }
     }
 
 
