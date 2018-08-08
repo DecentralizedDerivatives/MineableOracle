@@ -2,14 +2,15 @@ pragma solidity ^0.4.21;
 
 import "./libraries/SafeMath.sol";
 import "./Token.sol";
-import "./interfaces/OracleToken_Interface.sol";
+import "./CloneFactory.sol";
+import "./OracleToken.sol";
 /**
  * @title Proof of Work token
 
  This the master token where you deploy new oracles from.  
  Each oracle gets the API value specified
  */
-contract ProofofWorkToken is Token {
+contract ProofOfWorkToken is Token, CloneFactory {
 
     using SafeMath for uint256;
 
@@ -24,12 +25,14 @@ contract ProofofWorkToken is Token {
     mapping(address => uint) oracle_index;
     address owner;
 
+    event Deployed(string _api,address _newOracle);
+
     constructor() public{
         owner = msg.sender;
         oracle_list.push(OracleDetails({
-            API: 0,
-            location: 0
-        }))
+            API: "",
+            location: address(0)
+        }));
     }
 
     modifier onlyOwner() {
@@ -46,9 +49,9 @@ contract ProofofWorkToken is Token {
     } 
 
 
-    function deployNewOracle(string _api,uint _readFee){
+    function deployNewOracle(string _api,uint _readFee,uint _timeTarget) external returns(address){
         address new_oracle = createClone(dud_Oracle);
-        OracleToken_Interface(new_oracle).init(_api,address(this),_readFee);
+        OracleToken(new_oracle).init(_api,address(this),_readFee,_timeTarget);
         oracle_index[new_oracle] = oracle_list.length;
         OracleDetails storage _current = oracle_list[oracle_list.length];
         _current.API = _api;
@@ -58,7 +61,7 @@ contract ProofofWorkToken is Token {
     }
 
 
-    function iTransfer(address _to, uint _amount) internal returns (bool) {
+    function iTransfer(address _to, uint _amount) external returns (bool) {
         require(oracle_index[msg.sender] > 0);
         if (balances[address(this)] >= _amount
         && _amount > 0

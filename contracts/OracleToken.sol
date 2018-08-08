@@ -2,7 +2,7 @@ pragma solidity ^0.4.21;
 
 import "./libraries/SafeMath.sol";
 import "./Token.sol";
-import "./ProofOfWorkToken.sol"
+import "./ProofOfWorkToken.sol";
 /**
  * @title Mineable Token
  *
@@ -19,12 +19,12 @@ contract OracleToken{
     uint public timeTarget;
     uint count;
     string public API;
-    uint pubic readFee;
-    ProofOfWorkToken master;
-    uint payoutMultiplier;
+    uint public readFee;
+    address public master;
+    uint public  payoutMultiplier;
     mapping(uint => uint) values;
     Details[5] first_five;
-    uint valuePool;
+    uint public valuePool;
     struct Details {
         uint value;
         address miner;
@@ -40,10 +40,12 @@ contract OracleToken{
      * @dev Constructor that sets the passed value as the token to be mineable.
 
      */
-    function init(string _api,address _master,uint _readFee,uint _timeTarget) internal {
+    function init(string _api,address _master,uint _readFee,uint _timeTarget) external {
+
+        require (timeOfLastProof == 0);
         timeOfLastProof = now;
         API = _api;
-        master = ProofOfWorkToken(_master);
+        master = _master;
         readFee = _readFee;
         timeTarget = _timeTarget;
     }
@@ -67,13 +69,13 @@ contract OracleToken{
         first_five[count-1] = Details({
             value: value,
             miner: msg.sender
-        });  
+        }); 
         emit NewValue(msg.sender,value);
         if(count == 5) {
-            if (now - timeOfLastProof) < timeTarget{
+            if (now - timeOfLastProof< timeTarget){
                 difficulty++;
             }
-            else if (now - timeOfLastProof) > timeTarget{
+            else if (now - timeOfLastProof > timeTarget){
                 difficulty--;
             }
             timeOfLastProof = now - (now % 60);
@@ -93,23 +95,26 @@ contract OracleToken{
     }
 
     function pushValue(uint _time) internal {
-        insertionSort(first_five,0,4);
-        master.iTransfer(first_five[2].miner, 10.mul(payoutMultiplier)); // reward to winner grows over time
-        master.iTransfer(first_five[1].miner, 5.mul(payoutMultiplier)); // reward to winner grows over time
-        master.iTransfer(first_five[3].miner, 5.mul(payoutMultiplier)); // reward to winner grows over time
-        master.iTransfer(first_five[0].miner, 1.mul(payoutMultiplier)); // reward to winner grows over time
-        master.iTransfer(first_five[4].miner, 1.mul(payoutMultiplier)); // reward to winner grows over time
+        insertionSort(first_five);
+        ProofOfWorkToken _master = ProofOfWorkToken(master);
+        _master.iTransfer(first_five[2].miner, (payoutMultiplier.mul(10))); // reward to winner grows over time
+        _master.iTransfer(first_five[1].miner,payoutMultiplier.mul(5)); // reward to winner grows over time
+        _master.iTransfer(first_five[3].miner, payoutMultiplier.mul(5)); // reward to winner grows over time
+        _master.iTransfer(first_five[0].miner, payoutMultiplier.mul(1)); // reward to winner grows over time
+        _master.iTransfer(first_five[4].miner, payoutMultiplier.mul(1)); // reward to winner grows over time
         values[_time] = first_five[2].value;
     }
 
     function retrieveData(uint _timestamp) public constant returns (uint) {
-        require(master.transfer(address(master),readFee));
+        ProofOfWorkToken _master = ProofOfWorkToken(master);
+        require(_master.transfer(address(master),readFee));
         valuePool.add(readFee);
         return values[_timestamp];
     }
 
     function addToValuePool(uint _tip) public {
-        require(master.transfer(address(master),_tip));
+        ProofOfWorkToken _master = ProofOfWorkToken(master);
+        require(_master.transfer(address(master),_tip));
     }
 
     function testAdd(uint _timestamp, uint _value) public{
@@ -119,13 +124,14 @@ contract OracleToken{
     function insertionSort(Details[5] storage a)internal {
        for (uint i = 1;i < a.length;i++){
         uint temp = a[i].value;
+        address temp2 = a[i].miner;
         uint j;
         for (j = i -1; j >= 0 && temp < a[j].value; j--)
             a[j+1].value = a[j].value;
-            a[j + 1].value = temp;
             a[j+1].miner = a[j].miner;
-            a[j + 1].value = miner;
        }
+            a[j+1].value = temp;
+            a[j+1].miner= temp2;
     }
 
 

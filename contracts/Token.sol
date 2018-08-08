@@ -58,7 +58,7 @@ contract Token  {
         if (balances[_from] >= _amount
         && allowed[_from][msg.sender] >= _amount
         && _amount > 0
-        && balances[_to].add() + _amount > balances[_to]) {
+        && balances[_to].add(_amount) > balances[_to]) {
             allowed[_from][msg.sender] = allowed[_from][msg.sender] - _amount;
             xfer(_from,_to,_amount);
             return true;
@@ -95,7 +95,7 @@ contract Token  {
        return total_supply;
     }
 
-    function xfer(address _from, address _to, uint _amount)) internal returns(bool){
+    function xfer(address _from, address _to, uint _amount) internal returns(bool){
         balances[_from] = balances[_from].sub(_amount);
         balances[_to] = balances[_to].add(_amount);
         emit Transfer(_from, _to, _amount);
