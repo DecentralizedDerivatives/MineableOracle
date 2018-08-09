@@ -21,6 +21,7 @@ contract OracleToken{
     string public API;
     uint public readFee;
     address public master;
+    uint[5] public payoutStructure;
     uint public  payoutMultiplier;
     mapping(uint => uint) values;
     Details[5] first_five;
@@ -40,7 +41,7 @@ contract OracleToken{
      * @dev Constructor that sets the passed value as the token to be mineable.
 
      */
-    function init(string _api,address _master,uint _readFee,uint _timeTarget) external {
+    function init(string _api,address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) external {
 
         require (timeOfLastProof == 0);
         timeOfLastProof = now;
@@ -48,6 +49,7 @@ contract OracleToken{
         master = _master;
         readFee = _readFee;
         timeTarget = _timeTarget;
+        payoutStructure = _payoutStructure;
     }
 
 
@@ -61,7 +63,7 @@ contract OracleToken{
      * @return uint The amount rewarded
      */
 
-    function proofOfWork(string nonce, uint value) returns (uint256,uint256) {
+    function proofOfWork(string nonce, uint value) external returns (uint256,uint256) {
         bytes32 n = sha3(currentChallenge,msg.sender,nonce); // generate random hash based on input
         require(uint(n) % difficulty == 0);
         
@@ -94,18 +96,8 @@ contract OracleToken{
         return (count,timeOfLastProof);
     }
 
-    function pushValue(uint _time) internal {
-        insertionSort(first_five);
-        ProofOfWorkToken _master = ProofOfWorkToken(master);
-        _master.iTransfer(first_five[2].miner, (payoutMultiplier.mul(10))); // reward to winner grows over time
-        _master.iTransfer(first_five[1].miner,payoutMultiplier.mul(5)); // reward to winner grows over time
-        _master.iTransfer(first_five[3].miner, payoutMultiplier.mul(5)); // reward to winner grows over time
-        _master.iTransfer(first_five[0].miner, payoutMultiplier.mul(1)); // reward to winner grows over time
-        _master.iTransfer(first_five[4].miner, payoutMultiplier.mul(1)); // reward to winner grows over time
-        values[_time] = first_five[2].value;
-    }
 
-    function retrieveData(uint _timestamp) public constant returns (uint) {
+    function retrieveData(uint _timestamp) external returns (uint) {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
         require(_master.transfer(address(master),readFee));
         valuePool.add(readFee);
@@ -133,6 +125,18 @@ contract OracleToken{
             a[j+1].value = temp;
             a[j+1].miner= temp2;
     }
+
+        function pushValue(uint _time) internal {
+        insertionSort(first_five);
+        ProofOfWorkToken _master = ProofOfWorkToken(master);
+        _master.iTransfer(first_five[2].miner, (payoutMultiplier.mul(payoutStructure[2]))); // reward to winner grows over time
+        _master.iTransfer(first_five[1].miner,payoutMultiplier.mul(payoutStructure[1])); // reward to winner grows over time
+        _master.iTransfer(first_five[3].miner, payoutMultiplier.mul(payoutStructure[3])); // reward to winner grows over time
+        _master.iTransfer(first_five[0].miner, payoutMultiplier.mul(payoutStructure[0])); // reward to winner grows over time
+        _master.iTransfer(first_five[4].miner, payoutMultiplier.mul(payoutStructure[4])); // reward to winner grows over time
+        values[_time] = first_five[2].value;
+    }
+
 
 
     

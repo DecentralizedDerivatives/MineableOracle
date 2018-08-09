@@ -49,9 +49,9 @@ contract ProofOfWorkToken is Token, CloneFactory {
     } 
 
 
-    function deployNewOracle(string _api,uint _readFee,uint _timeTarget) external returns(address){
+    function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) external returns(address){
         address new_oracle = createClone(dud_Oracle);
-        OracleToken(new_oracle).init(_api,address(this),_readFee,_timeTarget);
+        OracleToken(new_oracle).init(_api,address(this),_readFee,_timeTarget,_payoutStructure);
         oracle_index[new_oracle] = oracle_list.length;
         OracleDetails storage _current = oracle_list[oracle_list.length];
         _current.API = _api;
