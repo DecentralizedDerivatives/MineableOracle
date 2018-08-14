@@ -5,16 +5,15 @@ import "./Token.sol";
 import "./CloneFactory.sol";
 import "./OracleToken.sol";
 /**
- * @title Proof of Work token
-
- This the master token where you deploy new oracles from.  
- Each oracle gets the API value specified
- */
+* @title Proof of Work token
+* This is the master token where you deploy new oracles from.  
+* Each oracle gets the API value specified
+*/
 contract ProofOfWorkToken is Token, CloneFactory {
 
     using SafeMath for uint256;
 
-
+    /*Variables*/
     struct OracleDetails {
         string API;
         address location;
@@ -24,9 +23,17 @@ contract ProofOfWorkToken is Token, CloneFactory {
     OracleDetails[] public oracle_list;
     mapping(address => uint) oracle_index;
     address owner;
-
+    
+    /*Events*/
     event Deployed(string _api,address _newOracle);
 
+    /*Modifiers*/
+        modifier onlyOwner() {
+         require(msg.sender == owner);
+        _;
+    }
+
+    /*Functions*/
     constructor() public{
         owner = msg.sender;
         oracle_list.push(OracleDetails({
@@ -35,20 +42,22 @@ contract ProofOfWorkToken is Token, CloneFactory {
         }));
     }
 
-    modifier onlyOwner() {
-         require(msg.sender == owner);
-        _;
-    }
-
     /**
-        *@dev Allows the owner to set a new owner address
-        *@param _new_owner the new owner address
+    * @dev Allows the owner to set a new owner address
+    * @param _new_owner the new owner address
     */
     function setOwner(address _new_owner) public onlyOwner() { 
         owner = _new_owner; 
     } 
 
-
+    /**
+    * @dev Deployes a new oracle 
+    * @param _api is the oracle api
+    * @param _readFee is the fee for reading oracle information
+    * @param _timeTarget for the dificulty adjustment
+    * @param _payoutStructure for miners
+    * @return new oracle address
+    */
     function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) external returns(address){
         address new_oracle = createClone(dud_Oracle);
         OracleToken(new_oracle).init(_api,address(this),_readFee,_timeTarget,_payoutStructure);
@@ -60,7 +69,12 @@ contract ProofOfWorkToken is Token, CloneFactory {
         return new_oracle;
     }
 
-
+    /**
+    * @dev Allows for a transfer of tokens to _to
+    * @param _to The address to send tokens to
+    * @param _amount The amount of tokens to send
+    * @return true if transfer is successful
+    */
     function iTransfer(address _to, uint _amount) external returns (bool) {
         require(oracle_index[msg.sender] > 0);
         if (balances[address(this)] >= _amount
@@ -75,6 +89,10 @@ contract ProofOfWorkToken is Token, CloneFactory {
         }
     }
 
+    /**
+    * @dev Allows owner to remove oracle that are no longer in use
+    * @param _removed is the oracle address to remove
+    */
     function removeOracle(address _removed) public onlyOwner(){        
         uint _index = oracle_index[_removed];
         require(_index > 0);
@@ -86,6 +104,11 @@ contract ProofOfWorkToken is Token, CloneFactory {
         oracle_index[_removed] = 0;
     }
 
+    /**
+    * @dev Getter function that gets the oracle API
+    * @param _oracle is the oracle address to look up
+    * @return the API and oracle address
+    */
     function getDetails(address _oracle) public view returns(string,address){
         OracleDetails storage _current = oracle_list[oracle_index[_oracle]];
         return(_current.API,_current.location);
