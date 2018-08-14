@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.24;
 
 import "./libraries/SafeMath.sol";
 import "./Token.sol";
@@ -70,7 +70,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     }
 
     /**
-    * @dev Allows for a transfer of tokens to _to
+    * @dev Allows for a minting tokens to _to
     * @param _to The address to send tokens to
     * @param _amount The amount of tokens to send
     * @return true if transfer is successful

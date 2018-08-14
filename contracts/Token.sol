@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.24;
 
 import "./libraries/SafeMath.sol";
 /**
@@ -52,7 +52,6 @@ contract Token  {
             return false;
         }
     }
-
 
     /**
     * @dev Allows an address with sufficient spending allowance to send tokens on the behalf of _from
