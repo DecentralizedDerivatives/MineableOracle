@@ -65,8 +65,7 @@ contract OracleToken{
 
     function proofOfWork(string nonce, uint value) external returns (uint256,uint256) {
         bytes32 n = sha3(currentChallenge,msg.sender,nonce); // generate random hash based on input
-        require(uint(n) % difficulty == 0);
-        
+        require(uint(n) % difficulty == 0 && value > 0); //can we say > 0? I like it forces them to enter a valueS  
         count++;
         first_five[count-1] = Details({
             value: value,
@@ -80,7 +79,7 @@ contract OracleToken{
             else if (now - timeOfLastProof > timeTarget){
                 difficulty--;
             }
-            timeOfLastProof = now - (now % 60);
+            timeOfLastProof = now - (now % timeTarget);//should it be like this? So 10 minute intervals?;
             pushValue(timeOfLastProof);
             if(valuePool > 44) {
                 valuePool = valuePool.sub(22);
@@ -97,11 +96,19 @@ contract OracleToken{
     }
 
 
-    function retrieveData(uint _timestamp) external returns (uint) {
+    function retrieveData(uint _timestamp) public returns (uint) {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
         require(_master.transfer(address(master),readFee));
         valuePool.add(readFee);
         return values[_timestamp];
+    }
+
+    function isData(uint _timestamp) external returns(bool){
+        return (values[_timestamp] > 0);
+    }
+
+    function getLastQuery() external returns(uint){
+        return retrieveData(timeOfLastProof);
     }
 
     function addToValuePool(uint _tip) public {
@@ -109,9 +116,6 @@ contract OracleToken{
         require(_master.transfer(address(master),_tip));
     }
 
-    function testAdd(uint _timestamp, uint _value) public{
-      values[_timestamp] = _value;
-    }
 
     function insertionSort(Details[5] storage a)internal {
        for (uint i = 1;i < a.length;i++){
