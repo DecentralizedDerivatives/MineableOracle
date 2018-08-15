@@ -1,6 +1,7 @@
-/*this contract tests the typical workflow from the dApp (user contract, cash out)*/
+/** This contract tests the typical workflow from the dApp 
+* (user contract, cash out)
+*/
 var oracleToken = artifacts.require("OracleToken");
-
 
 
 function promisifyLogWatch(_event) {
