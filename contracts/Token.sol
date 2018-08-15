@@ -13,6 +13,7 @@ contract Token  {
     uint public total_supply;
     mapping(address => uint) internal balances;
     mapping(address => mapping (address => uint)) internal allowed;
+    mapping (address => uint256) public balanceOf;//maybe to use for weight in ballot 
     
     /*Events*/
     event Approval(address indexed owner, address indexed spender, uint256 value);
