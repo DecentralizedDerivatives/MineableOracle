@@ -68,7 +68,7 @@ contract OracleToken{
     * @return count of values sumbitted so far and the time of the last submission
     */
     function proofOfWork(string nonce, uint value) external returns (uint256,uint256) {
-        bytes32 n = sha3(currentChallenge,msg.sender,nonce); // generate random hash based on input
+        bytes32 n = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
         require(uint(n) % difficulty == 0 && value > 0); //can we say > 0? I like it forces them to enter a valueS  
         count++;
         first_five[count-1] = Details({
@@ -94,7 +94,7 @@ contract OracleToken{
             }
             emit Mine(msg.sender,timeOfLastProof, value); // execute an event reflecting the change
             count = 0;
-            currentChallenge = sha3(nonce, currentChallenge, blockhash(block.number - 1)); // Save hash for next proof
+            currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
         }
         return (count,timeOfLastProof);
     }
