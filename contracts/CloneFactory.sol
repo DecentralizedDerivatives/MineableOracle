@@ -34,7 +34,7 @@ contract CloneFactory {
 
     /**
     * @dev Creates oracle clone
-    * @param _target is the address being cloned
+    * @param target is the address being cloned
     * @return address for clone
     */
     function createClone(address target) internal returns (address result) {

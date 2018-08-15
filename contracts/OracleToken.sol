@@ -55,7 +55,7 @@ contract OracleToken{
     }
 
     /**
-    * @dev Getter funciton for currentChallenge difficulty
+    * @dev Getter function for currentChallenge difficulty
     */
     function getVariables() public constant returns(bytes32, uint){
         return (currentChallenge,difficulty);
@@ -64,7 +64,7 @@ contract OracleToken{
     /**
     * @dev Proof of work to be done for mining
     * @param nonce uint submitted by miner
-    * @param value is the api value
+    * @param value rewarded
     * @return count of values sumbitted so far and the time of the last submission
     */
     function proofOfWork(string nonce, uint value) external returns (uint256,uint256) {
@@ -94,7 +94,7 @@ contract OracleToken{
             }
             emit Mine(msg.sender,timeOfLastProof, value); // execute an event reflecting the change
             count = 0;
-            currentChallenge = sha3(nonce, currentChallenge, block.blockhash(block.number - 1)); // Save hash for next proof
+            currentChallenge = sha3(nonce, currentChallenge, blockhash(block.number - 1)); // Save hash for next proof
         }
         return (count,timeOfLastProof);
     }
@@ -116,7 +116,7 @@ contract OracleToken{
     * @param _timestamp to retreive data/value from
     * @return true if the value exists/is greater than zero
     */
-    function isData(uint _timestamp) external returns(bool){
+    function isData(uint _timestamp) external view returns(bool){
         return (values[_timestamp] > 0);
     }
 
@@ -137,7 +137,10 @@ contract OracleToken{
         require(_master.transfer(address(master),_tip));
     }
 
-
+    /**
+    * @dev This fucntion sorts values as they come in so that the
+    * median can be identified later.
+    */
     function insertionSort(Details[5] storage a)internal {
        for (uint i = 1;i < a.length;i++){
         uint temp = a[i].value;
@@ -151,6 +154,9 @@ contract OracleToken{
             a[j+1].miner= temp2;
     }
 
+    /**
+    * @dev This fucntion rewards the first five miners that submit a value
+    */
     function pushValue(uint _time) internal {
         insertionSort(first_five);
         ProofOfWorkToken _master = ProofOfWorkToken(master);
