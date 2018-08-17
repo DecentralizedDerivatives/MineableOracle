@@ -77,7 +77,7 @@ import "./Token.sol";
     /**
     * @dev allows the owner to set the minimumQuorum and _voteDuration
     * @param _minimumQuorum is the minimum quorum required to excecute vote
-    * @param  _voteDuration is the vote duration (unix time in minutes)
+    * @param  _voteDuration is the vote duration (days)
     */
     function changeVotingRules(uint _minimumQuorum, uint _voteDuration) public onlyOwner() {
         if (_minimumQuorum == 0 ) _minimumQuorum = 1;
