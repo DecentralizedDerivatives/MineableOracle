@@ -62,7 +62,7 @@ import "./Token.sol";
     }
 
     /**
-    * Modifier that allows only shareholders to vote and create new proposals
+    * Modifier that allows only token holders to vote and create new proposals
     */
     modifier onlyTokenholders() {
         require(balanceOf(msg.sender) > 0);
