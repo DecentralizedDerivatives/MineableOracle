@@ -22,7 +22,12 @@ the new oracle api, https://www.ethereum.org/dao*/
     uint public minimumQuorum;
     uint public proposalFee;
     uint public voteDuration;//3days the same as voting period
-
+    Proposal[] public proposals;//holds proposalId
+    //mapping(address => Proposal) public proposer;//do we care who is proposing?
+    //address[] public proposersAddresses;//do we care who is proposing?
+    mapping(uint => address) public propRemoveOracle;
+    mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
+    
     struct Proposal {
         uint propType; //1=remove oracle 2= add oracle
         uint minExecutionDate; ///basically vote due date and stake release date
@@ -32,11 +37,6 @@ the new oracle api, https://www.ethereum.org/dao*/
         Vote[] votes;
         mapping (address => bool) voted;
     }
-    Proposal[] public proposals;//holds proposalId
-    //mapping(address => Proposal) public proposer;//do we care who is proposing?
-    //address[] public proposersAddresses;//do we care who is proposing?
-
-    mapping(uint => address) public propRemoveOracle;
 
     struct propAddOracle {
         string api;
@@ -44,13 +44,13 @@ the new oracle api, https://www.ethereum.org/dao*/
         uint timeTarget;
         uint[5] payoutStructure;
     }
-mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
-    
+
     struct Vote {
         bool inSupport;
         address voter;
     }
-
+    
+    /*Events*/
     event ProposalToRemove(uint proposalID, address oracleAddress, uint propType);
     event ProposalToAdd(uint proposalId, string _api, uint _readFee, uint _timeTarget, uint[5] _payoutStructure, uint propType);
     event Voted(uint proposalID, bool position, address voter);
@@ -62,7 +62,8 @@ mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
         require(msg.sender == owner);
         _;
     }
-        /**
+
+    /**
     * Modifier that allows only shareholders to vote and create new proposals
     */
     modifier onlyTokenholders() {
@@ -75,7 +76,12 @@ mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
         owner = msg.sender;
     }
 
-    function changeVotingRules( uint _minimumQuorum, uint _voteDuration) public onlyOwner() {
+    /**
+    * @dev allows the owner to set the minimumQuorum and _voteDuration
+    * @param _minimumQuorum is the minimum quorum required to excecute vote
+    * @param  _voteDuration is the vote duration (unix time in minutes)
+    */
+    function changeVotingRules(uint _minimumQuorum, uint _voteDuration) public onlyOwner() {
         if (_minimumQuorum == 0 ) _minimumQuorum = 1;
         minimumQuorum = _minimumQuorum;
         voteDuration = _voteDuration;
@@ -83,20 +89,24 @@ mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
     }
 
     /*
-    *@dev Updates the proposal fee amount
-    *@param _proposalFee fee amount for member
+    * @dev Updates the proposal fee amount
+    * @param _proposalFee fee amount for member
     */
     function setProposalFee(uint _proposalFee) public onlyOwner() {
         proposalFee = _proposalFee;
     }
 
     /**
-    *@dev Gets length of array containing all proposals
+    * @dev Gets length of array containing all proposals
     */
     function countProposals() view public returns(uint) {
         return proposals.length;
     }
 
+    /*
+    * @dev Allows token holders to submit a proposal to remove an oracle
+    * @param _removeOracle address of oracle to remove
+    */
     function propRemove(address _removeOracle) public onlyTokenholders() returns(uint proposalId)  {
         require(balanceOf(msg.sender) > proposalFee);
         transfer(address(this), proposalFee);
@@ -112,6 +122,15 @@ mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
         return proposalId;
     }
 
+    /**
+    * @dev Allows token holders to submit a proposal to add an oracle. The function
+    * assess a proposal fee to he person submitting the proposal.
+    * @param _api is the proposed oracle api
+    * @param _readFee is the proposed fee for reading oracle information
+    * @param _timeTarget is the proposed time for the dificulty adjustment
+    * @param _payoutStructure is the proposed payout structure for miners
+    * @return proposalId the ID of the submitted proposal
+    */
     function propAdd(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyTokenholders() returns(uint proposalId){
         require(balanceOf(msg.sender) > proposalFee);
         transfer(address(this), proposalFee);
@@ -131,6 +150,11 @@ mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
         return proposalId;
         }
 
+    /**
+    * @dev Allows token holders to vote
+    * @param _proposalId is the proposal id
+    * @param supportsProposal is the vote (true= vote for proposal false = vote against proposal)
+    */
     function vote(uint _proposalId, bool supportsProposal) public onlyTokenholders() returns (uint voteId) {
         Proposal storage prop = proposals[_proposalId];
         require(prop.voted[msg.sender] != true);
@@ -142,6 +166,10 @@ mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
         return voteId;
     }
 
+    /**
+    * @dev tallies the votes and executes if minimum quorum is met or exceeded.
+    * @param _proposalId is the proposal id
+    */
     function tallyVotes(uint _proposalId) public {
         Proposal storage prop = proposals[_proposalId];
         require(now > prop.minExecutionDate && !prop.executed);  
