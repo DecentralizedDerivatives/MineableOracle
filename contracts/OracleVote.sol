@@ -11,8 +11,6 @@ import "./Token.sol";
 * to add or delete oracles.
 */
 
-/*are we voting on each aspect of the new oracle or just 
-the new oracle api, https://www.ethereum.org/dao*/
  contract OracleVote is ProofOfWorkToken {
 
     using SafeMath for uint256; 
@@ -30,7 +28,7 @@ the new oracle api, https://www.ethereum.org/dao*/
     
     struct Proposal {
         uint propType; //1=remove oracle 2= add oracle
-        uint minExecutionDate; ///basically vote due date and stake release date
+        uint minExecutionDate; 
         bool executed;
         bool proposalPassed;
         uint numberOfVotes;
