@@ -187,7 +187,6 @@ import "./Token.sol";
         require(quorum >= minimumQuorum); 
         if (yea > nay ) {
             if (prop.propType==1){
-            // Proposal passed; execute the transaction
                 address _removeOracle = propRemoveOracle[_proposalId];
                 removeOracle(_removeOracle);
             } else {
@@ -197,7 +196,6 @@ import "./Token.sol";
             prop.executed = true;
             prop.proposalPassed = true;
         } else {
-            // Proposal failed
             prop.proposalPassed = false;
         }
         emit ProposalTallied(_proposalId, yea - nay, quorum, prop.proposalPassed);
