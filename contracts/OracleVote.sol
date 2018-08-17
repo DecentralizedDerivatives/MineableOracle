@@ -53,7 +53,7 @@ mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
 
     event ProposalToRemove(uint proposalID, address oracleAddress, uint propType);
     event ProposalToAdd(uint proposalId, string _api, uint _readFee, uint _timeTarget, uint[5] _payoutStructure, uint propType);
-    event Voted(uint proposalID, bool position, address voter);//should weight be added?
+    event Voted(uint proposalID, bool position, address voter);
     event ProposalTallied(uint proposalID, uint result, uint quorum, bool active);
     event ChangeOfRules(uint newMinimumQuorum, uint newVotingDuration);
 
@@ -150,7 +150,7 @@ mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
         uint nay = 0;  
         for (uint i = 0; i <  prop.votes.length; ++i) {
             Vote storage v = prop.votes[i];
-            uint voteWeight = balanceOf(v.voter);//change to locked balance not just balanceOf, does it matter?
+            uint voteWeight = balanceOf(v.voter);
             quorum += voteWeight;
             if (v.inSupport) {
                 yea += voteWeight;
@@ -158,7 +158,7 @@ mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
                 nay += voteWeight;
             }
         }
-        require(quorum >= minimumQuorum); // Check if a minimum quorum has been reached
+        require(quorum >= minimumQuorum); 
         if (yea > nay ) {
             if (prop.propType==1){
             // Proposal passed; execute the transaction
@@ -166,11 +166,7 @@ mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
                 removeOracle(_removeOracle);
             } else {
                 propAddOracle storage addOra = propAddOracles[_proposalId];
-                string _api = addOra.api ;
-                uint _readFee = addOra.readFee;
-                uint _timeTarget = addOra.timeTarget;
-                uint[5] _payoutStructure = addOra.payoutStructure;
-                deployNewOracle(_api,_readFee, _timeTarget,_payoutStructure);
+                deployNewOracle(addOra.api,addOra.readFee, addOra.timeTarget, addOra.payoutStructure);
             }
             prop.executed = true;
             prop.proposalPassed = true;
