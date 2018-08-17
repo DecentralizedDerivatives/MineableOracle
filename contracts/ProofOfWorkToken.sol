@@ -58,7 +58,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     * @param _payoutStructure for miners
     * @return new oracle address
     */
-    function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) external returns(address){
+    function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public returns(address){
         address new_oracle = createClone(dud_Oracle);
         OracleToken(new_oracle).init(_api,address(this),_readFee,_timeTarget,_payoutStructure);
         oracle_index[new_oracle] = oracle_list.length;

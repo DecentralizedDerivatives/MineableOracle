@@ -22,8 +22,6 @@ the new oracle api, https://www.ethereum.org/dao*/
     uint public minimumQuorum;
     uint public proposalFee;
     uint public voteDuration;//3days the same as voting period
-    Token public stakeTokenAddress;
-
 
     struct Proposal {
         uint propType; //1=remove oracle 2= add oracle
@@ -34,44 +32,41 @@ the new oracle api, https://www.ethereum.org/dao*/
         Vote[] votes;
         mapping (address => bool) voted;
     }
-    Proposal[] public proposals;
-    uint public numProposals;
-    mapping(address => Proposal) public removeOracle;
+    Proposal[] public proposals;//holds proposalId
+    //mapping(address => Proposal) public proposer;//do we care who is proposing?
+    //address[] public proposersAddresses;//do we care who is proposing?
 
+    mapping(uint => address) public propRemoveOracle;
 
+    struct propAddOracle {
+        string api;
+        uint readFee;
+        uint timeTarget;
+        uint[5] payoutStructure;
+    }
+mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
+    
     struct Vote {
         bool inSupport;
         address voter;
     }
 
-/*     
-    struct stakeDetails{
-        uint transferId;
-        uint amount;
-        uint public stakeStartTime;
-    }
-    mapping(address => stakeDetails) public stakes;//vote when stakes=minimumQuorum
-    address[] public memberStaked;
-    mapping(address => uint) public memberStakedIndex;
-    uint public total_deposited_supply;
-    uint public total_locked;
-    uint public stake_locked; */
-
-    event ProposalAdded(uint proposalID, address recipient, uint propType);
+    event ProposalToRemove(uint proposalID, address oracleAddress, uint propType);
+    event ProposalToAdd(uint proposalId, string _api, uint _readFee, uint _timeTarget, uint[5] _payoutStructure, uint propType);
     event Voted(uint proposalID, bool position, address voter);//should weight be added?
     event ProposalTallied(uint proposalID, uint result, uint quorum, bool active);
-    event ChangeOfRules(uint newMinimumQuorum, uint newVotingDuration, address newStakeTokenAddress);
+    event ChangeOfRules(uint newMinimumQuorum, uint newVotingDuration);
 
     /*Modifiers*/
-        modifier onlyOwner() {
-         require(msg.sender == owner);
+    modifier onlyOwner() {
+        require(msg.sender == owner);
         _;
     }
         /**
     * Modifier that allows only shareholders to vote and create new proposals
     */
-    modifier onlyTokenholders {
-        require(stakeTokenAddress.balanceOf(msg.sender) > 0);
+    modifier onlyTokenholders() {
+        require(balanceOf(msg.sender) > 0);
         _;
     }
 
@@ -80,13 +75,11 @@ the new oracle api, https://www.ethereum.org/dao*/
         owner = msg.sender;
     }
 
-
-    function changeVotingRules(Token _stakeTokenAddress, uint _minimumQuorum, uint _voteDuration) onlyOwner public {
-        stakeTokenAddress = Token(_stakeTokenAddress);
+    function changeVotingRules( uint _minimumQuorum, uint _voteDuration) public onlyOwner() {
         if (_minimumQuorum == 0 ) _minimumQuorum = 1;
         minimumQuorum = _minimumQuorum;
         voteDuration = _voteDuration;
-        emit ChangeOfRules(minimumQuorum, _voteDuration, stakeTokenAddress);
+        emit ChangeOfRules(minimumQuorum, _voteDuration);
     }
 
     /*
@@ -104,8 +97,8 @@ the new oracle api, https://www.ethereum.org/dao*/
         return proposals.length;
     }
 
-    function propRemove(address _removeOracle) public onlyTokenholders returns(uint proposalId) {
-        require(stakeTokenAddress.balanceOf(msg.sender) > proposalFee);
+    function propRemove(address _removeOracle) public onlyTokenholders() returns(uint proposalId)  {
+        require(balanceOf(msg.sender) > proposalFee);
         transfer(address(this), proposalFee);
         proposalId = proposals.length++;
         Proposal storage prop = proposals[proposalId];
@@ -114,22 +107,31 @@ the new oracle api, https://www.ethereum.org/dao*/
         prop.executed = false;
         prop.proposalPassed = false;
         prop.numberOfVotes = 0;
-        //emit event
-        emit ProposalAdded(proposalId, _removeOracle, prop.propType);
+        propRemoveOracle[proposalId] = _removeOracle;
+        emit ProposalToRemove(proposalId, _removeOracle, prop.propType);
         return proposalId;
     }
 
-    function propAdd(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyTokenholders {
-        require(stakeTokenAddress.balanceOf(msg.sender) > proposalFee);
+    function propAdd(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyTokenholders() returns(uint proposalId){
+        require(balanceOf(msg.sender) > proposalFee);
         transfer(address(this), proposalFee);
-        //create another struct???!!
+        proposalId = proposals.length++;
+        Proposal storage prop = proposals[proposalId];
+        prop.propType = 2;
+        prop.minExecutionDate = now + voteDuration * 1 days; //do we need an execution date?
+        prop.executed = false;
+        prop.proposalPassed = false;
+        prop.numberOfVotes = 0;
+        propAddOracle storage addOra = propAddOracles[proposalId];
+        addOra.api = _api;
+        addOra.readFee = _readFee;
+        addOra.timeTarget = _timeTarget;
+        addOra.payoutStructure = _payoutStructure;
+        emit ProposalToAdd(proposalId, _api, _readFee, _timeTarget, _payoutStructure, prop.propType);
+        return proposalId;
+        }
 
-        //deployNewOracle(_api,_readFee, _timeTarget,_payoutStructure);//where to save this info another struct?
-    }
-
-    function vote(uint _proposalId, bool supportsProposal) public onlyTokenholders returns (uint voteId) {
-        //check their stake is locked
-        //
+    function vote(uint _proposalId, bool supportsProposal) public onlyTokenholders() returns (uint voteId) {
         Proposal storage prop = proposals[_proposalId];
         require(prop.voted[msg.sender] != true);
         voteId = prop.votes.length++;
@@ -141,8 +143,6 @@ the new oracle api, https://www.ethereum.org/dao*/
     }
 
     function tallyVotes(uint _proposalId) public {
-        //check their stake is locked and is minimumQuorum
-        //weigh their vote based on locked balance
         Proposal storage prop = proposals[_proposalId];
         require(now > prop.minExecutionDate && !prop.executed);  
         uint quorum = 0;
@@ -150,7 +150,7 @@ the new oracle api, https://www.ethereum.org/dao*/
         uint nay = 0;  
         for (uint i = 0; i <  prop.votes.length; ++i) {
             Vote storage v = prop.votes[i];
-            uint voteWeight = stakeTokenAddress.balanceOf(v.voter);//change to locked balance not just balanceOf, does it matter?
+            uint voteWeight = balanceOf(v.voter);//change to locked balance not just balanceOf, does it matter?
             quorum += voteWeight;
             if (v.inSupport) {
                 yea += voteWeight;
@@ -162,9 +162,15 @@ the new oracle api, https://www.ethereum.org/dao*/
         if (yea > nay ) {
             if (prop.propType==1){
             // Proposal passed; execute the transaction
-                //removeOracle(_remove);///where should i save the oracle proposed to be removed
+                address _removeOracle = propRemoveOracle[_proposalId];
+                removeOracle(_removeOracle);
             } else {
-                //deployNewOracle(_api,_readFee, _timeTarget,_payoutStructure);///where to save all these details
+                propAddOracle storage addOra = propAddOracles[_proposalId];
+                string _api = addOra.api ;
+                uint _readFee = addOra.readFee;
+                uint _timeTarget = addOra.timeTarget;
+                uint[5] _payoutStructure = addOra.payoutStructure;
+                deployNewOracle(_api,_readFee, _timeTarget,_payoutStructure);
             }
             prop.executed = true;
             prop.proposalPassed = true;
