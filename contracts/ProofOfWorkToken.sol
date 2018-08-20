@@ -51,6 +51,14 @@ contract ProofOfWorkToken is Token, CloneFactory {
     } 
 
     /**
+    * @dev Set oracle dudd address to clone
+    * @param _dud_Oracle address to clone
+    */  
+    function setDudOracle(address _dud_Oracle) public onlyOwner(){
+        dud_Oracle = _dud_Oracle;
+    }
+
+    /**
     * @dev Deployes a new oracle 
     * @param _api is the oracle api
     * @param _readFee is the fee for reading oracle information

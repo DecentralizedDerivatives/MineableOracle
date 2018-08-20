@@ -82,6 +82,7 @@ import "./Token.sol";
     function changeVotingRules(uint _minimumQuorum, uint _voteDuration) public onlyOwner() {
         if (_minimumQuorum == 0 ) _minimumQuorum = 1;
         minimumQuorum = _minimumQuorum;
+        //minimumQuorum = (_minimumQuorum.div(100)).mul(total_supply);
         voteDuration = _voteDuration;
         emit ChangeOfRules(minimumQuorum, _voteDuration);
     }
@@ -107,7 +108,7 @@ import "./Token.sol";
     */
     function propRemove(address _removeOracle) public onlyTokenholders() returns(uint proposalId)  {
         require(balanceOf(msg.sender) > proposalFee);
-        transfer(address(this), proposalFee);
+        transferFrom(msg.sender, owner, proposalFee);
         proposalId = proposals.length++;
         Proposal storage prop = proposals[proposalId];
         prop.propType = 1;
@@ -199,6 +200,22 @@ import "./Token.sol";
             prop.proposalPassed = false;
         }
         emit ProposalTallied(_proposalId, yea - nay, quorum, prop.proposalPassed);
+    }
+
+    /**
+    *@dev Get proposal information
+    *@param _memberAddress address to pull the oriopType
+    */
+    function getProposalInfo(uint _propId) view public returns(uint, bool) {
+        return(proposals[_propId].propType, proposals[_propId].proposalPassed);
+    }
+
+    /**
+    * @dev Allows the owner to set a new owner address
+    * @param _new_owner the new owner address
+    */
+    function setOwner(address _new_owner) public onlyOwner() { 
+        owner = _new_owner; 
     }
 
 }

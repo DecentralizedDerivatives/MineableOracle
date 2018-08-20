@@ -94,7 +94,7 @@ contract Token  {
        return allowed[_owner][_spender]; }
 
     /**
-    * @dev Getter for the total_supply of wrapped ether
+    * @dev Getter for the total_supply of oracle tokens
     * @return total supply
     */
     function totalSupply() public constant returns (uint) {

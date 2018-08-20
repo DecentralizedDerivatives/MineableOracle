@@ -64,7 +64,7 @@ contract OracleToken{
     /**
     * @dev Proof of work to be done for mining
     * @param nonce uint submitted by miner
-    * @param value rewarded
+    * @param value of api query?
     * @return count of values sumbitted so far and the time of the last submission
     */
     function proofOfWork(string nonce, uint value) external returns (uint256,uint256) {
@@ -156,6 +156,7 @@ contract OracleToken{
 
     /**
     * @dev This fucntion rewards the first five miners that submit a value
+    * @param _time is the time/date for the value being provided by the miner
     */
     function pushValue(uint _time) internal {
         insertionSort(first_five);
