@@ -121,15 +121,15 @@ contract('Base Tests', function(accounts) {
         console.log("get index oracle 2", await oraclevote.getindex(oracletoken2.address));
 
 
-/*      await oraclevote.vote(1, true,{from:accounts[0]} );
+        await oraclevote.vote(1, true,{from:accounts[0]} );
         await oraclevote.vote(1, true,{from:accounts[4]} );
-        await oraclevote.vote(1, true,{from:accounts[5]} );
+  /*      await oraclevote.vote(1, true,{from:accounts[5]} );
         await oraclevote.vote(1, true,{from:accounts[6]} );
         await oraclevote.vote(1, false,{from:accounts[7]} );
         info = await oraclevote.getProposalInfo(1);
         console.log("info:", info);*/
         //sleep_s(3);
-        //await oraclevote.tallyVotes(1, {from:accounts[4]} );
+        await oraclevote.tallyVotes(1, {from:accounts[4]} );
 /*        info1 = await oraclevote.getProposalInfo(1);
         console.log("info1:", info1);
         assert( info1 = [1, true], "proposal passed")*/

@@ -51,10 +51,10 @@ contract('Base Tests', function(accounts) {
         balance4 = await oraclevote.balanceOf(accounts[4]);
         console.log("old bal 4", balance4);
         await oraclevote.transfer(accounts[4],50,{from:accounts[6]});
-        balance4a = await oraclevote..balanceOf(accounts[4]);
+        balance4a = await oraclevote.balanceOf(accounts[4]);
         console.log("new bal4", balance4a);
         console.log("transfer successful acct4");
-        balance6 = await oraclevote..balanceOf(accounts[6]);
+        balance6 = await oraclevote.balanceOf(accounts[6]);
         console.log(balance6);
         assert.equal(balance4a, 150, "balance for acct 4 is 150");
         assert.equal(balance6, 50, "balance for acct 6 is 50");
