@@ -20,10 +20,14 @@ import "./Token.sol";
     uint public minimumQuorum;
     uint public proposalFee;
     uint public voteDuration;//3days the same as voting period
-    Proposal[] public proposals;//holds proposalId
+    //Proposal[] public proposals;//holds proposalId
     //mapping(address => Proposal) public proposer;//do we care who is proposing?
     //address[] public proposersAddresses;//do we care who is proposing?
+    
+    mapping(uint => Proposal) public proposals;
     uint[] public proposalsIds;
+    mapping (uint => uint) public proposalsIdsIndex;
+
     mapping(uint => address) public propRemoveOracle;
     mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
     
@@ -100,7 +104,7 @@ import "./Token.sol";
     * @dev Gets length of array containing all proposals
     */
     function countProposals() view public returns(uint) {
-        return proposals.length;
+        return proposalsIds.length;
     }
 
     /*
@@ -110,7 +114,7 @@ import "./Token.sol";
     function propRemove(address _removeOracle) public onlyTokenholders() returns(uint proposalId)  {
         require(balanceOf(msg.sender) > proposalFee);
         transferFrom(msg.sender, owner, proposalFee);
-        proposalId = proposals.length++;
+        proposalId = proposalsIds.length;
         proposalsIds.push(proposalId);
         Proposal storage prop = proposals[proposalId];
         prop.propType = 1;
@@ -135,7 +139,7 @@ import "./Token.sol";
     function propAdd(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyTokenholders() returns(uint proposalId){
         require(balanceOf(msg.sender) > proposalFee);
         transfer(address(this), proposalFee);
-        proposalId = proposals.length++;
+        proposalId = proposalsIds.length;
         proposalsIds.push(proposalId);
         Proposal storage prop = proposals[proposalId];
         prop.propType = 2;
