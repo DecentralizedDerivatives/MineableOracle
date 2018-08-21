@@ -124,7 +124,6 @@ import "./Token.sol";
         proposalId = proposalsIds.length + 1;
         proposalsIds.push(proposalId);
         propRemoveOracle[proposalId] = _removeOracle; 
-             
         Proposal storage prop = proposals[proposalId];
         prop.propType = 1;
         prop.minExecutionDate = now + voteDuration * 1 days; //do we need an execution date?
