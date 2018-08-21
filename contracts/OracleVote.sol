@@ -23,6 +23,7 @@ import "./Token.sol";
     Proposal[] public proposals;//holds proposalId
     //mapping(address => Proposal) public proposer;//do we care who is proposing?
     //address[] public proposersAddresses;//do we care who is proposing?
+    uint[] public proposalsIds;
     mapping(uint => address) public propRemoveOracle;
     mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
     
@@ -110,6 +111,7 @@ import "./Token.sol";
         require(balanceOf(msg.sender) > proposalFee);
         transferFrom(msg.sender, owner, proposalFee);
         proposalId = proposals.length++;
+        proposalsIds.push(proposalId);
         Proposal storage prop = proposals[proposalId];
         prop.propType = 1;
         prop.minExecutionDate = now + voteDuration * 1 days; //do we need an execution date?
@@ -134,6 +136,7 @@ import "./Token.sol";
         require(balanceOf(msg.sender) > proposalFee);
         transfer(address(this), proposalFee);
         proposalId = proposals.length++;
+        proposalsIds.push(proposalId);
         Proposal storage prop = proposals[proposalId];
         prop.propType = 2;
         prop.minExecutionDate = now + voteDuration * 1 days; //do we need an execution date?
@@ -204,7 +207,7 @@ import "./Token.sol";
 
     /**
     *@dev Get proposal information
-    *@param _memberAddress address to pull the oriopType
+    *@param _propId to pull propType and prop passed
     */
     function getProposalInfo(uint _propId) view public returns(uint, bool) {
         return(proposals[_propId].propType, proposals[_propId].proposalPassed);
@@ -216,6 +219,13 @@ import "./Token.sol";
     */
     function setOwner(address _new_owner) public onlyOwner() { 
         owner = _new_owner; 
+    }
+
+    /**
+    *@dev getter function to get all proposalsIds
+    */
+    function getproposalsIds() view public returns (uint[]){
+        return proposalsIds;
     }
 
 }

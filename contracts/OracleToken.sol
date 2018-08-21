@@ -39,7 +39,7 @@ contract OracleToken{
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
     * @param _api is the oracle api
-    * @param _master is the master oracle address
+    * @param _master is the master oracle address? POWT?
     * @param _readFee is the fee for reading oracle information
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
