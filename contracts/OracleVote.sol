@@ -20,9 +20,14 @@ import "./Token.sol";
     uint public minimumQuorum;
     uint public proposalFee;
     uint public voteDuration;//3days the same as voting period
-    Proposal[] public proposals;//holds proposalId
+    //Proposal[] public proposals;//holds proposalId
     //mapping(address => Proposal) public proposer;//do we care who is proposing?
     //address[] public proposersAddresses;//do we care who is proposing?
+    
+    mapping(uint => Proposal) public proposals;
+    uint[] public proposalsIds;
+    mapping (uint => uint) public proposalsIdsIndex;//not sure i'll need it
+
     mapping(uint => address) public propRemoveOracle;
     mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
     
@@ -82,6 +87,7 @@ import "./Token.sol";
     function changeVotingRules(uint _minimumQuorum, uint _voteDuration) public onlyOwner() {
         if (_minimumQuorum == 0 ) _minimumQuorum = 1;
         minimumQuorum = _minimumQuorum;
+        //minimumQuorum = (_minimumQuorum.div(100)).mul(total_supply);
         voteDuration = _voteDuration;
         emit ChangeOfRules(minimumQuorum, _voteDuration);
     }
@@ -98,7 +104,14 @@ import "./Token.sol";
     * @dev Gets length of array containing all proposals
     */
     function countProposals() view public returns(uint) {
-        return proposals.length;
+        return proposalsIds.length;
+    }
+
+    /**
+    *@dev getter function to get all proposalsIds
+    */
+    function getProposalsIds() view public returns (uint[]){
+        return proposalsIds;
     }
 
     /*
@@ -107,15 +120,16 @@ import "./Token.sol";
     */
     function propRemove(address _removeOracle) public onlyTokenholders() returns(uint proposalId)  {
         require(balanceOf(msg.sender) > proposalFee);
-        transfer(address(this), proposalFee);
-        proposalId = proposals.length++;
+        transfer(owner, proposalFee);
+        proposalId = proposalsIds.length + 1;
+        proposalsIds.push(proposalId);
+        propRemoveOracle[proposalId] = _removeOracle; 
         Proposal storage prop = proposals[proposalId];
         prop.propType = 1;
         prop.minExecutionDate = now + voteDuration * 1 days; //do we need an execution date?
         prop.executed = false;
         prop.proposalPassed = false;
         prop.numberOfVotes = 0;
-        propRemoveOracle[proposalId] = _removeOracle;
         emit ProposalToRemove(proposalId, _removeOracle, prop.propType);
         return proposalId;
     }
@@ -131,11 +145,12 @@ import "./Token.sol";
     */
     function propAdd(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyTokenholders() returns(uint proposalId){
         require(balanceOf(msg.sender) > proposalFee);
-        transfer(address(this), proposalFee);
-        proposalId = proposals.length++;
+        transfer(owner, proposalFee);
+        proposalId = proposalsIds.length + 1;
+        proposalsIds.push(proposalId);
         Proposal storage prop = proposals[proposalId];
         prop.propType = 2;
-        prop.minExecutionDate = now + voteDuration * 1 days; //do we need an execution date?
+        prop.minExecutionDate = now + voteDuration * 1 days; 
         prop.executed = false;
         prop.proposalPassed = false;
         prop.numberOfVotes = 0;
@@ -160,7 +175,7 @@ import "./Token.sol";
         prop.votes[voteId] = Vote({inSupport: supportsProposal, voter: msg.sender});
         prop.voted[msg.sender] = true;
         prop.numberOfVotes = voteId +1;
-        emit Voted(_proposalId,  supportsProposal, msg.sender);//should weight or locked funds be added?
+        emit Voted(_proposalId,  supportsProposal, msg.sender);
         return voteId;
     }
 
@@ -168,9 +183,9 @@ import "./Token.sol";
     * @dev tallies the votes and executes if minimum quorum is met or exceeded.
     * @param _proposalId is the proposal id
     */
-    function tallyVotes(uint _proposalId) public {
+    function tallyVotes(uint _proposalId) public onlyOwner() {
         Proposal storage prop = proposals[_proposalId];
-        require(now > prop.minExecutionDate && !prop.executed);  
+        //require(now > prop.minExecutionDate && !prop.executed); //Uncomment for production-commented out for testing 
         uint quorum = 0;
         uint yea = 0;
         uint nay = 0;  
@@ -184,8 +199,8 @@ import "./Token.sol";
                 nay += voteWeight;
             }
         }
-        require(quorum >= minimumQuorum); 
-        if (yea > nay ) {
+         require(quorum >= minimumQuorum); 
+          if (yea > nay ) {
             if (prop.propType==1){
                 address _removeOracle = propRemoveOracle[_proposalId];
                 removeOracle(_removeOracle);
@@ -198,8 +213,26 @@ import "./Token.sol";
         } else {
             prop.proposalPassed = false;
         }
-        emit ProposalTallied(_proposalId, yea - nay, quorum, prop.proposalPassed);
+        emit ProposalTallied(_proposalId, yea - nay, quorum, prop.proposalPassed);   
     }
+
+    /**
+    *@dev Get proposal information
+    *@param _propId to pull propType and prop passed
+    */
+    function getProposalInfo(uint _propId) view public returns(uint, bool) {
+        return(proposals[_propId].propType, proposals[_propId].proposalPassed);
+    }
+
+    /**
+    * @dev Allows the owner to set a new owner address
+    * @param _new_owner the new owner address
+    */
+    function setOwner(address _new_owner) public onlyOwner() { 
+        owner = _new_owner; 
+    }
+
+
 
 }
  

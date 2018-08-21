@@ -51,6 +51,14 @@ contract ProofOfWorkToken is Token, CloneFactory {
     } 
 
     /**
+    * @dev Set oracle dudd address to clone
+    * @param _dud_Oracle address to clone
+    */  
+    function setDudOracle(address _dud_Oracle) public onlyOwner(){
+        dud_Oracle = _dud_Oracle;
+    }
+
+    /**
     * @dev Deployes a new oracle 
     * @param _api is the oracle api
     * @param _readFee is the fee for reading oracle information
@@ -62,9 +70,10 @@ contract ProofOfWorkToken is Token, CloneFactory {
         address new_oracle = createClone(dud_Oracle);
         OracleToken(new_oracle).init(_api,address(this),_readFee,_timeTarget,_payoutStructure);
         oracle_index[new_oracle] = oracle_list.length;
-        OracleDetails storage _current = oracle_list[oracle_list.length];
+        oracle_list.length++;
+        OracleDetails storage _current = oracle_list[oracle_list.length-1]; 
         _current.API = _api;
-        _current.location = new_oracle;
+        _current.location = new_oracle;  
         emit Deployed(_api, new_oracle);
         return new_oracle;
     }
@@ -112,6 +121,10 @@ contract ProofOfWorkToken is Token, CloneFactory {
     function getDetails(address _oracle) public view returns(string,address){
         OracleDetails storage _current = oracle_list[oracle_index[_oracle]];
         return(_current.API,_current.location);
+    }
+
+    function getindex(address _oracle) public view returns(uint){
+        return(oracle_index[_oracle]);
     }
 
 }
