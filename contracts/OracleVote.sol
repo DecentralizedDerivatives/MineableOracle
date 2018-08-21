@@ -107,6 +107,13 @@ import "./Token.sol";
         return proposalsIds.length;
     }
 
+    /**
+    *@dev getter function to get all proposalsIds
+    */
+    function getProposalsIds() view public returns (uint[]){
+        return proposalsIds;
+    }
+
     /*
     * @dev Allows token holders to submit a proposal to remove an oracle
     * @param _removeOracle address of oracle to remove
@@ -115,15 +122,15 @@ import "./Token.sol";
         require(balanceOf(msg.sender) > proposalFee);
         transfer(owner, proposalFee);
         proposalId = proposalsIds.length;
-        proposalsIds.push(proposalId);
+        propRemoveOracle[proposalId] = _removeOracle; 
+/*      proposalsIds.push(proposalId);
         Proposal storage prop = proposals[proposalId];
         prop.propType = 1;
         prop.minExecutionDate = now + voteDuration * 1 days; //do we need an execution date?
         prop.executed = false;
         prop.proposalPassed = false;
         prop.numberOfVotes = 0;
-        propRemoveOracle[proposalId] = _removeOracle;
-        emit ProposalToRemove(proposalId, _removeOracle, prop.propType);
+        emit ProposalToRemove(proposalId, _removeOracle, prop.propType);*/
         return proposalId;
     }
 
@@ -138,7 +145,7 @@ import "./Token.sol";
     */
     function propAdd(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyTokenholders() returns(uint proposalId){
         require(balanceOf(msg.sender) > proposalFee);
-        transfer(address(this), proposalFee);
+        transfer(owner, proposalFee);
         proposalId = proposalsIds.length;
         proposalsIds.push(proposalId);
         Proposal storage prop = proposals[proposalId];
@@ -225,12 +232,7 @@ import "./Token.sol";
         owner = _new_owner; 
     }
 
-    /**
-    *@dev getter function to get all proposalsIds
-    */
-    function getproposalsIds() view public returns (uint[]){
-        return proposalsIds;
-    }
+
 
 }
  
