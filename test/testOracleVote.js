@@ -39,14 +39,14 @@ contract('Base Tests', function(accounts) {
         let res = await powt.deployNewOracle("json(https://api.gdax.com/products/BTC-USD/ticker).price",22,10,[1,5,10,5,1]); 
         res = res.logs[0].args._newOracle;
         oracletoken = await oracleToken.at(res);
-        console.log("cloned powt",res); 
-        console.log("powt.address:", oracletoken.address); 
+        console.log("cloned oracle res",res); 
+        console.log("oracle.address:", oracletoken.address); 
 
         let res2 = await powt.deployNewOracle("json(https://api.gdax.com/products/BTC-USD/ticker).price",22,10,[1,5,10,5,1]); 
         res2 = res2.logs[0].args._newOracle;
         oracletoken2 = await oracleToken.at(res2);
-        console.log("cloned powt2",res2); 
-        console.log("powt.address2:", oracletoken2.address); 
+        console.log("cloned oracle res2",res2); 
+        console.log("oracle.address2:", oracletoken2.address); 
     });
 
     it("Change quorum and voting timeframe", async function(){
@@ -73,8 +73,8 @@ contract('Base Tests', function(accounts) {
         balance4 = await powt.balanceOf(accounts[4],{from:accounts[0]});
         console.log("balance 4a:",  balance4);
         await oraclevote.changeVotingRules(2, 3);
-        await oraclevote.propRemove(oracletoken.address, {from:accounts[4]});
-        await oraclevote.getProposalIds();
+        await oraclevote.propRemove(oracletoken2.address, {from:accounts[4]});
+        await oraclevote.getProposalsIds();
         count2 = await oraclevote.countProposals();
         assert.equal(count2, 1);
         console.log("count 2:", count2);

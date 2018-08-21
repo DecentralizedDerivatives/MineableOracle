@@ -26,7 +26,7 @@ import "./Token.sol";
     
     mapping(uint => Proposal) public proposals;
     uint[] public proposalsIds;
-    mapping (uint => uint) public proposalsIdsIndex;
+    mapping (uint => uint) public proposalsIdsIndex;//not sure i'll need it
 
     mapping(uint => address) public propRemoveOracle;
     mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
