@@ -121,16 +121,16 @@ import "./Token.sol";
     function propRemove(address _removeOracle) public onlyTokenholders() returns(uint proposalId)  {
         require(balanceOf(msg.sender) > proposalFee);
         transfer(owner, proposalFee);
-        proposalId = proposalsIds.length;
-        propRemoveOracle[proposalId] = _removeOracle; 
-/*      proposalsIds.push(proposalId);
+        proposalId = proposalsIds.length + 1;
+        proposalsIds.push(proposalId);
+        propRemoveOracle[proposalId] = _removeOracle;      
         Proposal storage prop = proposals[proposalId];
         prop.propType = 1;
         prop.minExecutionDate = now + voteDuration * 1 days; //do we need an execution date?
         prop.executed = false;
         prop.proposalPassed = false;
         prop.numberOfVotes = 0;
-        emit ProposalToRemove(proposalId, _removeOracle, prop.propType);*/
+        emit ProposalToRemove(proposalId, _removeOracle, prop.propType);
         return proposalId;
     }
 
@@ -150,7 +150,7 @@ import "./Token.sol";
         proposalsIds.push(proposalId);
         Proposal storage prop = proposals[proposalId];
         prop.propType = 2;
-        prop.minExecutionDate = now + voteDuration * 1 days; //do we need an execution date?
+        prop.minExecutionDate = now + voteDuration * 1 days; 
         prop.executed = false;
         prop.proposalPassed = false;
         prop.numberOfVotes = 0;
@@ -175,7 +175,7 @@ import "./Token.sol";
         prop.votes[voteId] = Vote({inSupport: supportsProposal, voter: msg.sender});
         prop.voted[msg.sender] = true;
         prop.numberOfVotes = voteId +1;
-        emit Voted(_proposalId,  supportsProposal, msg.sender);//should weight or locked funds be added?
+        emit Voted(_proposalId,  supportsProposal, msg.sender);
         return voteId;
     }
 
@@ -185,7 +185,7 @@ import "./Token.sol";
     */
     function tallyVotes(uint _proposalId) public {
         Proposal storage prop = proposals[_proposalId];
-        require(now > prop.minExecutionDate && !prop.executed);  
+        //require(now > prop.minExecutionDate && !prop.executed);  
         uint quorum = 0;
         uint yea = 0;
         uint nay = 0;  
@@ -199,8 +199,8 @@ import "./Token.sol";
                 nay += voteWeight;
             }
         }
-        require(quorum >= minimumQuorum); 
-        if (yea > nay ) {
+         require(quorum >= minimumQuorum); 
+          if (yea > nay ) {
             if (prop.propType==1){
                 address _removeOracle = propRemoveOracle[_proposalId];
                 removeOracle(_removeOracle);
@@ -213,7 +213,7 @@ import "./Token.sol";
         } else {
             prop.proposalPassed = false;
         }
-        emit ProposalTallied(_proposalId, yea - nay, quorum, prop.proposalPassed);
+        emit ProposalTallied(_proposalId, yea - nay, quorum, prop.proposalPassed);   
     }
 
     /**

@@ -71,7 +71,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
         OracleToken(new_oracle).init(_api,address(this),_readFee,_timeTarget,_payoutStructure);
         oracle_index[new_oracle] = oracle_list.length;
         oracle_list.length++;
-        OracleDetails storage _current = oracle_list[oracle_list.length-1];
+        OracleDetails storage _current = oracle_list[oracle_list.length-1]; 
         _current.API = _api;
         _current.location = new_oracle;  
         emit Deployed(_api, new_oracle);
@@ -121,6 +121,10 @@ contract ProofOfWorkToken is Token, CloneFactory {
     function getDetails(address _oracle) public view returns(string,address){
         OracleDetails storage _current = oracle_list[oracle_index[_oracle]];
         return(_current.API,_current.location);
+    }
+
+    function getindex(address _oracle) public view returns(uint){
+        return(oracle_index[_oracle]);
     }
 
 }
