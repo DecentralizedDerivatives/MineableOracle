@@ -123,7 +123,8 @@ import "./Token.sol";
         transfer(owner, proposalFee);
         proposalId = proposalsIds.length + 1;
         proposalsIds.push(proposalId);
-        propRemoveOracle[proposalId] = _removeOracle;      
+        propRemoveOracle[proposalId] = _removeOracle; 
+             
         Proposal storage prop = proposals[proposalId];
         prop.propType = 1;
         prop.minExecutionDate = now + voteDuration * 1 days; //do we need an execution date?
@@ -146,7 +147,7 @@ import "./Token.sol";
     function propAdd(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyTokenholders() returns(uint proposalId){
         require(balanceOf(msg.sender) > proposalFee);
         transfer(owner, proposalFee);
-        proposalId = proposalsIds.length;
+        proposalId = proposalsIds.length + 1;
         proposalsIds.push(proposalId);
         Proposal storage prop = proposals[proposalId];
         prop.propType = 2;
@@ -183,9 +184,9 @@ import "./Token.sol";
     * @dev tallies the votes and executes if minimum quorum is met or exceeded.
     * @param _proposalId is the proposal id
     */
-    function tallyVotes(uint _proposalId) public {
+    function tallyVotes(uint _proposalId) public onlyOwner() {
         Proposal storage prop = proposals[_proposalId];
-        //require(now > prop.minExecutionDate && !prop.executed);  
+        //require(now > prop.minExecutionDate && !prop.executed); //Uncomment for production-commented out for testing 
         uint quorum = 0;
         uint yea = 0;
         uint nay = 0;  
