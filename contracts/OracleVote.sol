@@ -113,7 +113,7 @@ import "./Token.sol";
     */
     function propRemove(address _removeOracle) public onlyTokenholders() returns(uint proposalId)  {
         require(balanceOf(msg.sender) > proposalFee);
-        transferFrom(msg.sender, owner, proposalFee);
+        transfer(owner, proposalFee);
         proposalId = proposalsIds.length;
         proposalsIds.push(proposalId);
         Proposal storage prop = proposals[proposalId];
