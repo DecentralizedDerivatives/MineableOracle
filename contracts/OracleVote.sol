@@ -66,13 +66,6 @@ import "./Token.sol";
         _;
     }
 
-    /**
-    * Modifier that allows only token holders to vote and create new proposals
-    */
-    modifier onlyTokenholders() {
-        require(balanceOf(msg.sender) > 0);
-        _;
-    }
 
     /*Functions*/
     constructor() public{
@@ -118,7 +111,7 @@ import "./Token.sol";
     * @dev Allows token holders to submit a proposal to remove an oracle
     * @param _removeOracle address of oracle to remove
     */
-    function propRemove(address _removeOracle) public onlyTokenholders() returns(uint proposalId)  {
+    function propRemove(address _removeOracle) public returns(uint proposalId)  {
         require(balanceOf(msg.sender) > proposalFee);
         transfer(owner, proposalFee);
         proposalId = proposalsIds.length + 1;
@@ -143,7 +136,7 @@ import "./Token.sol";
     * @param _payoutStructure is the proposed payout structure for miners
     * @return proposalId the ID of the submitted proposal
     */
-    function propAdd(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyTokenholders() returns(uint proposalId){
+    function propAdd(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public returns(uint proposalId){
         require(balanceOf(msg.sender) > proposalFee);
         transfer(owner, proposalFee);
         proposalId = proposalsIds.length + 1;
@@ -168,7 +161,7 @@ import "./Token.sol";
     * @param _proposalId is the proposal id
     * @param supportsProposal is the vote (true= vote for proposal false = vote against proposal)
     */
-    function vote(uint _proposalId, bool supportsProposal) public onlyTokenholders() returns (uint voteId) {
+    function vote(uint _proposalId, bool supportsProposal) public returns (uint voteId) {
         Proposal storage prop = proposals[_proposalId];
         require(prop.voted[msg.sender] != true);
         voteId = prop.votes.length++;
