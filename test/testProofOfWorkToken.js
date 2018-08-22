@@ -32,7 +32,7 @@ contract('Base Tests', function(accounts) {
         await oraclevote.transfer(accounts[7],100,{from:accounts[0]});
         console.log("transfer successful acct7");
 
-        let res = await oraclevote.deployNewOracle("json(https://api.gdax.com/products/BTC-USD/ticker).price",22,10,[1,5,10,5,1]); 
+/*        let res = await oraclevote.deployNewOracle("json(https://api.gdax.com/products/BTC-USD/ticker).price",22,10,[1,5,10,5,1]); 
         res = res.logs[0].args._newOracle;
         oracletoken = await oracleToken.at(res);
         console.log("cloned oracle res",res); 
@@ -42,7 +42,7 @@ contract('Base Tests', function(accounts) {
         res2 = res2.logs[0].args._newOracle;
         oracletoken2 = await oracleToken.at(res2);
         console.log("cloned oracle res2",res2); 
-        console.log("oracle.address2:", oracletoken2.address);  
+        console.log("oracle.address2:", oracletoken2.address);  */
 
 
     });
@@ -58,8 +58,8 @@ contract('Base Tests', function(accounts) {
         console.log(balance6);
         assert.equal(balance4a, 150, "balance for acct 4 is 150");
         assert.equal(balance6, 50, "balance for acct 6 is 50");
-
     });
+
     it("Approve and transfer", async function(){
         await oraclevote.approve(accounts[1], 500);
         console.log("approve");
@@ -70,8 +70,35 @@ contract('Base Tests', function(accounts) {
         console.log("new bal5", balance5a);
         console.log("transfer successful acct5");
         assert.equal(balance5a, 600, "balance for acct 5 is 600");
-
     });
+
+    it("Allowance after approve and transfer", async function(){
+        await oraclevote.approve(accounts[1], 500);
+        console.log("approve");
+        balance0a = await (oraclevote.balanceOf(accounts[0],{from:accounts[1]}));
+        console.log("old bal 0", balance0a);
+        await oraclevote.transferFrom(accounts[0], accounts[5], 400, {from:accounts[1]}); 
+        balance5a = await (oraclevote.balanceOf(accounts[5]));
+        console.log("new bal5", balance5a);
+        console.log("transfer successful acct5");
+        assert.equal(balance5a, 500, "balance for acct 5 is 600");
+        allow = await oraclevote.allowance(accounts[0], accounts[1]);
+        console.log(allow);
+        assert.equal(allow, 100, "Allowance shoudl be 100");
+    });
+
+    it("Total Supply", async function(){
+        await oraclevote.approve(accounts[1], 500);
+        console.log("approve");
+        supply = await oraclevote.totalSupply();
+        console.log("supply:", supply)
+        contra = await oraclevote.balanceOf(oraclevote.address);
+        contra1 = parseInt(contra);
+        csupply = (2**256) - contra1;
+        console.log("circulating supply", csupply);
+        //assert.equal(allow, 100, "Allowance shoudl be 100");
+    });
+
 
     /*it("Recording values to fx proof of work-no mining", async function () {
         let variables= await oracletoken.getVariables();

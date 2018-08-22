@@ -66,7 +66,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     * @param _payoutStructure for miners
     * @return new oracle address
     */
-    function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public returns(address){
+    function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) internal returns(address){
         address new_oracle = createClone(dud_Oracle);
         OracleToken(new_oracle).init(_api,address(this),_readFee,_timeTarget,_payoutStructure);
         oracle_index[new_oracle] = oracle_list.length;
@@ -102,7 +102,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     * @dev Allows owner to remove oracle that are no longer in use
     * @param _removed is the oracle address to remove
     */
-    function removeOracle(address _removed) public onlyOwner(){        
+    function removeOracle(address _removed) internal{        
         uint _index = oracle_index[_removed];
         require(_index > 0);
         uint _last_index = oracle_list.length.sub(1);
