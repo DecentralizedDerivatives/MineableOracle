@@ -1,6 +1,6 @@
 /** This contract tests the oracleVote.sol functions
 */
-var oracleToken = artifacts.require("OracleToken");
+/*var oracleToken = artifacts.require("OracleToken");
 var oracleVote = artifacts.require("OracleVote");
 var Token = artifacts.require("Token");
 var POWT = artifacts.require("ProofOfWorkToken.sol");
@@ -14,9 +14,6 @@ function sleep_s(secs) {
 contract('Base Tests', function(accounts) {
   let oracletoken;
   let oraclevote;
-  let token;
-  let powt;
-  let clonefactory;
   
     beforeEach('Setup contract for each test', async function () {
         oracletoken = await oracleToken.new();
@@ -217,3 +214,4 @@ contract('Base Tests', function(accounts) {
         assert(proposalsList = [1,2,3], "proposals list");
     });
 });
+*/

@@ -2,7 +2,7 @@
 * (user contract, cash out)
 */
 var oracleToken = artifacts.require("OracleToken");
-
+var oracleVote = artifacts.require("OracleVote");
 
 function promisifyLogWatch(_event) {
   return new Promise((resolve, reject) => {
@@ -10,19 +10,17 @@ function promisifyLogWatch(_event) {
       _event.stopWatching();
       if (error !== null)
         reject(error);
-
       resolve(log);
     });
-  });
+    });
 }
-
-  logNewPriceWatcher_d = promisifyLogWatch(dappBridge.LogUpdated({ fromBlock: 'latest' }));
-  
 
 contract('Base Tests', function(accounts) {
   let oracletoken;
+  let oraclevote;
+  let logNewValueWatcher;
   
-  beforeEach('Setup contract for each test', async function () {
+    beforeEach('Setup contract for each test', async function () {
         oracletoken = await oracleToken.new();
         console.log("dud oracle:", oracletoken.address);
         oraclevote = await oracleVote.new(22,1,1);
@@ -51,68 +49,73 @@ contract('Base Tests', function(accounts) {
         res = res.logs[0].args._newOracle;
         console.log("res address", res);
         oracletoken = await oracleToken.at(res);
-  });
 
-  it("getVariables", async function(){
-      vars = await oracletoken.getVariables();
-      console.log(vars)
-  });  
+        logNewValueWatcher = promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
+        console.log("logNewValueWatcher", logNewValueWatcher);
+    });
 
-/*  it("Recording values to fx proof of work-no mining", async function () {
-    let variables= await oracletoken.getVariables();
-    assert(variables = [0x0000000000000000000000000000000000000000000000000000000000000000,1] , "Diffiuculty= 1");
-    await oracletoken.proofOfWork("1", 10, {from: accounts[4]});
-    console.log(await oracletoken.getVariables());
-    await oracletoken.proofOfWork("1", 4, {from: accounts[5]});
-    console.log(await oracletoken.getVariables());
-    await oracletoken.proofOfWork("1", 9, {from: accounts[6]});
-    console.log(await oracletoken.getVariables());
-    await oracletoken.proofOfWork("1", 7, {from: accounts[7]});
-    console.log(await oracletoken.getVariables());
-    await oracletoken.proofOfWork("1", 5, {from: accounts[8]});
-    await oracletoken.isData(uint _timestamp); //assert = true
-    await oracletoken.retrieveData(uint _timestamp);//where to get timestamp assert=5
+    it("getVariables", async function(){
+        vars = await oracletoken.getVariables();
+        console.log(vars);
+        assert(vars = ['0x0000000000000000000000000000000000000000000000000000000000000000',0]);
+    }); 
 
-  })
+    it("Recording values to fx proof of work-no mining", async function () {
+        vars = await oracletoken.getVariables();
+        console.log(vars);
+        assert(vars = ['0x0000000000000000000000000000000000000000000000000000000000000000',0]);
+/*        await oracletoken.proofOfWork("1534377600", 10, {from: accounts[4]});
+        logNewValueWatcher = promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
+        console.log("logNewValueWatcher", logNewValueWatcher);
+        console.log(await oracletoken.getVariables());
+        await oracletoken.proofOfWork("1534377600", 4, {from: accounts[5]});
+        console.log(await oracletoken.getVariables());
+        await oracletoken.proofOfWork("1534377600", 9, {from: accounts[6]});
+        console.log(await oracletoken.getVariables());
+        await oracletoken.proofOfWork("1534377600", 7, {from: accounts[7]});
+        console.log(await oracletoken.getVariables());*/
+        let result = await oracletoken.proofOfWork("1534377600", 5, {from: accounts[8]});
+        result1 = result.logs[0].args;//New value event has 5 events
+        result2 = result.logs[11].args._time; //PushValue- has 5 events Mine event-timestamp
+        await oracletoken.isData(1534377600); //assert = true
+        await oracletoken.retrieveData(1534377600);//where to get timestamp assert=5
+    });
 
-  it("testAdd", async function(){
-    await oracletoken.testAdd(1531008000,100);
-    let data = await oracletoken.retrieveData(1531008000); 
-    assert(data = 100 , "data=100");
-  });
+/*    it("testAdd", async function(){
+        await oracletoken.testAdd(1531008000,100);
+        let data = await oracletoken.retrieveData(1531008000); 
+        assert(data = 100 , "data=100");
+    });
 
-  it("Sample Mine Token", async function(){
+    it("Sample Mine Token", async function(){
 
-  });
+    });
 
-  it("Mine tokens and get 20 values", async function(){
+    it("Mine tokens and get 20 values", async function(){
     
-  });
+    });*/
 
-    it("proofOfWork", async function(){*/
-    
-/*  balance3 = await (oracletoken.balanceOf(accounts[3]));
-    balance4 = await (oracletoken.balanceOf(accounts[4]));
-    balance5 = await (oracletoken.balanceOf(accounts[5]));
-    balance6 = await (oracletoken.balanceOf(accounts[6]));*/
-/*    console.log("1 proof of work");
-    await oracletoken.proofOfWork("1531005060", 100, {from: accounts[0]});
-    await oracletoken.proofOfWork("1531005060", 100, {from: accounts[0]});
-    await oracletoken.proofOfWork("1531005060", 100, {from: accounts[0]});
-    await oracletoken.proofOfWork("1531005060", 100, {from: accounts[0]});
-    let res = await oracletoken.proofOfWork("1531005060", 100, {from: accounts[0]});*/
-    //  res = res.logs[0].args;
+/*    it("proofOfWork", async function(){
+        balance3 = await (oracletoken.balanceOf(accounts[3]));
+        balance4 = await (oracletoken.balanceOf(accounts[4]));
+        balance5 = await (oracletoken.balanceOf(accounts[5]));
+        balance6 = await (oracletoken.balanceOf(accounts[6]));
+        console.log("1 proof of work");
+        await oracletoken.proofOfWork("1531005060", 100, {from: accounts[0]});
+        await oracletoken.proofOfWork("1531005060", 100, {from: accounts[0]});
+        await oracletoken.proofOfWork("1531005060", 100, {from: accounts[0]});
+        await oracletoken.proofOfWork("1531005060", 100, {from: accounts[0]});
+        let res = await oracletoken.proofOfWork("1531005060", 100, {from: accounts[0]});
+        res = res.logs[0].args;
+        res = res.logs[6].args._time; 
+        console.log(res);
+        let data = await oracletoken.retrieveData(res); 
+        assert(data = 100 , "data=100");
+        balance2x = await (oracletoken.balanceOf(accounts[0]));
+        console.log(balance2x);
+        console.log("2 proof of work");
 
-/*     res = res.logs[6].args._time
-          console.log(res);
-     let data = await oracletoken.retrieveData(res); 
-    assert(data = 100 , "data=100");
-    balance2x = await (oracletoken.balanceOf(accounts[0]));
-    console.log(balance2x);
-
-     console.log("2 proof of work");*/
-
-/*    await oracletoken.setDifficulty(1,{from: accounts[1]});
+   await oracletoken.setDifficulty(1,{from: accounts[1]});
      console.log("3");
     await oracletoken.proofOfWork(1531005120, 101, {from: accounts[3]});
      console.log("4");
@@ -125,8 +128,8 @@ contract('Base Tests', function(accounts) {
     await oracletoken.proofOfWork(1531005240, 103, {from: accounts[5]});
      console.log("8");
     await oracletoken.setDifficulty(1,{from: accounts[1]});
-     console.log("9");*/
-/*    await oracletoken.proofOfWork(1531005300, 105, {from: accounts[6]});
+     console.log("9");
+   await oracletoken.proofOfWork(1531005300, 105, {from: accounts[6]});
     balance2x = await (oracletoken.balanceOf(accounts[2]));
     balance3x = await (oracletoken.balanceOf(accounts[3]));
     balance4x = await (oracletoken.balanceOf(accounts[4]));
@@ -137,8 +140,6 @@ contract('Base Tests', function(accounts) {
     assert.equal(balance3-balance3x, 5, "balance should be 5 for acct3");
     assert.equal(balance5-balance5x, 5, "balance should be 5 for acct5");
     assert.equal(balance3-balance3x, 10, "balance should be one for acct3");
-  */
-   /*});*/
 
-
-/*});*/
+   });  */
+});

@@ -1,6 +1,6 @@
 /** This contract tests the ProofOfWorkToken functions
 */ 
-var oracleToken = artifacts.require("OracleToken");
+/*var oracleToken = artifacts.require("OracleToken");
 var oracleVote = artifacts.require("OracleVote");
 var Token = artifacts.require("Token");
 var POWT = artifacts.require("ProofOfWorkToken.sol");
@@ -9,8 +9,6 @@ var CloneFactory = artifacts.require("CloneFactory.sol");
 contract('Base Tests', function(accounts) {
   let oracletoken;
   let oraclevote;
-  let token;
-  let clonefactory;
   
     beforeEach('Setup contract for each test', async function () {
         oracletoken = await oracleToken.new();
@@ -116,4 +114,4 @@ contract('Base Tests', function(accounts) {
     });
 
 });
- 
+ */

@@ -122,6 +122,7 @@ import "./ProofOfWorkToken.sol";
 
     /*
     * @dev Propose updates to minimum quorum 
+    * @param _minimumQuorum from 1-100 representing a percentage of total circulating supply
     */
     function propMinimumQuorum(uint _minimumQuorum) public returns(uint proposalId)  {
         require(balanceOf(msg.sender) > proposalFee && _minimumQuorum != 0);
@@ -141,7 +142,8 @@ import "./ProofOfWorkToken.sol";
     }
 
     /*
-    * @dev Updates the proposal fee amount
+    * @dev Updates the vote duration
+    * @param _voteDuration in days
     */
     function propVoteDuration(uint _voteDuration) public returns(uint proposalId)  {
         require(balanceOf(msg.sender) > proposalFee && _voteDuration != 0);
