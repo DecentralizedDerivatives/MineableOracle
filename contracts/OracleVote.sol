@@ -311,7 +311,5 @@ import "./ProofOfWorkToken.sol";
         emit ChangeProposalFee(proposalFee);
     }
 
-
-
 }
  

@@ -1,7 +1,7 @@
 /** This contract tests the typical workflow from the dApp 
 * (user contract, cash out)
 */
-/*var oracleToken = artifacts.require("OracleToken");
+var oracleToken = artifacts.require("OracleToken");
 
 
 function promisifyLogWatch(_event) {
@@ -23,11 +23,42 @@ contract('Base Tests', function(accounts) {
   let oracletoken;
   
   beforeEach('Setup contract for each test', async function () {
-     oracletoken = await oracleToken.new();
-     await init("test/BTCUSD",oracletoken.address,22,5,[1,5,10,5,1]);
+        oracletoken = await oracleToken.new();
+        console.log("dud oracle:", oracletoken.address);
+        oraclevote = await oracleVote.new(22,1,1);
+        console.log("oracle vote:", oraclevote.address);
+        await oraclevote.propDudOracle(oracletoken.address);
+        await oraclevote.vote(1, true,{from:accounts[0]} );
+        await oraclevote.tallyVotes(1, {from:accounts[0]} )
+
+        console.log("setDudOracle", await oraclevote.dud_Oracle.call());
+        balance0 = await (oraclevote.balanceOf(accounts[0],{from:accounts[0]}));
+        console.log("owner bal", balance0);
+        await oraclevote.transfer(accounts[4],100,{from:accounts[0]});
+        console.log("transfer successful acct4");
+        await oraclevote.transfer(accounts[5],100,{from:accounts[0]});
+        console.log("transfer successful acct5");
+        await oraclevote.transfer(accounts[6],100,{from:accounts[0]});
+        console.log("transfer successful acct6");
+        await oraclevote.transfer(accounts[7],100,{from:accounts[0]});
+        console.log("transfer successful acct7");
+        await oraclevote.transfer(accounts[8],100,{from:accounts[0]});
+        console.log("transfer acct8");
+
+        await oraclevote.propAdd("testAddproposedOracle",22,5,[1,5,10,5,1], {from:accounts[8]});
+        await oraclevote.vote(2, true,{from:accounts[0]} );
+        let res = await oraclevote.tallyVotes(2, {from:accounts[0]} );
+        res = res.logs[0].args._newOracle;
+        console.log("res address", res);
+        oracletoken = await oracleToken.at(res);
   });
 
-  it("Recording values to fx proof of work-no mining", async function () {
+  it("getVariables", async function(){
+      vars = await oracletoken.getVariables();
+      console.log(vars)
+  });  
+
+/*  it("Recording values to fx proof of work-no mining", async function () {
     let variables= await oracletoken.getVariables();
     assert(variables = [0x0000000000000000000000000000000000000000000000000000000000000000,1] , "Diffiuculty= 1");
     await oracletoken.proofOfWork("1", 10, {from: accounts[4]});
@@ -38,11 +69,11 @@ contract('Base Tests', function(accounts) {
     console.log(await oracletoken.getVariables());
     await oracletoken.proofOfWork("1", 7, {from: accounts[7]});
     console.log(await oracletoken.getVariables());
-    await oracletoken.proofOfWork("1", 5, {from: accounts[8]});*/
-   // await oracletoken.isData(uint _timestamp); //assert = true
-  //  await oracletoken.retrieveData(uint _timestamp);//where to get timestamp assert=5
+    await oracletoken.proofOfWork("1", 5, {from: accounts[8]});
+    await oracletoken.isData(uint _timestamp); //assert = true
+    await oracletoken.retrieveData(uint _timestamp);//where to get timestamp assert=5
 
-/*  })
+  })
 
   it("testAdd", async function(){
     await oracletoken.testAdd(1531008000,100);
@@ -50,22 +81,10 @@ contract('Base Tests', function(accounts) {
     assert(data = 100 , "data=100");
   });
 
-  it("Token Transfer", async function(){*/
-    // balance2 = await (oracletoken.balanceOf(accounts[2]));
-    // console.log(balance2);
-    // await oracletoken.transfer(accounts[2], 5);
-    // balance2x = await (oracletoken.balanceOf(accounts[2]));
-    // console.log(balance2x);
-    // assert(balance2-balance2x == 5 , "5");
-/*  });
-
-
-  it("Token Approval and Transfer", async function(){
-
-  });
   it("Sample Mine Token", async function(){
 
   });
+
   it("Mine tokens and get 20 values", async function(){
     
   });
