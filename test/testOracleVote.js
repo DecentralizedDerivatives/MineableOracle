@@ -25,7 +25,8 @@ contract('Base Tests', function(accounts) {
         console.log("oracle vote:", oraclevote.address);
         await oraclevote.setProposalFee(22);
         console.log("set proposal fee");
-        await oraclevote.setDudOracle(oracletoken.address);
+        await propDudOracle(oracletoken.address);
+        await oraclevote.vote(1, true,{from:accounts[0]} );
         console.log("setDudOracle", await oraclevote.dud_Oracle.call());
         balance0 = await (oraclevote.balanceOf(accounts[0],{from:accounts[0]}));
         console.log("owner bal", balance0);
@@ -53,19 +54,6 @@ contract('Base Tests', function(accounts) {
         res2 = res2.logs[0].args._newOracle;
         oracletoken2 = await oracleToken.at(res2);
 
-
-
-/*      let res = await oraclevote.deployNewOracle("json(https://api.gdax.com/products/BTC-USD/ticker).price",22,10,[1,5,10,5,1]); 
-        res = res.logs[0].args._newOracle;
-        oracletoken = await oracleToken.at(res);
-        console.log("cloned oracle res",res); 
-        console.log("oracle.address:", oracletoken.address); 
-
-        let res2 = await oraclevote.deployNewOracle("json(https://api.gdax.com/products/ETH-USD/ticker).price",22,10,[1,5,10,5,1]); 
-        res2 = res2.logs[0].args._newOracle;
-        oracletoken2 = await oracleToken.at(res2);
-        console.log("cloned oracle res2",res2); 
-        console.log("oracle.address2:", oracletoken2.address); */
     });
 
 /*    it("Change quorum and voting timeframe", async function(){
@@ -104,25 +92,6 @@ contract('Base Tests', function(accounts) {
         assert.equal(count3, 2);
      });*/
 
-
-/*    it("Remove Oracle", async function(){
-        console.log("get details2", await oraclevote.getDetails(oracletoken2.address));
-        console.log("get index oracle 2", await oraclevote.getindex(oracletoken2.address));
-        console.log("get index oracle1", await oraclevote.getindex(oracletoken.address));
-        console.log("get details1", await oraclevote.getDetails(oracletoken.address));
-        await oraclevote.removeOracle(oracletoken.address);
-        console.log("get index oracle1-remove", await oraclevote.getindex(oracletoken.address));
-        details = await oraclevote.getDetails(oracletoken.address);
-        assert(details = [ '', '0x0000000000000000000000000000000000000000' ], "oracle removed")
-    });
-
-    it("Add Oracle", async function(){
-        let res3 = await oraclevote.deployNewOracle("json(https://api.gdax.com/products/ETH-USD/ticker).price",22,10,[1,5,10,5,1]); 
-        res3 = res3.logs[0].args._newOracle;
-        oracletoken3 = await oracleToken.at(res3);
-        console.log("cloned oracle res3",res3); 
-        console.log("oracle.address3:", oracletoken3.address); 
-    });*/
 
 /*    it("Proposal to remove, vote, tally-Pass", async function(){
         await oraclevote.changeVotingRules(1, 1);
