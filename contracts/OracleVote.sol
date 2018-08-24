@@ -2,7 +2,6 @@
 
 import "./libraries/SafeMath.sol"; 
 import "./ProofOfWorkToken.sol";
-import "./Token.sol";
 
 
 /**
@@ -235,25 +234,26 @@ import "./Token.sol";
                 nay += voteWeight;
             }
         }
-        uint circulating_supply = (2**256).sub(balanceOf(this));
-        uint minQuorum = (minimumQuorum.div(100)).mul(circulating_supply);
-        emit eventquorum(minQuorum);
 
+/*      uint minQuorum = (minimumQuorum.div(100)).mul((2**256)-1-balanceOf(address(this)));
+        emit eventquorum(minQuorum); */ 
+        uint minQuorum = minimumQuorum;
          require(quorum >= minQuorum); 
           if (yea > nay ) {
             if (prop.propType==1){
-                //address _removeOracle = propRemoveOrUpdateOracle[_proposalId];
-                //removeOracle(_removeOracle);
                 removeOracle(propRemoveOrUpdateOracle[_proposalId]);
             } else if (prop.propType==2){
                 propAddOracle storage addOra = propAddOracles[_proposalId];
                 deployNewOracle(addOra.api,addOra.readFee, addOra.timeTarget, addOra.payoutStructure);
             } else if (prop.propType==3){
-                //address _minimumQuorum = propUpdatePropVars[_proposalId];
-                //setMinimumQuorum(_minimumQuorum );
                 setMinimumQuorum(propUpdatePropVars[_proposalId]);
+            } else if (prop.propType==4){
+                setVoteDuration(propUpdatePropVars[_proposalId]);
+            } else if (prop.propType==5){
+                setProposalFee(propUpdatePropVars[_proposalId]);
+            } else if (prop.propType==6){
+                setDudOracle(propRemoveOrUpdateOracle[_proposalId]);
             }
-
             prop.executed = true;
             prop.proposalPassed = true;
         } else {

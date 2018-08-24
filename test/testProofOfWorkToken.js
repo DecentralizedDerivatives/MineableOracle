@@ -1,6 +1,6 @@
 /** This contract tests the ProofOfWorkToken functions
 */ 
-var oracleToken = artifacts.require("OracleToken");
+/*var oracleToken = artifacts.require("OracleToken");
 var oracleVote = artifacts.require("OracleVote");
 var Token = artifacts.require("Token");
 var POWT = artifacts.require("ProofOfWorkToken.sol");
@@ -31,18 +31,6 @@ contract('Base Tests', function(accounts) {
         console.log("transfer successful acct6");
         await oraclevote.transfer(accounts[7],100,{from:accounts[0]});
         console.log("transfer successful acct7");
-
-/*        let res = await oraclevote.deployNewOracle("json(https://api.gdax.com/products/BTC-USD/ticker).price",22,10,[1,5,10,5,1]); 
-        res = res.logs[0].args._newOracle;
-        oracletoken = await oracleToken.at(res);
-        console.log("cloned oracle res",res); 
-        console.log("oracle.address:", oracletoken.address); 
-
-        let res2 = await oraclevote.deployNewOracle("json(https://api.gdax.com/products/ETH-USD/ticker).price",22,10,[1,5,10,5,1]); 
-        res2 = res2.logs[0].args._newOracle;
-        oracletoken2 = await oracleToken.at(res2);
-        console.log("cloned oracle res2",res2); 
-        console.log("oracle.address2:", oracletoken2.address);  */
 
 
     });
@@ -98,7 +86,7 @@ contract('Base Tests', function(accounts) {
         console.log("circulating supply", csupply);
         //assert.equal(allow, 100, "Allowance shoudl be 100");
     });
-
+*/
 
     /*it("Recording values to fx proof of work-no mining", async function () {
         let variables= await oracletoken.getVariables();
@@ -122,5 +110,5 @@ contract('Base Tests', function(accounts) {
 
 
 
-});
+/*});*/
  
