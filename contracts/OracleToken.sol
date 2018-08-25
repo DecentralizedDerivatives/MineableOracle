@@ -14,7 +14,7 @@ contract OracleToken{
     /*Variables*/
     bytes32 public currentChallenge;
     uint public timeOfLastProof; // time of last challenge solved
-    uint256 public difficulty = 1; // Difficulty starts low
+    uint256 public difficulty; // Difficulty starts low
     uint public timeTarget;
     uint count;
     string public API;
@@ -52,6 +52,7 @@ contract OracleToken{
         readFee = _readFee;
         timeTarget = _timeTarget;
         payoutStructure = _payoutStructure;
+        difficulty = 1;
     }
 
     /**

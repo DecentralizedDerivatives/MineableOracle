@@ -22,64 +22,64 @@ contract('Base Tests', function(accounts) {
   
     beforeEach('Setup contract for each test', async function () {
         oracletoken = await oracleToken.new();
-        console.log("dud oracle:", oracletoken.address);
-        oraclevote = await oracleVote.new(22,1,1);
-        console.log("oracle vote:", oraclevote.address);
+        //console.log("dud oracle:", oracletoken.address);
+        oraclevote = await oracleVote.new(22,10,1);
+        //console.log("oracle vote:", oraclevote.address);
         await oraclevote.propDudOracle(oracletoken.address);
         await oraclevote.vote(1, true,{from:accounts[0]} );
         await oraclevote.tallyVotes(1, {from:accounts[0]} )
 
-        console.log("setDudOracle", await oraclevote.dud_Oracle.call());
+        //console.log("setDudOracle", await oraclevote.dud_Oracle.call());
         balance0 = await (oraclevote.balanceOf(accounts[0],{from:accounts[0]}));
-        console.log("owner bal", balance0);
+        //console.log("owner bal", balance0);
         await oraclevote.transfer(accounts[4],100,{from:accounts[0]});
-        console.log("transfer successful acct4");
+        //console.log("transfer successful acct4");
         await oraclevote.transfer(accounts[5],100,{from:accounts[0]});
-        console.log("transfer successful acct5");
+        //console.log("transfer successful acct5");
         await oraclevote.transfer(accounts[6],100,{from:accounts[0]});
-        console.log("transfer successful acct6");
+        //console.log("transfer successful acct6");
         await oraclevote.transfer(accounts[7],100,{from:accounts[0]});
-        console.log("transfer successful acct7");
+        //console.log("transfer successful acct7");
         await oraclevote.transfer(accounts[8],100,{from:accounts[0]});
-        console.log("transfer acct8");
+        //console.log("transfer acct8");
 
         await oraclevote.propAdd("testAddproposedOracle",22,5,[1,5,10,5,1], {from:accounts[8]});
         await oraclevote.vote(2, true,{from:accounts[0]} );
         let res = await oraclevote.tallyVotes(2, {from:accounts[0]} );
         res = res.logs[0].args._newOracle;
-        console.log("res address", res);
         oracletoken = await oracleToken.at(res);
 
-        logNewValueWatcher = promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
-        console.log("logNewValueWatcher", logNewValueWatcher);
+/*        logNewValueWatcher = promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
+        console.log("logNewValueWatcher", logNewValueWatcher);*/
     });
 
     it("getVariables", async function(){
         vars = await oracletoken.getVariables();
         console.log(vars);
-        assert(vars = ['0x0000000000000000000000000000000000000000000000000000000000000000',0]);
+        assert(vars = ['0x0000000000000000000000000000000000000000000000000000000000000000',1]);//this should be 1
     }); 
 
-    it("Recording values to fx proof of work-no mining", async function () {
+/*    it("Recording values to fx proof of work-no mining", async function () {
         vars = await oracletoken.getVariables();
         console.log(vars);
-        assert(vars = ['0x0000000000000000000000000000000000000000000000000000000000000000',0]);
-/*        await oracletoken.proofOfWork("1534377600", 10, {from: accounts[4]});
+        assert(vars = ['0x0000000000000000000000000000000000000000000000000000000000000000',1]);
+        await oracletoken.proofOfWork("1534377600", 10, {from: accounts[4]});
         logNewValueWatcher = promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
-        console.log("logNewValueWatcher", logNewValueWatcher);
-        console.log(await oracletoken.getVariables());
+
+
+       console.log(await oracletoken.getVariables());
         await oracletoken.proofOfWork("1534377600", 4, {from: accounts[5]});
         console.log(await oracletoken.getVariables());
         await oracletoken.proofOfWork("1534377600", 9, {from: accounts[6]});
         console.log(await oracletoken.getVariables());
         await oracletoken.proofOfWork("1534377600", 7, {from: accounts[7]});
-        console.log(await oracletoken.getVariables());*/
+        console.log(await oracletoken.getVariables());
         let result = await oracletoken.proofOfWork("1534377600", 5, {from: accounts[8]});
         result1 = result.logs[0].args;//New value event has 5 events
         result2 = result.logs[11].args._time; //PushValue- has 5 events Mine event-timestamp
         await oracletoken.isData(1534377600); //assert = true
         await oracletoken.retrieveData(1534377600);//where to get timestamp assert=5
-    });
+    });*/
 
 /*    it("testAdd", async function(){
         await oracletoken.testAdd(1531008000,100);
