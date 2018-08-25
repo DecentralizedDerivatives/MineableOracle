@@ -1,6 +1,6 @@
 /** This contract tests the oracleVote.sol functions
 */
-/*var oracleToken = artifacts.require("OracleToken");
+var oracleToken = artifacts.require("OracleToken");
 var oracleVote = artifacts.require("OracleVote");
 var Token = artifacts.require("Token");
 var POWT = artifacts.require("ProofOfWorkToken.sol");
@@ -17,32 +17,31 @@ contract('Base Tests', function(accounts) {
   
     beforeEach('Setup contract for each test', async function () {
         oracletoken = await oracleToken.new();
-        console.log("dud oracle:", oracletoken.address);
+        //console.log("dud oracle:", oracletoken.address);
         oraclevote = await oracleVote.new(22,1,1);
-        console.log("oracle vote:", oraclevote.address);
+        //console.log("oracle vote:", oraclevote.address);
         await oraclevote.propDudOracle(oracletoken.address);
         await oraclevote.vote(1, true,{from:accounts[0]} );
         await oraclevote.tallyVotes(1, {from:accounts[0]} )
 
-        console.log("setDudOracle", await oraclevote.dud_Oracle.call());
+        //console.log("setDudOracle", await oraclevote.dud_Oracle.call());
         balance0 = await (oraclevote.balanceOf(accounts[0],{from:accounts[0]}));
-        console.log("owner bal", balance0);
+        //console.log("owner bal", balance0);
         await oraclevote.transfer(accounts[4],100,{from:accounts[0]});
-        console.log("transfer successful acct4");
+        //console.log("transfer successful acct4");
         await oraclevote.transfer(accounts[5],100,{from:accounts[0]});
-        console.log("transfer successful acct5");
+        //console.log("transfer successful acct5");
         await oraclevote.transfer(accounts[6],100,{from:accounts[0]});
-        console.log("transfer successful acct6");
+        //console.log("transfer successful acct6");
         await oraclevote.transfer(accounts[7],100,{from:accounts[0]});
-        console.log("transfer successful acct7");
+        //console.log("transfer successful acct7");
         await oraclevote.transfer(accounts[8],100,{from:accounts[0]});
-        console.log("transfer acct8");
+        //console.log("transfer acct8");
 
         await oraclevote.propAdd("testAddproposedOracle",22,5,[1,5,10,5,1], {from:accounts[8]});
         await oraclevote.vote(2, true,{from:accounts[0]} );
         let res = await oraclevote.tallyVotes(2, {from:accounts[0]} );
         res = res.logs[0].args._newOracle;
-        console.log("res address", res);
         oracletoken = await oracleToken.at(res);
 
         await oraclevote.propAdd("testAddproposedOracle2",22,5,[1,5,10,5,1], {from:accounts[8]});
@@ -214,4 +213,3 @@ contract('Base Tests', function(accounts) {
         assert(proposalsList = [1,2,3], "proposals list");
     });
 });
-*/

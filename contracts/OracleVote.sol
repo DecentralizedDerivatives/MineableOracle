@@ -216,6 +216,11 @@ import "./ProofOfWorkToken.sol";
         return voteId;
     }
 
+//for testing//////////////////////////////
+    function quorumNeeded() public constant returns (uint){
+        uint minQuorum = ((2**256)-1-balanceOf(address(this))*100).mul(minimumQuorum).div(10000) ;
+        return(minQuorum);
+    }
     /**
     * @dev tallies the votes and executes if minimum quorum is met or exceeded.
     * @param _proposalId is the proposal id
@@ -237,9 +242,8 @@ import "./ProofOfWorkToken.sol";
             }
         }
 
-/*      uint minQuorum = (minimumQuorum.div(100)).mul((2**256)-1-balanceOf(address(this)));
-        emit eventquorum(minQuorum); */ 
-        uint minQuorum = minimumQuorum;
+        uint minQuorum = ((2**256)-1-balanceOf(address(this))*100).mul(minimumQuorum).div(10000) ;
+
          require(quorum >= minQuorum); 
           if (yea > nay ) {
             if (prop.propType==1){
