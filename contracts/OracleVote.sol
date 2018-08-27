@@ -125,7 +125,7 @@ import "./ProofOfWorkToken.sol";
     * @param _minimumQuorum from 1-100 representing a percentage of total circulating supply
     */
     function propMinimumQuorum(uint _minimumQuorum) public returns(uint proposalId)  {
-        require(balanceOf(msg.sender) > proposalFee && _minimumQuorum != 0);
+        require(balanceOf(msg.sender) > proposalFee && _minimumQuorum >= 1 && _minimumQuorum <= 100);
         transfer(address(this), proposalFee);
         proposalId = proposalsIds.length + 1;
         proposalsIds.push(proposalId);
