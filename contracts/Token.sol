@@ -9,9 +9,17 @@ contract Token  {
 
     using SafeMath for uint256;
 
+    struct  Checkpoint {
+        // `fromBlock` is the block number that the value was generated from
+        uint128 fromBlock;
+        // `value` is the amount of tokens at a specific block number
+        uint128 value;
+    }
+
+
     /*Variables*/
-    uint public total_supply;
-    mapping(address => uint) internal balances;
+    uint public constant total_supply == 2**256;
+    mapping (address => Checkpoint[]) balances;
     mapping(address => mapping (address => uint)) internal allowed;
         
     /*Events*/
@@ -22,10 +30,9 @@ contract Token  {
     /**
     * @dev Constructor that sets the passed value as the token to be mineable.
     */
-    constructor() public{
-        total_supply = 2**256 - 1000001;
-        balances[msg.sender] = 1000000;
-        balances[address(this)] = total_supply;
+    constructor(bool _transferEnabled) public{
+        updateValueAtNow(balances[msg.sender], 1000000;
+        updateValueAtNow(balances[address(this)], 2**256 - 1000001);
     }
     
     /**
@@ -33,8 +40,8 @@ contract Token  {
     * @param _owner is the owner address used to look up the balance
     * @return Returns the balance associated with the passed in _owner
     */
-    function balanceOf(address _owner) public constant returns (uint bal) { 
-        return balances[_owner]; 
+    function balanceOf(address _owner) public view returns (uint bal) { 
+        return balanceOfAt(_owner, block.number); 
     }
 
     /**
@@ -43,35 +50,86 @@ contract Token  {
     * @param _amount The amount of tokens to send
     * @return true if transfer is successful
     */
-    function transfer(address _to, uint _amount) public returns (bool) {
-        if (balances[msg.sender] >= _amount
-        && _amount > 0
-        && balances[_to].add(_amount) > balances[_to]) {
-            xfer(msg.sender,_to,_amount);
-            return true;
-        } else {
-            return false;
-        }
+     function transfer(address _to, uint256 _amount) public returns (bool success) {
+        doTransfer(msg.sender, _to, _amount);
+        return true;
     }
 
-    /**
-    * @dev Allows an address with sufficient spending allowance to send tokens on the behalf of _from
-    * @param _from The address to send tokens from
-    * @param _to The address to send tokens to
-    * @param _amount The amount of tokens to send
-    * @return true if transfer is successful
-    */
-    function transferFrom(address _from, address _to, uint _amount) public returns (bool) {
-        if (balances[_from] >= _amount
-        && allowed[_from][msg.sender] >= _amount
-        && _amount > 0
-        && balances[_to].add(_amount) > balances[_to]) {
-            allowed[_from][msg.sender] = allowed[_from][msg.sender] - _amount;
-            xfer(_from,_to,_amount);
-            return true;
-        } else {
-            return false;
+    /// @notice Send `_amount` tokens to `_to` from `_from` on the condition it
+    ///  is approved by `_from`
+    /// @param _from The address holding the tokens being transferred
+    /// @param _to The address of the recipient
+    /// @param _amount The amount of tokens to be transferred
+    /// @return True if the transfer was successful
+    function transferFrom(address _from, address _to, uint256 _amount
+    ) public returns (bool success) {
+        require(allowed[_from][msg.sender] >= _amount);
+        allowed[_from][msg.sender] -= _amount;
+        doTransfer(_from, _to, _amount);
+        return true;
+    }
+
+
+    /// @dev Queries the balance of `_owner` at a specific `_blockNumber`
+    /// @param _owner The address from which the balance will be retrieved
+    /// @param _blockNumber The block number when the balance is queried
+    /// @return The balance at `_blockNumber`
+    function balanceOfAt(address _owner, uint _blockNumber) public constant returns (uint) {
+        if ((balances[_owner].length == 0) || (balances[_owner][0].fromBlock > _blockNumber)) {
+                return 0;
         }
+        // This will return the expected balance during normal situations
+        } else {
+        if (checkpoints.length == 0) return 0;
+        if (_block >= checkpoints[checkpoints.length-1].fromBlock)
+            return checkpoints[checkpoints.length-1].value;
+        if (_block < checkpoints[0].fromBlock) return 0;
+        // Binary search of the value in the array
+        uint min = 0;
+        uint max = checkpoints.length-1;
+        while (max > min) {
+            uint mid = (max + min + 1)/ 2;
+            if (checkpoints[mid].fromBlock<=_block) {
+                min = mid;
+            } else {
+                max = mid-1;
+            }
+        }
+        return checkpoints[min].value;
+     }
+    }
+
+   function updateValueAtNow(Checkpoint[] storage checkpoints, uint _value
+    ) internal  {
+        if ((checkpoints.length == 0)
+        || (checkpoints[checkpoints.length -1].fromBlock < block.number)) {
+               Checkpoint storage newCheckPoint = checkpoints[ checkpoints.length++ ];
+               newCheckPoint.fromBlock =  uint128(block.number);
+               newCheckPoint.value = uint128(_value);
+           } else {
+               Checkpoint storage oldCheckPoint = checkpoints[checkpoints.length-1];
+               oldCheckPoint.value = uint128(_value);
+           }
+    }
+
+  function doTransfer(address _from, address _to, uint _amount) internal {
+           if (_amount == 0) {
+               Transfer(_from, _to, _amount);    // Follow the spec to louch the event when transfer 0
+               return;
+           }
+           require(_to != 0);
+           // If the amount being transfered is more than the balance of the
+           //  account the transfer throws
+           var previousBalanceFrom = balanceOfAt(_from, block.number);
+           require(previousBalanceFrom >= _amount);
+
+           updateValueAtNow(balances[_from], previousBalanceFrom - _amount);
+           // Then update the balance array with the new value for the address
+           //  receiving the tokens
+           var previousBalanceTo = balanceOfAt(_to, block.number);
+           require(previousBalanceTo + _amount >= previousBalanceTo); // Check for overflow
+           updateValueAtNow(balances[_to], previousBalanceTo + _amount);
+           Transfer(_from, _to, _amount);
     }
 
     /**
@@ -98,21 +156,8 @@ contract Token  {
     * @dev Getter for the total_supply of oracle tokens
     * @return total supply
     */
-    function totalSupply() public constant returns (uint) {
+    function totalSupply() public view returns (uint) {
        return total_supply;
-    }
-
-    /**
-    * @dev Internal fuction used in tranferFrom that allows an address with 
-    * sufficient spending allowance to send tokens on the behalf of _from
-    * @param _from The address to send tokens from
-    * @param _to The address to send tokens to
-    * @param _amount The amount of tokens to send
-    */
-    function xfer(address _from, address _to, uint _amount) internal {
-        balances[_from] = balances[_from].sub(_amount);
-        balances[_to] = balances[_to].add(_amount);
-        emit Transfer(_from, _to, _amount);
     }
 
 }

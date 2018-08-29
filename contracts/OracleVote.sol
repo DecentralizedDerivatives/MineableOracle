@@ -27,14 +27,25 @@ import "./ProofOfWorkToken.sol";
     mapping(uint => uint) public propUpdatePropVars;// saves proposed changes to minimum quorum, proposal fee, and vote duration
     mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
     
+
     struct Proposal {
-        uint propType; //1=remove oracle, 2=add oracle, 3=changeMinQuorum, 4=ChangeVoteDuration, 5= ChangeProposalFee, 6 = changeDudOracle
+        enum propType {
+        removeOracle,
+        addOracle,
+        changeMinQuorum,
+        changeVoteDuration,
+        changeProposalFee,
+        changeDudOracle
+
+        } // 4=ChangeVoteDuration, 5= ChangeProposalFee, 6 = changeDudOracle
         uint minExecutionDate; 
         bool executed;
         bool proposalPassed;
         uint numberOfVotes;
-        Vote[] votes;
+        int tally;
+        uint quorum;
         mapping (address => bool) voted;
+        uint  blockNumber;
     }
 
     struct propAddOracle {
@@ -49,6 +60,7 @@ import "./ProofOfWorkToken.sol";
         address voter;
     }
     
+
     /*Events*/
     event ProposalToRemove(uint proposalID, address oracleAddress);
     event ProposalToAdd(uint proposalId, string _api, uint _readFee, uint _timeTarget, uint[5] _payoutStructure);
@@ -57,7 +69,7 @@ import "./ProofOfWorkToken.sol";
     event ProposalDudOracle(uint proposalID, address newDudOracle);
     event ProposalProposalFee(uint proposalID, uint newProposalFee);
     event Voted(uint proposalID, bool position, address voter);
-    event ProposalTallied(uint proposalID, uint result, uint quorum, bool active);
+    event ProposalTallied(uint proposalID, int result, uint quorum, bool active);
     event ChangeMinQuorum(uint newMinimumQuorum);
     event ChangeVoteDuration(uint newVotingDuration);
     event ChangeProposalFee(uint newProposalFee);
@@ -65,7 +77,7 @@ import "./ProofOfWorkToken.sol";
 
 
     /*Functions*/
-    constructor(uint _proposalFee, uint _minimumQuorum, uint _voteDuration ) public{
+    constructor(uint _proposalFee, uint _minimumQuorum, uint _voteDuration) public{
        proposalFee = _proposalFee;
        minimumQuorum = _minimumQuorum;
        voteDuration = _voteDuration;
@@ -75,18 +87,9 @@ import "./ProofOfWorkToken.sol";
     * @dev Allows token holders to submit a proposal to remove an oracle
     * @param _removeOracle address of oracle to remove
     */
-    function propRemove(address _removeOracle) public returns(uint proposalId)  {
-        require(balanceOf(msg.sender) > proposalFee);
-        transfer(address(this), proposalFee);
-        proposalId = proposalsIds.length + 1;
-        proposalsIds.push(proposalId);
+    function propRemove(address _removeOracle) external returns(uint proposalId)  {
+        prop.funcs(1);
         propRemoveOrUpdateOracle[proposalId] = _removeOracle; 
-        Proposal storage prop = proposals[proposalId];
-        prop.propType = 1;
-        prop.minExecutionDate = now + voteDuration * 1 days; 
-        prop.executed = false;
-        prop.proposalPassed = false;
-        prop.numberOfVotes = 0;
         emit ProposalToRemove(proposalId, _removeOracle);
         return proposalId;
     }
@@ -101,16 +104,7 @@ import "./ProofOfWorkToken.sol";
     * @return proposalId the ID of the submitted proposal
     */
     function propAdd(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public returns(uint proposalId){
-        require(balanceOf(msg.sender) > proposalFee);
-        transfer(address(this), proposalFee);
-        proposalId = proposalsIds.length + 1;
-        proposalsIds.push(proposalId);
-        Proposal storage prop = proposals[proposalId];
-        prop.propType = 2;
-        prop.minExecutionDate = now + voteDuration * 1 days; 
-        prop.executed = false;
-        prop.proposalPassed = false;
-        prop.numberOfVotes = 0;
+        prop.funcs(2);
         propAddOracle storage addOra = propAddOracles[proposalId];
         addOra.api = _api;
         addOra.readFee = _readFee;
@@ -124,18 +118,10 @@ import "./ProofOfWorkToken.sol";
     * @dev Propose updates to minimum quorum 
     * @param _minimumQuorum from 1-100 representing a percentage of total circulating supply
     */
-    function propMinimumQuorum(uint _minimumQuorum) public returns(uint proposalId)  {
-        require(balanceOf(msg.sender) > proposalFee && _minimumQuorum != 0);
-        transfer(address(this), proposalFee);
-        proposalId = proposalsIds.length + 1;
-        proposalsIds.push(proposalId);
+    function propMinimumQuorum(uint _minimumQuorum) external returns(uint proposalId)  {
+        require(_minimumQuorum != 0);
+        prop.funcs(3);
         propUpdatePropVars[proposalId] = _minimumQuorum;
-        Proposal storage prop = proposals[proposalId];
-        prop.propType = 3;
-        prop.minExecutionDate = now + voteDuration * 1 days; 
-        prop.executed = false;
-        prop.proposalPassed = false;
-        prop.numberOfVotes = 0;  
         minimumQuorum = _minimumQuorum;
         emit ProposalMinQuroum(proposalId, _minimumQuorum);
         return proposalId;
@@ -145,18 +131,10 @@ import "./ProofOfWorkToken.sol";
     * @dev Updates the vote duration
     * @param _voteDuration in days
     */
-    function propVoteDuration(uint _voteDuration) public returns(uint proposalId)  {
-        require(balanceOf(msg.sender) > proposalFee && _voteDuration != 0);
-        transfer(address(this), proposalFee);
-        proposalId = proposalsIds.length + 1;
-        proposalsIds.push(proposalId);
+    function propVoteDuration(uint _voteDuration) external returns(uint proposalId)  {
+        require(_voteDuration != 0);
+        prop.funcs(4);
         propUpdatePropVars[proposalId] = _voteDuration;
-        Proposal storage prop = proposals[proposalId];
-        prop.propType = 4;
-        prop.minExecutionDate = now + voteDuration * 1 days; 
-        prop.executed = false;
-        prop.proposalPassed = false;
-        prop.numberOfVotes = 0;
         emit ProposalVoteDuration(proposalId, _voteDuration);
         return proposalId;
     }
@@ -164,18 +142,10 @@ import "./ProofOfWorkToken.sol";
     * @dev Updates the proposal fee amount
     * @param _proposalFee fee amount for member
     */
-    function propProposalFee(uint _proposalFee) public returns(uint proposalId)  {
-        require(balanceOf(msg.sender) > proposalFee && _proposalFee !=0);
-        transfer(address(this), proposalFee);
-        proposalId = proposalsIds.length + 1;
-        proposalsIds.push(proposalId);
+    function propProposalFee(uint _proposalFee) external returns(uint proposalId)  {
+        require(_proposalFee !=0);
+        prop.funcs(5);
         propUpdatePropVars[proposalId] = _proposalFee;
-        Proposal storage prop = proposals[proposalId];
-        prop.propType = 5;
-        prop.minExecutionDate = now + voteDuration * 1 days; 
-        prop.executed = false;
-        prop.proposalPassed = false;
-        prop.numberOfVotes = 0;
         emit ProposalProposalFee(proposalId, _proposalFee);
         return proposalId;
     }
@@ -184,20 +154,27 @@ import "./ProofOfWorkToken.sol";
     * @dev Set oracle dudd address to clone
     * @param _dud_Oracle address to clone
     */  
-    function propDudOracle(address _dud_Oracle) public returns(uint proposalId) {
-        require(balanceOf(msg.sender) > proposalFee && _dud_Oracle != address(0));
-        transfer(address(this), proposalFee);
-        proposalId = proposalsIds.length + 1;
-        proposalsIds.push(proposalId);
+    function propDudOracle(address _dud_Oracle) external returns(uint proposalId) {
+        require(_dud_Oracle != address(0));
+        prop.funcs(6);
         propRemoveOrUpdateOracle[proposalId] = _dud_Oracle; 
+        emit ProposalDudOracle(proposalId, _dud_Oracle);
+        return proposalId;
+    }
+
+
+    function propFuncs(uint _id) internal {
+        require(transfer(address(this), proposalFee));
+        proposalId = proposalsIds.length + 1;
         Proposal storage prop = proposals[proposalId];
-        prop.propType = 6;
+        proposalsIds.push(proposalId);
+        prop.propType = _id;
+        prop.snapshot = _newadd;
+        prop.blockNumber = block.number;
         prop.minExecutionDate = now + voteDuration * 1 days; 
         prop.executed = false;
         prop.proposalPassed = false;
         prop.numberOfVotes = 0;
-        emit ProposalDudOracle(proposalId, _dud_Oracle);
-        return proposalId;
     }
 
     /**
@@ -205,13 +182,19 @@ import "./ProofOfWorkToken.sol";
     * @param _proposalId is the proposal id
     * @param supportsProposal is the vote (true= vote for proposal false = vote against proposal)
     */
-    function vote(uint _proposalId, bool supportsProposal) public returns (uint voteId) {
+    function vote(uint _proposalId, bool _supportsProposal) external returns (uint voteId) {
         Proposal storage prop = proposals[_proposalId];
-        require(prop.voted[msg.sender] != true);
-        voteId = prop.votes.length++;
-        prop.votes[voteId] = Vote({inSupport: supportsProposal, voter: msg.sender});
+        require(prop.voted[msg.sender] != true && balanceOfAt(msg.sender,prop.blockNumber)>0);
         prop.voted[msg.sender] = true;
-        prop.numberOfVotes = voteId +1;
+        prop.numberOfVotes += 1;
+        uint voteWeight = balanceOfAt(msg.sender,prop.blockNumber);
+        prop.quorum += voteWeight;
+            if (supportsProposal) {
+                prop.tally += voteWeight;
+            } else {
+                prop.tally -= voteWeight;
+            }
+        }
         emit Voted(_proposalId,  supportsProposal, msg.sender);
         return voteId;
     }
@@ -220,28 +203,12 @@ import "./ProofOfWorkToken.sol";
     * @dev tallies the votes and executes if minimum quorum is met or exceeded.
     * @param _proposalId is the proposal id
     */
-    function tallyVotes(uint _proposalId) public {
+    function tallyVotes(uint _proposalId,uint _loop) external{
         Proposal storage prop = proposals[_proposalId];
         //require(now > prop.minExecutionDate && !prop.executed); //Uncomment for production-commented out for testing 
-        uint quorum = 0;
-        uint yea = 0;
-        uint nay = 0;  
-        for (uint i = 0; i <  prop.votes.length; ++i) {
-            Vote storage v = prop.votes[i];
-            uint voteWeight = balanceOf(v.voter);
-            quorum += voteWeight;
-            if (v.inSupport) {
-                yea += voteWeight;
-            } else {
-                nay += voteWeight;
-            }
-        }
-
-/*      uint minQuorum = (minimumQuorum.div(100)).mul((2**256)-1-balanceOf(address(this)));
-        emit eventquorum(minQuorum); */ 
         uint minQuorum = minimumQuorum;
          require(quorum >= minQuorum); 
-          if (yea > nay ) {
+          if (prop.tally > 0 ) {
             if (prop.propType==1){
                 removeOracle(propRemoveOrUpdateOracle[_proposalId]);
             } else if (prop.propType==2){
@@ -261,8 +228,9 @@ import "./ProofOfWorkToken.sol";
         } else {
             prop.proposalPassed = false;
         }
-        emit ProposalTallied(_proposalId, yea - nay, quorum, prop.proposalPassed);   
+        emit ProposalTallied(_proposalId,tally, quorum, prop.proposalPassed); 
     }
+
 
     /**
     *@dev Get proposal information

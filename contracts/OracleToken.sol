@@ -17,12 +17,12 @@ contract OracleToken{
     uint256 public difficulty = 1; // Difficulty starts low
     uint public timeTarget;
     uint count;
-    string public API;
     uint public readFee;
     address public master;
     uint[5] public payoutStructure;
     uint public  payoutMultiplier;
     mapping(uint => uint) values;
+    mapping(bytes32 => mapping(address=>bool)) miners;
     Details[5] first_five;
     uint public valuePool;
     struct Details {
@@ -44,10 +44,9 @@ contract OracleToken{
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
     */
-    function init(string _api,address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) external {
+    function init(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) external {
         require (timeOfLastProof == 0);
         timeOfLastProof = now;
-        API = _api;
         master = _master;
         readFee = _readFee;
         timeTarget = _timeTarget;
@@ -57,7 +56,7 @@ contract OracleToken{
     /**
     * @dev Getter function for currentChallenge difficulty
     */
-    function getVariables() public constant returns(bytes32, uint){
+    function getVariables() external view returns(bytes32, uint){
         return (currentChallenge,difficulty);
     }
 
@@ -69,12 +68,11 @@ contract OracleToken{
     */
     function proofOfWork(string nonce, uint value) external returns (uint256,uint256) {
         bytes32 n = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
-        require(uint(n) % difficulty == 0 && value > 0); //can we say > 0? I like it forces them to enter a valueS  
+        require(uint(n) % difficulty == 0 && value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a valueS  
         count++;
-        first_five[count-1] = Details({
-            value: value,
-            miner: msg.sender
-        }); 
+        first_five[count - 1].value = value;
+        first_five[count - 1].miner = msg.sender;
+        miners[currentChallenge][msg.sender] = true;
         emit NewValue(msg.sender,value);
         if(count == 5) {
             if (now - timeOfLastProof< timeTarget){
@@ -86,7 +84,7 @@ contract OracleToken{
             timeOfLastProof = now - (now % timeTarget);//should it be like this? So 10 minute intervals?;
             pushValue(timeOfLastProof);
             if(valuePool > 44) {
-                valuePool = valuePool.sub(22);
+                valuePool = valuePool -22;
                 payoutMultiplier = valuePool / 22; //solidity should always round down
             }
             else{
@@ -143,33 +141,52 @@ contract OracleToken{
     */
     function insertionSort(Details[5] storage a)internal {
        for (uint i = 1;i < a.length;i++){
-        uint temp = a[i].value;
-        address temp2 = a[i].miner;
-        uint j;
-        for (j = i -1; j >= 0 && temp < a[j].value; j--)
-            a[j+1].value = a[j].value;
-            a[j+1].miner = a[j].miner;
+            uint temp = a[i].value;
+            address temp2 = a[i].miner;
+            uint j = i;
+            while(j > 0 && temp < a[j-1].value;){
+                a[j].value = a[j-1].value;
+                a[j].miner = a[j-1].miner;   
+                j--;
+            }
        }
-            a[j+1].value = temp;
-            a[j+1].miner= temp2;
+        a[j].value = temp;
+        a[j].miner= temp2;
     }
 
     /**
     * @dev This fucntion rewards the first five miners that submit a value
     * @param _time is the time/date for the value being provided by the miner
     */
+
     function pushValue(uint _time) internal {
-        insertionSort(first_five);
-        ProofOfWorkToken _master = ProofOfWorkToken(master);
-        _master.iTransfer(first_five[2].miner, (payoutMultiplier.mul(payoutStructure[2]))); // reward to winner grows over time
-        _master.iTransfer(first_five[1].miner, payoutMultiplier.mul(payoutStructure[1])); // reward to winner grows over time
-        _master.iTransfer(first_five[3].miner, payoutMultiplier.mul(payoutStructure[3])); // reward to winner grows over time
-        _master.iTransfer(first_five[0].miner, payoutMultiplier.mul(payoutStructure[0])); // reward to winner grows over time
-        _master.iTransfer(first_five[4].miner, payoutMultiplier.mul(payoutStructure[4])); // reward to winner grows over time
-        values[_time] = first_five[2].value;
+        Details[5] memory a = first_five;
+        /**
+         * - This function would simply be adapted from your above insertionSort function
+         * - It would need to be a library, and operate directly on the passed-in pointer when sorting
+         *   (structs are passed by reference, not value)
+         */
+        for (uint i = 1;i < a.length;i++){
+            uint temp = a[i].value;
+            address temp2 = a[i].miner;
+            uint j = i;
+            while(j > 0 && temp < a[j-1].value;){
+                a[j].value = a[j-1].value;
+                a[j].miner = a[j-1].miner;   
+                j--;
+            }
+       }
+        a[j].value = temp;
+        a[j].miner= temp2;
+        /**
+         * - Batching the transfer will save ~(4 * 700) gas on external calls
+         * - d.addrs() is simply shorthand for a function that returns the addresses of d. It's not necessary,
+         *   but it does look clean
+         * - calculatePayoutStructure() returns (uint[5] memory), calculates each index of the batchTransfer amount using
+         *   payoutMultiplier and payoutStructure
+         */
+        ProofOfWorkToken(master).batchTransfer(d.addrs(), calculatePayoutStructure());
     }
-
-
 
     
 }
