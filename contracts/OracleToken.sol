@@ -41,7 +41,6 @@ contract OracleToken{
     /*Functions*/
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
-    * @param _api is the oracle api
     * @param _master is the master oracle address? POWT?
     * @param _readFee is the fee for reading oracle information
     * @param _timeTarget for the dificulty adjustment
@@ -139,7 +138,7 @@ contract OracleToken{
     }
 
     function calculatePayoutStructure() internal returns (uint[5]){
-        uint[5] arr;
+        uint[5] memory arr;
         for (uint i =0;i<payoutStructure.length;i++) {
             arr[i] = payoutStructure[i] * payoutMultiplier;
         }
@@ -154,11 +153,6 @@ contract OracleToken{
 
     function pushValue(uint _time) internal {
         Details[5] memory a = first_five;
-        /**
-         * - This function would simply be adapted from your above insertionSort function
-         * - It would need to be a library, and operate directly on the passed-in pointer when sorting
-         *   (structs are passed by reference, not value)
-         */
         for (uint i = 1;i < a.length;i++){
             uint temp = a[i].value;
             address temp2 = a[i].miner;
@@ -171,16 +165,8 @@ contract OracleToken{
        }
         a[j].value = temp;
         a[j].miner= temp2;
-        /**
-         * - Batching the transfer will save ~(4 * 700) gas on external calls
-         * - d.addrs() is simply shorthand for a function that returns the addresses of d. It's not necessary,
-         *   but it does look clean
-         * - calculatePayoutStructure() returns (uint[5] memory), calculates each index of the batchTransfer amount using
-         *   payoutMultiplier and payoutStructure
-         */
-        ProofOfWorkToken(master).batchTransfer(a.addrs(), calculatePayoutStructure());
+
+        ProofOfWorkToken(master).batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], calculatePayoutStructure());
         values[_time] = a[2].value;
     }
-
-    
 }

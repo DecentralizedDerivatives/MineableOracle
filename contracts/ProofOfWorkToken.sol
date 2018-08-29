@@ -62,7 +62,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     */
     function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) internal returns(address){
         address new_oracle = createClone(dud_Oracle);
-        OracleToken(new_oracle).init(_api,address(this),_readFee,_timeTarget,_payoutStructure);
+        OracleToken(new_oracle).init(address(this),_readFee,_timeTarget,_payoutStructure);
         oracle_index[new_oracle] = oracle_list.length;
         oracle_list.length++;
         OracleDetails storage _current = oracle_list[oracle_list.length-1]; 
@@ -78,12 +78,12 @@ contract ProofOfWorkToken is Token, CloneFactory {
     * @param _amount The amount of tokens to send
     * @return true if transfer is successful
     */
-function batchTransfer(address[] _miners, uint256[] _amount) external{
+function batchTransfer(address[5] _miners, uint256[5] _amount) external{
     require(oracle_index[msg.sender] > 0);
-    for (uint i = 0; i < _miners.lengt; i++) {
-        if (balances[address(this)] >= _amount[i]
+    for (uint i = 0; i < _miners.length; i++) {
+        if (balanceOf(address(this)) >= _amount[i]
         && _amount[i] > 0
-        && balances[_miners[i]].add(_amount[i]) > balances[_miners[i]]) {
+        && balanceOf(_miners[i]).add(_amount[i]) > balanceOf(_miners[i])) {
             doTransfer(address(this),_miners[i],_amount[i]);
             emit Mined(_miners[i], _amount[i]);
         }

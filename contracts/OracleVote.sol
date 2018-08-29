@@ -12,7 +12,7 @@ import "./ProofOfWorkToken.sol";
 
  contract OracleVote is ProofOfWorkToken {
 
-    using SafeMath for uint256; 
+    using SafeMath for uint256;
 
     /*Variables*/
     uint public minimumQuorum;
@@ -27,18 +27,10 @@ import "./ProofOfWorkToken.sol";
     mapping(uint => uint) public propUpdatePropVars;// saves proposed changes to minimum quorum, proposal fee, and vote duration
     mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
     
-
-    enum PropState {
-        removeOracle,
-        addOracle,
-        changeMinQuorum,
-        changeVoteDuration,
-        changeProposalFee,
-        changeDudOracle
-    }
+    //removeOracle, addOracle,changeMinQuorum, changeVoteDuration, changeProposalFee, changeDudOracle
 
     struct Proposal {
-        PropState propType;
+        uint propType; //removeOracle, addOracle,changeMinQuorum, changeVoteDuration, changeProposalFee, changeDudOracle
         uint minExecutionDate; 
         bool executed;
         bool proposalPassed;
@@ -83,7 +75,7 @@ import "./ProofOfWorkToken.sol";
     * @param _removeOracle address of oracle to remove
     */
     function propRemove(address _removeOracle) external returns(uint proposalId)  {
-        prop.funcs(1);
+        propFuncs(1);
         propRemoveOrUpdateOracle[proposalId] = _removeOracle; 
         emit ProposalToRemove(proposalId, _removeOracle);
         return proposalId;
@@ -99,7 +91,7 @@ import "./ProofOfWorkToken.sol";
     * @return proposalId the ID of the submitted proposal
     */
     function propAdd(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public returns(uint proposalId){
-        prop.funcs(2);
+        propFuncs(2);
         propAddOracle storage addOra = propAddOracles[proposalId];
         addOra.api = _api;
         addOra.readFee = _readFee;
@@ -115,7 +107,7 @@ import "./ProofOfWorkToken.sol";
     */
     function propMinimumQuorum(uint _minimumQuorum) external returns(uint proposalId)  {
         require(_minimumQuorum != 0);
-        prop.funcs(3);
+        propFuncs(3);
         propUpdatePropVars[proposalId] = _minimumQuorum;
         minimumQuorum = _minimumQuorum;
         emit ProposalMinQuroum(proposalId, _minimumQuorum);
@@ -128,7 +120,7 @@ import "./ProofOfWorkToken.sol";
     */
     function propVoteDuration(uint _voteDuration) external returns(uint proposalId)  {
         require(_voteDuration != 0);
-        prop.funcs(4);
+        propFuncs(4);
         propUpdatePropVars[proposalId] = _voteDuration;
         emit ProposalVoteDuration(proposalId, _voteDuration);
         return proposalId;
@@ -139,7 +131,7 @@ import "./ProofOfWorkToken.sol";
     */
     function propProposalFee(uint _proposalFee) external returns(uint proposalId)  {
         require(_proposalFee !=0);
-        prop.funcs(5);
+        propFuncs(5);
         propUpdatePropVars[proposalId] = _proposalFee;
         emit ProposalProposalFee(proposalId, _proposalFee);
         return proposalId;
@@ -151,7 +143,7 @@ import "./ProofOfWorkToken.sol";
     */  
     function propDudOracle(address _dud_Oracle) external returns(uint proposalId) {
         require(_dud_Oracle != address(0));
-        prop.funcs(6);
+        propFuncs(6);
         propRemoveOrUpdateOracle[proposalId] = _dud_Oracle; 
         emit ProposalDudOracle(proposalId, _dud_Oracle);
         return proposalId;
@@ -160,7 +152,7 @@ import "./ProofOfWorkToken.sol";
 
     function propFuncs(uint _id) internal {
         require(transfer(address(this), proposalFee));
-        proposalId = proposalsIds.length + 1;
+        uint proposalId = proposalsIds.length + 1;
         Proposal storage prop = proposals[proposalId];
         proposalsIds.push(proposalId);
         prop.propType = _id;
@@ -174,7 +166,7 @@ import "./ProofOfWorkToken.sol";
     /**
     * @dev Allows token holders to vote
     * @param _proposalId is the proposal id
-    * @param supportsProposal is the vote (true= vote for proposal false = vote against proposal)
+    * @param _supportsProposal is the vote (true= vote for proposal false = vote against proposal)
     */
     function vote(uint _proposalId, bool _supportsProposal) external returns (uint voteId) {
         Proposal storage prop = proposals[_proposalId];
@@ -182,16 +174,15 @@ import "./ProofOfWorkToken.sol";
         prop.voted[msg.sender] = true;
         prop.numberOfVotes += 1;
         uint voteWeight = balanceOfAt(msg.sender,prop.blockNumber);
-        prop.quorum += voteWeight;
-        if (supportsProposal) {
-            prop.tally += voteWeight;
+        prop.quorum +=  voteWeight;
+        if (_supportsProposal) {
+            prop.tally = prop.tally + int(voteWeight);
         } else {
-            prop.tally -= voteWeight;
+            prop.tally = prop.tally - int(voteWeight);
         }
-        emit Voted(_proposalId,  supportsProposal, msg.sender);
+        emit Voted(_proposalId,_supportsProposal,msg.sender);
         return voteId;
     }
-
     /**
     * @dev tallies the votes and executes if minimum quorum is met or exceeded.
     * @param _proposalId is the proposal id
@@ -201,7 +192,7 @@ import "./ProofOfWorkToken.sol";
         require(prop.executed == false);
         //require(now > prop.minExecutionDate && !prop.executed); //Uncomment for production-commented out for testing 
         uint minQuorum = minimumQuorum;
-         require(quorum >= minQuorum); 
+         require(prop.quorum >= minQuorum); 
           if (prop.tally > 0 ) {
             if (prop.propType==1){
                 removeOracle(propRemoveOrUpdateOracle[_proposalId]);
@@ -223,7 +214,7 @@ import "./ProofOfWorkToken.sol";
             prop.executed = true;
             prop.proposalPassed = false;
         }
-        emit ProposalTallied(_proposalId,tally, quorum, prop.proposalPassed); 
+        emit ProposalTallied(_proposalId,prop.tally, prop.quorum, prop.proposalPassed); 
     }
 
 
@@ -231,7 +222,7 @@ import "./ProofOfWorkToken.sol";
     *@dev Get proposal information
     *@param _propId to pull propType and prop passed
     */
-    function getProposalInfo(uint _propId) view public returns(uint, bool) {
+    function getProposalInfo(uint _propId) view public returns(uint,bool) {
         return(proposals[_propId].propType, proposals[_propId].proposalPassed);
     }
 

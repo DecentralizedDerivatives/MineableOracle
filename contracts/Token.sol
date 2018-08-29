@@ -18,7 +18,7 @@ contract Token  {
 
 
     /*Variables*/
-    uint public constant total_supply = 2**256;
+    uint public constant total_supply = 2**256-1;
     mapping (address => Checkpoint[]) balances;
     mapping(address => mapping (address => uint)) internal allowed;
         
@@ -121,23 +121,17 @@ contract Token  {
     }
 
   function doTransfer(address _from, address _to, uint _amount) internal {
-           if (_amount == 0) {
-               Transfer(_from, _to, _amount);    // Follow the spec to louch the event when transfer 0
-               return;
-           }
+        if (_amount > 0) {
            require(_to != 0);
-           // If the amount being transfered is more than the balance of the
-           //  account the transfer throws
            uint previousBalance = balanceOfAt(_from, block.number);
            require(previousBalance >= _amount);
-
            updateValueAtNow(balances[_from], previousBalance - _amount);
-           // Then update the balance array with the new value for the address
-           //  receiving the tokens
            previousBalance = balanceOfAt(_to, block.number);
            require(previousBalance + _amount >= previousBalance); // Check for overflow
            updateValueAtNow(balances[_to], previousBalance + _amount);
-           Transfer(_from, _to, _amount);
+
+       }
+       emit Transfer(_from, _to, _amount);
     }
 
     /**
