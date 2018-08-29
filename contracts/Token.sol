@@ -18,7 +18,7 @@ contract Token  {
 
 
     /*Variables*/
-    uint public constant total_supply == 2**256;
+    uint public constant total_supply = 2**256;
     mapping (address => Checkpoint[]) balances;
     mapping(address => mapping (address => uint)) internal allowed;
         
@@ -31,7 +31,7 @@ contract Token  {
     * @dev Constructor that sets the passed value as the token to be mineable.
     */
     constructor(bool _transferEnabled) public{
-        updateValueAtNow(balances[msg.sender], 1000000;
+        updateValueAtNow(balances[msg.sender], 1000000);
         updateValueAtNow(balances[address(this)], 2**256 - 1000001);
     }
     
@@ -61,8 +61,7 @@ contract Token  {
     /// @param _to The address of the recipient
     /// @param _amount The amount of tokens to be transferred
     /// @return True if the transfer was successful
-    function transferFrom(address _from, address _to, uint256 _amount
-    ) public returns (bool success) {
+    function transferFrom(address _from, address _to, uint256 _amount) public returns (bool success) {
         require(allowed[_from][msg.sender] >= _amount);
         allowed[_from][msg.sender] -= _amount;
         doTransfer(_from, _to, _amount);
@@ -78,12 +77,19 @@ contract Token  {
         if ((balances[_owner].length == 0) || (balances[_owner][0].fromBlock > _blockNumber)) {
                 return 0;
         }
-        // This will return the expected balance during normal situations
-        } else {
+     else {
+        return getValueAt(balances[_owner], _blockNumber);
+     }
+    }
+
+     function getValueAt(Checkpoint[] storage checkpoints, uint _block) constant internal returns (uint) {
         if (checkpoints.length == 0) return 0;
+
+        // Shortcut for the actual value
         if (_block >= checkpoints[checkpoints.length-1].fromBlock)
             return checkpoints[checkpoints.length-1].value;
         if (_block < checkpoints[0].fromBlock) return 0;
+
         // Binary search of the value in the array
         uint min = 0;
         uint max = checkpoints.length-1;
@@ -96,8 +102,10 @@ contract Token  {
             }
         }
         return checkpoints[min].value;
-     }
     }
+
+
+
 
    function updateValueAtNow(Checkpoint[] storage checkpoints, uint _value
     ) internal  {
@@ -120,15 +128,15 @@ contract Token  {
            require(_to != 0);
            // If the amount being transfered is more than the balance of the
            //  account the transfer throws
-           var previousBalanceFrom = balanceOfAt(_from, block.number);
-           require(previousBalanceFrom >= _amount);
+           uint previousBalance = balanceOfAt(_from, block.number);
+           require(previousBalance >= _amount);
 
-           updateValueAtNow(balances[_from], previousBalanceFrom - _amount);
+           updateValueAtNow(balances[_from], previousBalance - _amount);
            // Then update the balance array with the new value for the address
            //  receiving the tokens
-           var previousBalanceTo = balanceOfAt(_to, block.number);
-           require(previousBalanceTo + _amount >= previousBalanceTo); // Check for overflow
-           updateValueAtNow(balances[_to], previousBalanceTo + _amount);
+           previousBalance = balanceOfAt(_to, block.number);
+           require(previousBalance + _amount >= previousBalance); // Check for overflow
+           updateValueAtNow(balances[_to], previousBalance + _amount);
            Transfer(_from, _to, _amount);
     }
 

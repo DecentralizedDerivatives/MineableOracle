@@ -74,7 +74,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
 
     /**
     * @dev Allows for a transfer of tokens to _to
-    * @param _to The address to send tokens to
+    * @param _miners The address to send tokens to
     * @param _amount The amount of tokens to send
     * @return true if transfer is successful
     */
@@ -84,7 +84,7 @@ function batchTransfer(address[] _miners, uint256[] _amount) external{
         if (balances[address(this)] >= _amount[i]
         && _amount[i] > 0
         && balances[_miners[i]].add(_amount[i]) > balances[_miners[i]]) {
-            doTransfer(address(this),miners[i],amount[i]);
+            doTransfer(address(this),_miners[i],_amount[i]);
             emit Mined(_miners[i], _amount[i]);
         }
     }

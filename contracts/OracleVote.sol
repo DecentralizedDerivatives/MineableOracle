@@ -28,16 +28,17 @@ import "./ProofOfWorkToken.sol";
     mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
     
 
-    struct Proposal {
-        enum propType {
+    enum PropState {
         removeOracle,
         addOracle,
         changeMinQuorum,
         changeVoteDuration,
         changeProposalFee,
         changeDudOracle
+    }
 
-        } // 4=ChangeVoteDuration, 5= ChangeProposalFee, 6 = changeDudOracle
+    struct Proposal {
+        PropState propType;
         uint minExecutionDate; 
         bool executed;
         bool proposalPassed;
@@ -54,11 +55,6 @@ import "./ProofOfWorkToken.sol";
         uint timeTarget;
         uint[5] payoutStructure;
     }
-
-    struct Vote {
-        bool inSupport;
-        address voter;
-    }
     
 
     /*Events*/
@@ -73,7 +69,6 @@ import "./ProofOfWorkToken.sol";
     event ChangeMinQuorum(uint newMinimumQuorum);
     event ChangeVoteDuration(uint newVotingDuration);
     event ChangeProposalFee(uint newProposalFee);
-    event eventquorum(uint _minQuorum);
 
 
     /*Functions*/
@@ -169,7 +164,6 @@ import "./ProofOfWorkToken.sol";
         Proposal storage prop = proposals[proposalId];
         proposalsIds.push(proposalId);
         prop.propType = _id;
-        prop.snapshot = _newadd;
         prop.blockNumber = block.number;
         prop.minExecutionDate = now + voteDuration * 1 days; 
         prop.executed = false;
@@ -189,11 +183,10 @@ import "./ProofOfWorkToken.sol";
         prop.numberOfVotes += 1;
         uint voteWeight = balanceOfAt(msg.sender,prop.blockNumber);
         prop.quorum += voteWeight;
-            if (supportsProposal) {
-                prop.tally += voteWeight;
-            } else {
-                prop.tally -= voteWeight;
-            }
+        if (supportsProposal) {
+            prop.tally += voteWeight;
+        } else {
+            prop.tally -= voteWeight;
         }
         emit Voted(_proposalId,  supportsProposal, msg.sender);
         return voteId;
@@ -205,6 +198,7 @@ import "./ProofOfWorkToken.sol";
     */
     function tallyVotes(uint _proposalId,uint _loop) external{
         Proposal storage prop = proposals[_proposalId];
+        require(prop.executed == false);
         //require(now > prop.minExecutionDate && !prop.executed); //Uncomment for production-commented out for testing 
         uint minQuorum = minimumQuorum;
          require(quorum >= minQuorum); 
@@ -223,9 +217,10 @@ import "./ProofOfWorkToken.sol";
             } else if (prop.propType==6){
                 setDudOracle(propRemoveOrUpdateOracle[_proposalId]);
             }
-            prop.executed = true;
             prop.proposalPassed = true;
-        } else {
+        } 
+        else {
+            prop.executed = true;
             prop.proposalPassed = false;
         }
         emit ProposalTallied(_proposalId,tally, quorum, prop.proposalPassed); 

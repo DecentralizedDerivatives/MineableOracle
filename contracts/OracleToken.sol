@@ -24,6 +24,9 @@ contract OracleToken{
     mapping(uint => uint) values;
     mapping(bytes32 => mapping(address=>bool)) miners;
     Details[5] first_five;
+
+
+
     uint public valuePool;
     struct Details {
         uint value;
@@ -135,24 +138,14 @@ contract OracleToken{
         require(_master.transfer(address(master),_tip));
     }
 
-    /**
-    * @dev This fucntion sorts values as they come in so that the
-    * median can be identified later.
-    */
-    function insertionSort(Details[5] storage a)internal {
-       for (uint i = 1;i < a.length;i++){
-            uint temp = a[i].value;
-            address temp2 = a[i].miner;
-            uint j = i;
-            while(j > 0 && temp < a[j-1].value;){
-                a[j].value = a[j-1].value;
-                a[j].miner = a[j-1].miner;   
-                j--;
-            }
-       }
-        a[j].value = temp;
-        a[j].miner= temp2;
+    function calculatePayoutStructure() internal returns (uint[5]){
+        uint[5] arr;
+        for (uint i =0;i<payoutStructure.length;i++) {
+            arr[i] = payoutStructure[i] * payoutMultiplier;
+        }
+        return arr;
     }
+
 
     /**
     * @dev This fucntion rewards the first five miners that submit a value
@@ -170,7 +163,7 @@ contract OracleToken{
             uint temp = a[i].value;
             address temp2 = a[i].miner;
             uint j = i;
-            while(j > 0 && temp < a[j-1].value;){
+            while(j > 0 && temp < a[j-1].value){
                 a[j].value = a[j-1].value;
                 a[j].miner = a[j-1].miner;   
                 j--;
@@ -185,7 +178,8 @@ contract OracleToken{
          * - calculatePayoutStructure() returns (uint[5] memory), calculates each index of the batchTransfer amount using
          *   payoutMultiplier and payoutStructure
          */
-        ProofOfWorkToken(master).batchTransfer(d.addrs(), calculatePayoutStructure());
+        ProofOfWorkToken(master).batchTransfer(a.addrs(), calculatePayoutStructure());
+        values[_time] = a[2].value;
     }
 
     
