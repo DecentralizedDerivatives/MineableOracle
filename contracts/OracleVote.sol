@@ -187,7 +187,7 @@ import "./ProofOfWorkToken.sol";
     * @dev tallies the votes and executes if minimum quorum is met or exceeded.
     * @param _proposalId is the proposal id
     */
-    function tallyVotes(uint _proposalId,uint _loop) external{
+    function tallyVotes(uint _proposalId) external{
         Proposal storage prop = proposals[_proposalId];
         require(prop.executed == false);
         //require(now > prop.minExecutionDate && !prop.executed); //Uncomment for production-commented out for testing 

@@ -5,7 +5,7 @@ import pandas as pd
 from Naked.toolshed.shell import execute_js, muterun_js, run_js
 from multiprocessing import Process, freeze_support
 
-contract_address =  "0xfa405d140e6631561b050b4578bbf722753e015e"
+contract_address = "";
 node_url ="http://localhost:8545" #https://rinkeby.infura.io/
 net_id = 60 #eth network ID
 miners_started = 0
@@ -13,6 +13,9 @@ last_block = 0
 
 public_keys = ["0xe010ac6e0248790e08f42d5f697160dedf97e024","0xcdd8fa31af8475574b8909f135d510579a8087d3","0xb9dd5afd86547df817da2d0fb89334a6f8edd891","0x230570cd052f40e14c14a81038c6f3aa685d712b","0x3233afa02644ccd048587f8ba6e99b3c00a34dcc"]
 private_keys = ["3a10b4bc1258e8bfefb95b498fb8c0f0cd6964a811eabca87df5630bcacd7216","d32132133e03be292495035cf32e0e2ce0227728ff7ec4ef5d47ec95097ceeed","d13dc98a245bd29193d5b41203a1d3a4ae564257d60e00d6f68d120ef6b796c5","4beaa6653cdcacc36e3c400ce286f2aefd59e2642c2f7f29804708a434dd7dbe","78c1c7e40057ea22a36a0185380ce04ba4f333919d1c5e2effaf0ae8d6431f14"]
+
+static_jazz1 = "0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000"
+static_jazz2 = "80000000000000000000000000000000000000000000000000000000000000000"
 
 def generate_random_number():
     return str(random.randint(1000000,9999999))
@@ -48,6 +51,7 @@ def masterMiner():
 	global miners_started
 	print('starting masterMiner',miners_started + 1)
 	while True:
+		getAddress();
 		challenge,difficulty = getVariables();
 		print(challenge,difficulty);
 		nonce = mine(challenge,public_keys[miners_started][2:],difficulty);
@@ -65,9 +69,12 @@ def masterMiner():
 	miners_started -= 1
 
 def getVariables():
+	print(contract_address)
 	payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_call","params":[{"to":contract_address,"data":"0x94aef022"}, "latest"]}
 	r = requests.post(node_url, data=json.dumps(payload));
 	val = r.content
+	d = jsonParser(r);
+	print(d)
 	val2 = val[100:]
 	val2 = val2[:-3]
 	_challenge = val[34:98].decode("utf-8")
@@ -75,34 +82,39 @@ def getVariables():
 	_difficulty = int(val3);
 	return _challenge,_difficulty;
 
-def getAddress():
-	global last_block
-	payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_blockNumber"}
-	r = requests.post(node_url, data=json.dumps(payload));
-	my_json = r.content
-	print (my_json)
+def jsonParser(_info):
+	my_json = _info.content
 	data = json.loads(my_json)
 	s = json.dumps(data, indent=4, sort_keys=True)
-	d = json.loads(s)
+	return json.loads(s)
+
+def getAddress():
+	global last_block, contract_address
+	payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_blockNumber"}
+	r = requests.post(node_url, data=json.dumps(payload));
+	d = jsonParser(r);
 	block = int(d['result'],16)
-	print ("Block",block);
 	while(block > last_block):
-		print ('Block Loop',block)
 		payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_getTransactionByBlockNumberAndIndex","params":[hex(block),0]}
 		r = requests.post(node_url, data=json.dumps(payload));
-		my_json = r.content
-		data = json.loads(my_json)
-		s = json.dumps(data, indent=4, sort_keys=True)
-		d = json.loads(s)
+		d = jsonParser(r);
+		tx = d['result']
+		payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_getTransactionReceipt","params":[tx['hash']]}
+		r = requests.post(node_url, data=json.dumps(payload));
+		d = jsonParser(r);
 		tx = d['result']
 		try:
-			contractAddress = tx['contractAddress'];
-			last_block = block
-			block = 0;
-			print(contractAddress)
+			logs =tx['logs'][0]['data']
+			if static_jazz1 and static_jazz2 in logs:
+				contract_address = logs.replace(static_jazz1,'').replace(static_jazz2,'')
+				last_block = block
+				block = 0 ;
+				print('New Contract Address',contract_address)
+			else:
+				block = block-1;
 		except:
 			block = block-1;
-		print(tx)
+
 	return 
 
 def bytes2int(str):
@@ -118,8 +130,8 @@ def bytes_to_int(bytes):
 
 
 
-#masterMiner();
-getAddress();
+masterMiner();
+#getAddress();
 
 def runInParallel(*fns):
   proc = []

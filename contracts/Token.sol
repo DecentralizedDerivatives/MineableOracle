@@ -30,7 +30,7 @@ contract Token  {
     /**
     * @dev Constructor that sets the passed value as the token to be mineable.
     */
-    constructor(bool _transferEnabled) public{
+    constructor() public{
         updateValueAtNow(balances[msg.sender], 1000000);
         updateValueAtNow(balances[address(this)], 2**256 - 1000001);
     }
@@ -158,7 +158,7 @@ contract Token  {
     * @dev Getter for the total_supply of oracle tokens
     * @return total supply
     */
-    function totalSupply() public view returns (uint) {
+    function totalSupply() public pure returns (uint) {
        return total_supply;
     }
 

@@ -14,7 +14,7 @@ contract OracleToken{
     /*Variables*/
     bytes32 public currentChallenge;
     uint public timeOfLastProof; // time of last challenge solved
-    uint256 public difficulty = 1; // Difficulty starts low
+    uint256 public difficulty; // Difficulty starts low
     uint public timeTarget;
     uint count;
     uint public readFee;
@@ -53,6 +53,8 @@ contract OracleToken{
         readFee = _readFee;
         timeTarget = _timeTarget;
         payoutStructure = _payoutStructure;
+        currentChallenge = keccak256(abi.encodePacked(0,currentChallenge, blockhash(block.number - 1)));
+        difficulty = 1;
     }
 
     /**
@@ -137,7 +139,7 @@ contract OracleToken{
         require(_master.transfer(address(master),_tip));
     }
 
-    function calculatePayoutStructure() internal returns (uint[5]){
+    function calculatePayoutStructure() internal view returns (uint[5]){
         uint[5] memory arr;
         for (uint i =0;i<payoutStructure.length;i++) {
             arr[i] = payoutStructure[i] * payoutMultiplier;
