@@ -35,7 +35,7 @@ contract OracleToken{
  
 
     /*Events*/
-    event Mine(address indexed to,uint _time, uint value);
+    event Mine(address indexed to,uint _time, uint _value);
     event NewValue(address _miner, uint _value);
 
     /*Functions*/
@@ -98,7 +98,7 @@ contract OracleToken{
             if (now - timeOfLastProof< timeTarget){
                 difficulty++;
             }
-            else if (now - timeOfLastProof > timeTarget){
+            else if (now - timeOfLastProof > timeTarget && difficulty > 1){
                 difficulty--;
             }
             timeOfLastProof = now - (now % timeTarget);//should it be like this? So 10 minute intervals?;

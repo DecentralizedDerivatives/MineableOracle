@@ -8,7 +8,6 @@ from multiprocessing import Process, freeze_support
 contract_address = "";
 node_url ="http://localhost:8545" #https://rinkeby.infura.io/
 net_id = 60 #eth network ID
-miners_started = 0
 last_block = 0
 
 public_keys = ["0xe010ac6e0248790e08f42d5f697160dedf97e024","0xcdd8fa31af8475574b8909f135d510579a8087d3","0xb9dd5afd86547df817da2d0fb89334a6f8edd891","0x230570cd052f40e14c14a81038c6f3aa685d712b","0x3233afa02644ccd048587f8ba6e99b3c00a34dcc"]
@@ -46,8 +45,7 @@ def getAPIvalue():
 	return int(float(price))
 
 def masterMiner():
-	global miners_started
-	print('starting masterMiner',miners_started + 1)
+	miners_started = 0
 	while True:
 		getAddress();
 		challenge,difficulty = getVariables();
@@ -55,17 +53,18 @@ def masterMiner():
 		print('Public Key', public_keys[miners_started][2:])
 		nonce = mine(str(challenge),public_keys[miners_started],difficulty);
 		print(nonce);
-		miners_started += 1
 		if(nonce > 0):
 			print ("You guessed the hash");
 			value = getAPIvalue();
 			arg_string =""+ str(nonce) + " "+str(value)+" "+str(contract_address)+" "+str(public_keys[miners_started])+" "+str(private_keys[miners_started])
 			run_js('submitter.js',arg_string);
-			time.sleep(30)
+			time.sleep(1)
+			miners_started += 1
+			if(miners_started == 5):
+				miners_started = 0;
 		else:
 			pass
 	print('Miner Stopping')
-	miners_started -= 1
 
 def getVariables():
 	getAddress();
@@ -133,8 +132,6 @@ def bytes_to_int(bytes):
 
 def runInParallel(*fns):
   proc = []
-
-
   for fn in fns:
   	if __name__ == '__main__':
   		freeze_support()
@@ -143,8 +140,6 @@ def runInParallel(*fns):
   		proc.append(p)
   for p in proc:
     p.join()
-
-#runInParallel(masterMiner,masterMiner,masterMiner,masterMiner,masterMiner)
 
 
 
@@ -174,3 +169,5 @@ def working():
 #working()
 #getVariables()
 masterMiner();
+#runInParallel(masterMiner,masterMiner,masterMiner,masterMiner,masterMiner)
+

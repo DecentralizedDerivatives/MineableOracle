@@ -114,9 +114,4 @@ function batchTransfer(address[5] _miners, uint256[5] _amount) external{
         OracleDetails storage _current = oracle_list[oracle_index[_oracle]];
         return(_current.API,_current.location);
     }
-
-    function getindex(address _oracle) public view returns(uint){
-        return(oracle_index[_oracle]);
-    }
-
 }
