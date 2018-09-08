@@ -21,7 +21,7 @@ contract('Base Tests', function(accounts) {
   let logNewValueWatcher;
   
     beforeEach('Setup contract for each test', async function () {
-        oracletoken = await oracleToken.new();
+        oracletoken = await oracleToken.new(accounts[0],22,5,[1,5,10,5,1]);
         console.log('Oracle Token Address: ',oracletoken.address);
         oraclevote = await oracleVote.new(22,1,1);
         await oraclevote.propDudOracle(oracletoken.address);
@@ -50,8 +50,8 @@ contract('Base Tests', function(accounts) {
     }); 
 
     it("Recording values to fx proof of work-no mining", async function () {
-        logNewValueWatcher = promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
         console.log(await(oracletoken.getVariables()));
+        logNewValueWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
         console.log("logNewValueWatcher", logNewValueWatcher);
         // let result = await oracletoken.proofOfWork("1534377600", 5, {from: accounts[8]});
         // console.log(_result);

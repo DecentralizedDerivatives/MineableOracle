@@ -39,6 +39,22 @@ contract OracleToken{
     event NewValue(address _miner, uint _value);
 
     /*Functions*/
+        /**
+    * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
+    * @param _master is the master oracle address? POWT?
+    * @param _readFee is the fee for reading oracle information
+    * @param _timeTarget for the dificulty adjustment
+    * @param _payoutStructure for miners
+    */
+    constructor(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public{
+        timeOfLastProof = now;
+        master = _master;
+        readFee = _readFee;
+        timeTarget = _timeTarget;
+        payoutStructure = _payoutStructure;
+        currentChallenge = keccak256(abi.encodePacked(0,currentChallenge, blockhash(block.number - 1)));
+        difficulty = 1;
+    }
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
     * @param _master is the master oracle address? POWT?

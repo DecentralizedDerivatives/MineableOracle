@@ -75,10 +75,10 @@ import "./ProofOfWorkToken.sol";
     * @param _removeOracle address of oracle to remove
     */
     function propRemove(address _removeOracle) external returns(uint proposalId)  {
-        propFuncs(1);
-        propRemoveOrUpdateOracle[proposalId] = _removeOracle; 
-        emit ProposalToRemove(proposalId, _removeOracle);
-        return proposalId;
+        uint _propId = propFuncs(1);
+        propRemoveOrUpdateOracle[_propId] = _removeOracle; 
+        emit ProposalToRemove(_propId, _removeOracle);
+        return _propId;
     }
 
     /**
@@ -88,69 +88,69 @@ import "./ProofOfWorkToken.sol";
     * @param _readFee is the proposed fee for reading oracle information
     * @param _timeTarget is the proposed time for the dificulty adjustment
     * @param _payoutStructure is the proposed payout structure for miners
-    * @return proposalId the ID of the submitted proposal
+    * @return _propId the ID of the submitted proposal
     */
-    function propAdd(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public returns(uint proposalId){
-        propFuncs(2);
-        propAddOracle storage addOra = propAddOracles[proposalId];
+    function propAdd(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public returns(uint){
+        uint _propId = propFuncs(2);
+        propAddOracle storage addOra = propAddOracles[_propId];
         addOra.api = _api;
         addOra.readFee = _readFee;
         addOra.timeTarget = _timeTarget;
         addOra.payoutStructure = _payoutStructure;
-        emit ProposalToAdd(proposalId, _api, _readFee, _timeTarget, _payoutStructure);
-        return proposalId;
+        emit ProposalToAdd(_propId, _api, _readFee, _timeTarget, _payoutStructure);
+        return _propId;
         }
 
     /*
     * @dev Propose updates to minimum quorum 
     * @param _minimumQuorum from 1-100 representing a percentage of total circulating supply
     */
-    function propMinimumQuorum(uint _minimumQuorum) external returns(uint proposalId)  {
+    function propMinimumQuorum(uint _minimumQuorum) external returns(uint)  {
         require(_minimumQuorum != 0);
-        propFuncs(3);
-        propUpdatePropVars[proposalId] = _minimumQuorum;
+        uint _propId = propFuncs(3);
+        propUpdatePropVars[_propId] = _minimumQuorum;
         minimumQuorum = _minimumQuorum;
-        emit ProposalMinQuroum(proposalId, _minimumQuorum);
-        return proposalId;
+        emit ProposalMinQuroum(_propId, _minimumQuorum);
+        return _propId;
     }
 
     /*
     * @dev Updates the vote duration
     * @param _voteDuration in days
     */
-    function propVoteDuration(uint _voteDuration) external returns(uint proposalId)  {
+    function propVoteDuration(uint _voteDuration) external returns(uint)  {
         require(_voteDuration != 0);
-        propFuncs(4);
-        propUpdatePropVars[proposalId] = _voteDuration;
-        emit ProposalVoteDuration(proposalId, _voteDuration);
-        return proposalId;
+        uint _propId = propFuncs(4);
+        propUpdatePropVars[_propId] = _voteDuration;
+        emit ProposalVoteDuration(_propId, _voteDuration);
+        return _propId;
     }
     /*
     * @dev Updates the proposal fee amount
     * @param _proposalFee fee amount for member
     */
-    function propProposalFee(uint _proposalFee) external returns(uint proposalId)  {
+    function propProposalFee(uint _proposalFee) external returns(uint)  {
         require(_proposalFee !=0);
-        propFuncs(5);
-        propUpdatePropVars[proposalId] = _proposalFee;
-        emit ProposalProposalFee(proposalId, _proposalFee);
-        return proposalId;
+        uint _propId = propFuncs(5);
+        propUpdatePropVars[_propId] = _proposalFee;
+        emit ProposalProposalFee(_propId, _proposalFee);
+        return _propId;
     }
 
     /**
     * @dev Set oracle dudd address to clone
     * @param _dud_Oracle address to clone
     */  
-    function propDudOracle(address _dud_Oracle) external returns(uint proposalId) {
+    function propDudOracle(address _dud_Oracle) external returns(uint) {
         require(_dud_Oracle != address(0));
-        propFuncs(6);
-        propRemoveOrUpdateOracle[proposalId] = _dud_Oracle; 
-        emit ProposalDudOracle(proposalId, _dud_Oracle);
-        return proposalId;
+        uint _propId = propFuncs(6);
+        propRemoveOrUpdateOracle[_propId] = _dud_Oracle; 
+        emit ProposalDudOracle(_propId, _dud_Oracle);
+        return _propId;
     }
 
 
-    function propFuncs(uint _id) internal {
+    function propFuncs(uint _id) internal returns(uint){
         require(transfer(address(this), proposalFee));
         uint proposalId = proposalsIds.length + 1;
         Proposal storage prop = proposals[proposalId];
@@ -161,6 +161,7 @@ import "./ProofOfWorkToken.sol";
         prop.executed = false;
         prop.proposalPassed = false;
         prop.numberOfVotes = 0;
+        return proposalId;
     }
 
     /**
