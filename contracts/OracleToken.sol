@@ -37,6 +37,7 @@ contract OracleToken{
     /*Events*/
     event Mine(address indexed to,uint _time, uint _value);
     event NewValue(address _miner, uint _value);
+    event Print(uint _stuff,uint _more);
 
     /*Functions*/
         /**
@@ -143,6 +144,7 @@ contract OracleToken{
     * @return value for timestamp of last proof of work submited
     */
     function getLastQuery() external returns(uint){
+        Print(timeOfLastProof,values[timeOfLastProof]);
         return retrieveData(timeOfLastProof);
     }
 
@@ -162,7 +164,6 @@ contract OracleToken{
         }
         return arr;
     }
-
 
     /**
     * @dev This fucntion rewards the first five miners that submit a value
@@ -185,6 +186,7 @@ contract OracleToken{
         a[j].miner= temp2;
 
         ProofOfWorkToken(master).batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], calculatePayoutStructure());
+        emit Print(_time,a[2].value);
         values[_time] = a[2].value;
     }
 }

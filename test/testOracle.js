@@ -1,8 +1,8 @@
 /** This contract tests the typical workflow from the dApp 
 * (user contract, cash out)
 */
-var oracleToken = artifacts.require("OracleToken");
-var oracleVote = artifacts.require("OracleVote");
+var oracleToken = artifacts.require("./OracleToken.sol");
+var oracleVote = artifacts.require("./OracleVote.sol");
 
 function promisifyLogWatch(_event) {
   return new Promise((resolve, reject) => {
@@ -35,6 +35,7 @@ contract('Base Tests', function(accounts) {
         await oraclevote.vote(2, true,{from:accounts[0]} );
         let res = await oraclevote.tallyVotes(2, {from:accounts[0]} );
         res = res.logs[0].args._newOracle;
+        console.log(res);
         oracletoken = await oracleToken.at(res);
     });
 
@@ -44,7 +45,8 @@ contract('Base Tests', function(accounts) {
     }); 
 
     it("Test miner", async function () {
-        console.log(await(oracletoken.getVariables()));
+        console.log(await oracletoken.getVariables());
+        console.log(oracletoken.address);
         logNewValueWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
     });
     it("Test Full Miner", async function () {
@@ -58,20 +60,26 @@ contract('Base Tests', function(accounts) {
             logMineWatcher = await promisifyLogWatch(oracletoken.Mine({ fromBlock: 'latest' }));//or Event Mine?
             console.log('Mining...',i);
         }
-        console.log("Mined", logMineWatcher);
         res = logMineWatcher.args._value;
         assert(res > 0);
     });
     it("Test Is Data", async function () {
         console.log(await(oracletoken.getVariables()));
         logMineWatcher = await promisifyLogWatch(oracletoken.Mine({ fromBlock: 'latest' }));//or Event Mine?
+        res = logMineWatcher.args._time;
+        val = logMineWatcher.args._value;       
+        data = await oracletoken.isData.call(res.c[0]);
+        assert(data == true);
+    });
+         it("Test Get Last Query", async function () {
+        console.log(await(oracletoken.getVariables()));
+        logMineWatcher = await promisifyLogWatch(oracletoken.Mine({ fromBlock: 'latest' }));//or Event Mine?
         console.log("Mined",logMineWatcher.args._time);
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;       
-        console.log('time',res.c[0]);
-        data = await oracletoken.isData(res.c[0]);
-        console.log(data)
-        assert(data == true);
+        data = await oracletoken.getLastQuery.call();
+        console.log('DATA',data)
+        assert(data > 0);
     });
             /*
     it("Test Data Read", async function () {
@@ -86,13 +94,6 @@ contract('Base Tests', function(accounts) {
         assert(data == val);
     });
 
-            it("Test Get Last Query", async function () {
-        console.log(await(oracletoken.getVariables()));
-        logMineWatcher = await promisifyLogWatch(oracletoken.Mine({ fromBlock: 'latest' }));//or Event Mine?
-        console.log("Mined", logMineWatcher);
-        res = logMineWatcher.args._value;
-        assert(res > 0);
-    });
       it("Test Add Value to Pool", async function () {
         console.log(await(oracletoken.getVariables()));
         logMineWatcher = await promisifyLogWatch(oracletoken.Mine({ fromBlock: 'latest' }));//or Event Mine?
