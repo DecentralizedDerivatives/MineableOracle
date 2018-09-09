@@ -90,6 +90,13 @@ function batchTransfer(address[5] _miners, uint256[5] _amount) external{
     }
 }
 
+    function callTransfer(address _from,uint _amount) public returns(bool){
+        require(oracle_index[msg.sender] > 0);
+        doTransfer(_from,address(this), _amount);
+        return true;
+    }
+
+
     /**
     * @dev Allows  to remove oracle that are no longer in use
     * @param _removed is the oracle address to remove

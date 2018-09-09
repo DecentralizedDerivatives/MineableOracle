@@ -124,7 +124,7 @@ contract OracleToken{
     */
     function retrieveData(uint _timestamp) public returns (uint) {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
-        require(_master.transfer(address(master),readFee));
+        require(isData(_timestamp) && _master.callTransfer(msg.sender,readFee));
         valuePool.add(readFee);
         return values[_timestamp];
     }
@@ -134,7 +134,7 @@ contract OracleToken{
     * @param _timestamp to retreive data/value from
     * @return true if the value exists/is greater than zero
     */
-    function isData(uint _timestamp) external view returns(bool){
+    function isData(uint _timestamp) public view returns(bool){
         return (values[_timestamp] > 0);
     }
 

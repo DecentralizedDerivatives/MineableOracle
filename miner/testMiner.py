@@ -27,9 +27,7 @@ def mine(challenge, public_address, difficulty):
 		_string = str(challenge[1:]).strip() + public_address[2:].strip() + nonce[2:].strip()
 		n = Web3.sha3(_string.strip())
 		hash1 = int(n,16)
-		print ('Hash: ',hash1,'Difficulty: ',difficulty,'Nonce: ',nonce)
 		if hash1 % difficulty == 0:
-			print ('SUCESSS!!')
 			return int(nonce,16);
 		if x % 10000 == 0:
 			_challenge,_difficulty = getVariables();
@@ -49,16 +47,13 @@ def masterMiner():
 	while True:
 		getAddress();
 		challenge,difficulty = getVariables();
-		print(challenge,difficulty);
-		print('Public Key', public_keys[miners_started][2:])
 		nonce = mine(str(challenge),public_keys[miners_started],difficulty);
-		print(nonce);
 		if(nonce > 0):
-			print ("You guessed the hash");
+			print ("You guessed the hash!");
 			value = getAPIvalue();
 			arg_string =""+ str(nonce) + " "+str(value)+" "+str(contract_address)+" "+str(public_keys[miners_started])+" "+str(private_keys[miners_started])
 			run_js('submitter.js',arg_string);
-			time.sleep(1)
+			time.sleep(.1)
 			miners_started += 1
 			if(miners_started == 5):
 				miners_started = 0;
@@ -71,14 +66,12 @@ def getVariables():
 	payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_call","params":[{"to":contract_address,"data":"0x94aef022"}, "latest"]}
 	r = requests.post(node_url, data=json.dumps(payload));
 	val = r.content
-	print (val)
 	val2 = val[102:]
 	val2 = val2[:-2]
 	_challenge = val[34:101].decode("utf-8")
 	val3 = bytes.decode(val2)
-	print(val3)
 	_difficulty = int(val3);
-	print ('diff',_difficulty)
+	
 	return _challenge,_difficulty;
 
 def jsonParser(_info):

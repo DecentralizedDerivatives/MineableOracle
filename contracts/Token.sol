@@ -129,7 +129,6 @@ contract Token  {
            previousBalance = balanceOfAt(_to, block.number);
            require(previousBalance + _amount >= previousBalance); // Check for overflow
            updateValueAtNow(balances[_to], previousBalance + _amount);
-
        }
        emit Transfer(_from, _to, _amount);
     }
