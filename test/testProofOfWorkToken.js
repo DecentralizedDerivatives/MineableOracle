@@ -1,6 +1,6 @@
 /** This contract tests the ProofOfWorkToken functions
 */ 
-/*var oracleToken = artifacts.require("OracleToken");
+var oracleToken = artifacts.require("OracleToken");
 var oracleVote = artifacts.require("OracleVote");
 var Token = artifacts.require("Token");
 var POWT = artifacts.require("ProofOfWorkToken.sol");
@@ -114,4 +114,4 @@ contract('Base Tests', function(accounts) {
     });
 
 });
- */
+ 

@@ -50,7 +50,7 @@ def masterMiner():
 		nonce = mine(str(challenge),public_keys[miners_started],difficulty);
 		if(nonce > 0):
 			print ("You guessed the hash!");
-			value = getAPIvalue();
+			value = getAPIvalue() - miners_started*10; #account 2 should always be winner
 			arg_string =""+ str(nonce) + " "+str(value)+" "+str(contract_address)+" "+str(public_keys[miners_started])+" "+str(private_keys[miners_started])
 			run_js('submitter.js',arg_string);
 			miners_started += 1
@@ -110,7 +110,7 @@ def getAddress():
 			except:
 				pass
 		except:
-			block = block -1;
+			block = block - 1;
 			i=0
 
 	return 
@@ -125,45 +125,6 @@ def bytes_to_int(bytes):
         result = result * 256 + int(b)
 
     return result
-
-
-
-
-def runInParallel(*fns):
-  proc = []
-  for fn in fns:
-  	if __name__ == '__main__':
-  		freeze_support()
-  		p = Process(target=fn)
-  		p.start()
-  		proc.append(p)
-  for p in proc:
-    p.join()
-
-
-
-def testHash():
-	challenge = "0x6ea5c1031c390399bdeeef830f5ad748eba64ff30dfefdd1778ba9ba371478e3";
-	nonce = Web3.toHex(str.encode(str(330608)));
-	p = "0xca35b7d915458ef540ade6068dfe2f44e8fa733c";
-	string = challenge + p[2:]+ nonce[2:];
-	print(string);
-	n = Web3.sha3(string)
-	n_int = int(n,16)
-	print('n: ',n);
-	print('n_int: ', n_int);
-
-
-def working():
-	challenge = "0xefa48490ac44e1ef5cfff21aad308b6a621cd9baf3292127e2a0c6cd70e77033";
-	nonce = Web3.toHex(str.encode(str(1124106)));
-	p = "0xe010ac6e0248790e08f42d5f697160dedf97e024";
-	string = challenge + p[2:]+ nonce[2:];
-	print(string);
-	n = Web3.sha3(string)
-	n_int = int(n,16)
-	print('n: ',n);
-	print('n_int: ', n_int);
 
 #working()
 #getVariables()

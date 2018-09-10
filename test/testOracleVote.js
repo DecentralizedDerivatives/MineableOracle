@@ -1,6 +1,6 @@
 /** This contract tests the oracleVote.sol functions
 */
-/*var oracleToken = artifacts.require("OracleToken");
+var oracleToken = artifacts.require("OracleToken");
 var oracleVote = artifacts.require("OracleVote");
 var Token = artifacts.require("Token");
 var POWT = artifacts.require("ProofOfWorkToken.sol");
@@ -214,4 +214,3 @@ contract('Base Tests', function(accounts) {
         assert(proposalsList = [1,2,3], "proposals list");
     });
 });
-*/

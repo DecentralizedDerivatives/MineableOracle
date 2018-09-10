@@ -3,6 +3,8 @@ pragma solidity ^0.4.24;
 import "./libraries/SafeMath.sol";
 import "./Token.sol";
 import "./ProofOfWorkToken.sol";
+//Instead of valuePool, can we balances of this address?
+
 /**
  * @title Mineable Token
  * @dev Turns a wallet into a mine for a specified ERC20 token
@@ -20,6 +22,7 @@ contract OracleToken{
     uint public readFee;
     address public master;
     uint[5] public payoutStructure;
+    uint private payoutTotal;
     uint public  payoutMultiplier;
     mapping(uint => uint) values;
     mapping(bytes32 => mapping(address=>bool)) miners;
@@ -53,8 +56,12 @@ contract OracleToken{
         readFee = _readFee;
         timeTarget = _timeTarget;
         payoutStructure = _payoutStructure;
-        currentChallenge = keccak256(abi.encodePacked(0,currentChallenge, blockhash(block.number - 1)));
+        payoutMultiplier = 1;
+        currentChallenge = keccak256(abi.encodePacked(timeOfLastProof,currentChallenge, blockhash(block.number - 1)));
         difficulty = 1;
+        for(uint i = 0;i<5;i++){
+            payoutTotal += _payoutStructure[i];
+        }
     }
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
@@ -70,8 +77,12 @@ contract OracleToken{
         readFee = _readFee;
         timeTarget = _timeTarget;
         payoutStructure = _payoutStructure;
-        currentChallenge = keccak256(abi.encodePacked(0,currentChallenge, blockhash(block.number - 1)));
+        payoutMultiplier = 1;
+        currentChallenge = keccak256(abi.encodePacked(timeOfLastProof,currentChallenge, blockhash(block.number - 1)));
         difficulty = 1;
+        for(uint i = 0;i<5;i++){
+            payoutTotal += _payoutStructure[i];
+        }
     }
 
     /**
@@ -103,15 +114,15 @@ contract OracleToken{
                 difficulty--;
             }
             timeOfLastProof = now - (now % timeTarget);//should it be like this? So 10 minute intervals?;
-            pushValue(timeOfLastProof);
-            if(valuePool > 44) {
-                valuePool = valuePool -22;
-                payoutMultiplier = valuePool / 22; //solidity should always round down
+            emit Print(payoutTotal,valuePool);
+            if(valuePool >= payoutTotal) {
+                payoutMultiplier = (valuePool + payoutTotal) / payoutTotal; //solidity should always round down
+                valuePool = valuePool - (payoutTotal*(payoutMultiplier-1));
             }
             else{
                 payoutMultiplier = 1;
             }
-            emit Mine(msg.sender,timeOfLastProof, value); // execute an event reflecting the change
+            pushValue(timeOfLastProof);
             count = 0;
             currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
         }
@@ -126,7 +137,7 @@ contract OracleToken{
     function retrieveData(uint _timestamp) public returns (uint) {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
         require(isData(_timestamp) && _master.callTransfer(msg.sender,readFee));
-        valuePool.add(readFee);
+        valuePool = valuePool.add(readFee);
         return values[_timestamp];
     }
 
@@ -144,7 +155,6 @@ contract OracleToken{
     * @return value for timestamp of last proof of work submited
     */
     function getLastQuery() external returns(uint){
-        Print(timeOfLastProof,values[timeOfLastProof]);
         return retrieveData(timeOfLastProof);
     }
 
@@ -154,17 +164,13 @@ contract OracleToken{
     */
     function addToValuePool(uint _tip) public {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
-        require(_master.transfer(address(master),_tip));
+        require(_master.callTransfer(msg.sender,_tip));
+        valuePool = valuePool.add(_tip);
     }
 
-    function calculatePayoutStructure() internal view returns (uint[5]){
-        uint[5] memory arr;
-        for (uint i =0;i<payoutStructure.length;i++) {
-            arr[i] = payoutStructure[i] * payoutMultiplier;
-        }
-        return arr;
-    }
-
+    event Print2(address[5] _miners,uint[5] _payoutStructure);
+    event Print3(address victim);
+    
     /**
     * @dev This fucntion rewards the first five miners that submit a value
     * @param _time is the time/date for the value being provided by the miner
@@ -172,7 +178,8 @@ contract OracleToken{
 
     function pushValue(uint _time) internal {
         Details[5] memory a = first_five;
-        for (uint i = 1;i < a.length;i++){
+        emit Print2([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner],payoutStructure);
+        for (uint i = 1;i <5;i++){
             uint temp = a[i].value;
             address temp2 = a[i].miner;
             uint j = i;
@@ -181,12 +188,14 @@ contract OracleToken{
                 a[j].miner = a[j-1].miner;   
                 j--;
             }
-       }
-        a[j].value = temp;
-        a[j].miner= temp2;
-
-        ProofOfWorkToken(master).batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], calculatePayoutStructure());
-        emit Print(_time,a[2].value);
+            if(j<i){
+                a[j].value = temp;
+                a[j].miner= temp2;
+            }
+        }
+        emit Print(payoutStructure[0],payoutMultiplier);
+        ProofOfWorkToken(master).batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], [payoutStructure[0]*payoutMultiplier,payoutStructure[1]*payoutMultiplier,payoutStructure[2]*payoutMultiplier,payoutStructure[3]*payoutMultiplier,payoutStructure[4]*payoutMultiplier]);
         values[_time] = a[2].value;
+        emit Mine(msg.sender,_time,a[2].value); // execute an event reflecting the change
     }
 }
