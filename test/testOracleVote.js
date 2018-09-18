@@ -1,51 +1,37 @@
 /** This contract tests the oracleVote.sol functions
 */
-var oracleToken = artifacts.require("OracleToken");
-var oracleVote = artifacts.require("OracleVote");
-var Token = artifacts.require("Token");
-var POWT = artifacts.require("ProofOfWorkToken.sol");
-var CloneFactory = artifacts.require("CloneFactory.sol");
+var oracleToken = artifacts.require("./OracleToken.sol");
+var oracleVote = artifacts.require("./OracleVote.sol");
+
 
 function sleep_s(secs) {
   secs = (+new Date) + secs * 1000;
   while ((+new Date) < secs);
 }
 
-contract('Base Tests', function(accounts) {
+contract('Oracle Vote Tests', function(accounts) {
   let oracletoken;
   let oraclevote;
   
     beforeEach('Setup contract for each test', async function () {
-        oracletoken = await oracleToken.new();
-        console.log("dud oracle:", oracletoken.address);
+        oracletoken = await oracleToken.new(accounts[0],22,(86400/60)/6,[1,5,10,5,1]);
         oraclevote = await oracleVote.new(22,1,1);
-        console.log("oracle vote:", oraclevote.address);
         await oraclevote.propDudOracle(oracletoken.address);
         await oraclevote.vote(1, true,{from:accounts[0]} );
         await oraclevote.tallyVotes(1, {from:accounts[0]} )
-
-        console.log("setDudOracle", await oraclevote.dud_Oracle.call());
         balance0 = await (oraclevote.balanceOf(accounts[0],{from:accounts[0]}));
-        console.log("owner bal", balance0);
         await oraclevote.transfer(accounts[4],100,{from:accounts[0]});
-        console.log("transfer successful acct4");
         await oraclevote.transfer(accounts[5],100,{from:accounts[0]});
-        console.log("transfer successful acct5");
         await oraclevote.transfer(accounts[6],100,{from:accounts[0]});
-        console.log("transfer successful acct6");
         await oraclevote.transfer(accounts[7],100,{from:accounts[0]});
-        console.log("transfer successful acct7");
-        await oraclevote.transfer(accounts[8],100,{from:accounts[0]});
-        console.log("transfer acct8");
-
-        await oraclevote.propAdd("testAddproposedOracle",22,5,[1,5,10,5,1], {from:accounts[8]});
+        await oraclevote.transfer(accounts[8],100,{from:accounts[0]});-
+        await oraclevote.propAdd("testAddproposedOracle",22,(86400/60)/6,[1,5,10,5,1], {from:accounts[8]});
         await oraclevote.vote(2, true,{from:accounts[0]} );
         let res = await oraclevote.tallyVotes(2, {from:accounts[0]} );
         res = res.logs[0].args._newOracle;
-        console.log("res address", res);
         oracletoken = await oracleToken.at(res);
-
-        await oraclevote.propAdd("testAddproposedOracle2",22,5,[1,5,10,5,1], {from:accounts[8]});
+        
+        await oraclevote.propAdd("testAddproposedOracle2",22,(86400/60)/6,[1,5,10,5,1], {from:accounts[8]});
         await oraclevote.vote(3, true,{from:accounts[0]} );
         let res2 = await oraclevote.tallyVotes(3, {from:accounts[0]} );
         res2 = res2.logs[0].args._newOracle;
@@ -56,33 +42,24 @@ contract('Base Tests', function(accounts) {
      it("Number of proposals", async function(){
         count = await oraclevote.countProposals();
         assert.equal(count, 3);
-        console.log("count", count);
         balance4 = await oraclevote.balanceOf(accounts[4],{from:accounts[0]});
-        console.log("balance 4:",  balance4);
         await oraclevote.getProposalsIds();
         await oraclevote.propRemove(oracletoken2.address, {from:accounts[4]});
-        console.log("prop array:", await oraclevote.getProposalsIds());
         count2 = await oraclevote.countProposals();
         assert.equal(count2, 4);
-        console.log("count 2:", count2);
         balance4a = await (oraclevote.balanceOf(accounts[4],{from:accounts[0]}));
-        console.log("end bal:",balance4a);
         assert(balance4 - balance4a == 22, "initial balance should be lower");
         await oraclevote.propAdd("json(https://api.gdax.com/products/BTC-USD/ticker).price",22,5,[1,5,10,5,1], {from:accounts[5]});
         count3 = await oraclevote.countProposals();
-        console.log("count 3:", count3);
         assert.equal(count3, 5);
      });
 
     it("Proposal to remove, vote, tally-Pass", async function(){
         balance4 = await (oraclevote.balanceOf(accounts[4],{from:accounts[0]}));
-        console.log("initial bal:",balance4);
         await oraclevote.propRemove(oracletoken2.address, {from:accounts[4]});
         count = await oraclevote.countProposals();
         assert.equal(count, 4);
-        console.log("count", count);
         balance4a = await (oraclevote.balanceOf(accounts[4],{from:accounts[0]}));
-        console.log("end bal:",balance4a);
         assert(balance4 - balance4a == 22, "initial balance should be lower");
         let initdetails = await oraclevote.getDetails(oracletoken2.address);
         assert (initdetails = ['json(https://api.gdax.com/products/ETH-USD/ticker).price', oracletoken2.address], "oracle to remove")
@@ -93,7 +70,6 @@ contract('Base Tests', function(accounts) {
         await oraclevote.vote(4, false,{from:accounts[7]} );
         await oraclevote.tallyVotes(4, {from:accounts[0]} );
         info1 = await oraclevote.getProposalInfo(4);
-        console.log("info1:", info1);
         assert( info1 = [4, true], "proposal passed")
         details = await oraclevote.getDetails(oracletoken2.address);
         assert(details = [ '', '0x0000000000000000000000000000000000000000' ], "oracle removed")
@@ -101,13 +77,10 @@ contract('Base Tests', function(accounts) {
 
     it("Proposal to add, vote, tally-Pass", async function(){
         balance5 = await (oraclevote.balanceOf(accounts[5],{from:accounts[0]}));
-        console.log("initial bal:",balance5);
         await oraclevote.propAdd("testAddproposedOracle",22,5,[1,5,10,5,1], {from:accounts[5]});
         count = await oraclevote.countProposals();
         assert.equal(count, 4);
-        console.log("count", count);
         balance5a = await (oraclevote.balanceOf(accounts[5],{from:accounts[0]}));
-        console.log("end bal:",balance5a);
         assert(balance5 - balance5a == 22, "initial balance should be lower");
         await oraclevote.vote(4, true,{from:accounts[0]} );
         await oraclevote.vote(4, true,{from:accounts[4]} );
@@ -116,24 +89,18 @@ contract('Base Tests', function(accounts) {
         await oraclevote.vote(4, false,{from:accounts[7]} );
         let tally = await oraclevote.tallyVotes(4, {from:accounts[0]} );//event 13
         info1 = await oraclevote.getProposalInfo(4);
-        console.log("info1:", info1);
         assert( info1 = [4, true], "proposal passed")
         tally = tally.logs[0].args._newOracle;
-        console.log("cloned oracle added", tally);
         details = await oraclevote.getDetails(tally);
-        console.log("details:", details);
         assert(details = [ 'testAddproposedOracle', tally], "oracle removed")
     });
 
     it("Proposal to remove, vote, tally-fail", async function(){
         balance4 = await (oraclevote.balanceOf(accounts[4],{from:accounts[0]}));
-        console.log("initial bal:",balance4);
         await oraclevote.propRemove(oracletoken2.address, {from:accounts[4]});
         count = await oraclevote.countProposals();
         assert.equal(count, 4);
-        console.log("count", count);
         balance4a = await (oraclevote.balanceOf(accounts[4],{from:accounts[0]}));
-        console.log("end bal:",balance4a);
         assert(balance4 - balance4a == 22, "initial balance should be lower");
         let initdetails = await oraclevote.getDetails(oracletoken2.address);
         assert (initdetails = ['json(https://api.gdax.com/products/ETH-USD/ticker).price', oracletoken2.address], "oracle to remove")
@@ -144,7 +111,6 @@ contract('Base Tests', function(accounts) {
         await oraclevote.vote(4, true,{from:accounts[7]} );
         await oraclevote.tallyVotes(4, {from:accounts[0]} );
         info1 = await oraclevote.getProposalInfo(4);
-        console.log("info1:", info1);
         assert( info1 = [4, false], "proposal passed")
         details = await oraclevote.getDetails(oracletoken2.address);
         assert(details = ['json(https://api.gdax.com/products/ETH-USD/ticker).price', oracletoken2.address], "oracle should not have been removed")
@@ -152,13 +118,10 @@ contract('Base Tests', function(accounts) {
 
     it("Proposal to add, vote, tally-Fail", async function(){
         balance5 = await (oraclevote.balanceOf(accounts[5],{from:accounts[0]}));
-        console.log("initial bal:",balance5);
         await oraclevote.propAdd("testAddproposedOracle",22,5,[1,5,10,5,1], {from:accounts[5]});
         count = await oraclevote.countProposals();
         assert.equal(count, 4);
-        console.log("count", count);
         balance5a = await (oraclevote.balanceOf(accounts[5],{from:accounts[0]}));
-        console.log("end bal:",balance5a);
         assert(balance5 - balance5a == 22, "initial balance should be lower");
         await oraclevote.vote(4, false,{from:accounts[0]} );
         await oraclevote.vote(4, true,{from:accounts[4]} );
@@ -167,50 +130,42 @@ contract('Base Tests', function(accounts) {
         await oraclevote.vote(4, true,{from:accounts[7]} );
         await oraclevote.tallyVotes(4, {from:accounts[0]} );//event 13
         info1 = await oraclevote.getProposalInfo(4);
-        console.log("info1:", info1);
         assert( info1 = [4, false], "proposal failed")
     });
 
 
     it("Change quorum", async function(){
         quorum = await oraclevote.minimumQuorum.call();
-        console.log(quorum);
         assert.equal(quorum,1, "minimumQuorum is now 1");
         await oraclevote.propMinimumQuorum(2, {from:accounts[5]});
         await oraclevote.vote(4, false,{from:accounts[0]} );
         await oraclevote.tallyVotes(4, {from:accounts[0]} );
         quorum1 = await oraclevote.minimumQuorum.call();
-        console.log(quorum1);
         assert.equal(quorum1,2, "quorum is 2 days");
     });
 
     it("Change voting timeframe", async function(){
         duration = await oraclevote.voteDuration.call();
-        console.log("start duration",duration);
         assert.equal(duration,1, "minimumQuorum is now 1");
         await oraclevote.propVoteDuration(2, {from:accounts[5]});
         await oraclevote.vote(4, true,{from:accounts[0]} );
         await oraclevote.tallyVotes(4, {from:accounts[0]} );
         duration1 = await oraclevote.voteDuration.call();
-        console.log("end duration", duration1);
         assert.equal(duration1,2, "voteDuration is 2 days");        
     });
 
     it("Change proposal fee", async function(){
         propFee = await oraclevote.proposalFee.call();
-        console.log(propFee);
         assert.equal(propFee,22, "propFee is 22");
         await oraclevote.propProposalFee(26, {from:accounts[5]});
         await oraclevote.vote(4, true,{from:accounts[0]} );
         await oraclevote.tallyVotes(4, {from:accounts[0]} );
         propFee1 = await oraclevote.proposalFee.call();
-        console.log(propFee1);
         assert.equal(propFee1,26, "Proposal fee is now 26");
     });
 
     it("Get proposalsId list", async function(){
         proposalsList = await oraclevote.getProposalsIds();
-        console.log(proposalsList);
         assert(proposalsList = [1,2,3], "proposals list");
     });
 });

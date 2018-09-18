@@ -15,7 +15,7 @@ function promisifyLogWatch(_event) {
     });
 }
 
-contract('Base Tests', function(accounts) {
+contract('Mining Tests', function(accounts) {
   let oracletoken;
   let oraclevote;
   let logNewValueWatcher;
@@ -64,7 +64,7 @@ contract('Base Tests', function(accounts) {
         data = await oracletoken.isData.call(res.c[0]);
         assert(data == true);
     });
-         it("Test Get Last Query", async function () {
+   it("Test Get Last Query", async function () {
         logMineWatcher = await promisifyLogWatch(oracletoken.Mine({ fromBlock: 'latest' }));//or Event Mine?
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;       
