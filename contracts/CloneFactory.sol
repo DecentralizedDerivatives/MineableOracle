@@ -7,31 +7,6 @@ pragma solidity ^0.4.24;
 */
 contract CloneFactory {
 
-    /*Variables*/
-    address internal owner;
-    
-    /*Events*/
-    event CloneCreated(address indexed target, address clone);
-
-    /*Modifiers*/
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-    
-    /*Functions*/
-    constructor() public{
-        owner = msg.sender;
-    }    
-    
-    /**
-    * @dev Allows the owner to set a new owner address
-    * @param _owner the new owner address
-    */
-    function setOwner(address _owner) public onlyOwner(){
-        owner = _owner;
-    }
-
     /**
     * @dev Creates oracle clone
     * @param target is the address being cloned
