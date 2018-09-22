@@ -60,6 +60,7 @@
     "react-chartjs": "^1.2.0",
     "react-dom": "^15.4.2",
     "reactstrap": "^6.2.0",
+    "sha3": "^1.2.2",
     "truffle-hdwallet-provider": "0.0.5"
   },
   "scripts": {

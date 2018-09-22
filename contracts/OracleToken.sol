@@ -15,22 +15,20 @@ contract OracleToken{
 
     /*Variables*/
     bytes32 public currentChallenge;
+    uint public valuePool;
     uint public timeOfLastProof; // time of last challenge solved
-    uint256 public difficulty; // Difficulty starts low
     uint public timeTarget;
-    uint count;
+    uint public count;
     uint public readFee;
-    address public master;
-    uint[5] public payoutStructure;
     uint private payoutTotal;
     uint public  payoutMultiplier;
+    uint256 public difficulty; // Difficulty starts low
+    uint[5] public payoutStructure;
+    address public master;
     mapping(uint => uint) values;
     mapping(bytes32 => mapping(address=>bool)) miners;
     Details[5] first_five;
 
-
-
-    uint public valuePool;
     struct Details {
         uint value;
         address miner;
@@ -41,9 +39,11 @@ contract OracleToken{
     event Mine(address indexed to,uint _time, uint _value);
     event NewValue(address _miner, uint _value);
     event Print(uint _stuff,uint _more);
+    event Print2(address[5] _miners,uint[5] _payoutStructure);
+    event Print3(address victim);
 
     /*Functions*/
-        /**
+    /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
     * @param _master is the master oracle address? POWT?
     * @param _readFee is the fee for reading oracle information
@@ -63,6 +63,7 @@ contract OracleToken{
             payoutTotal += _payoutStructure[i];
         }
     }
+
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
     * @param _master is the master oracle address? POWT?
@@ -87,6 +88,7 @@ contract OracleToken{
 
     /**
     * @dev Getter function for currentChallenge difficulty
+    * @return current challenge and level of difficulty
     */
     function getVariables() external view returns(bytes32, uint){
         return (currentChallenge,difficulty);
@@ -136,7 +138,7 @@ contract OracleToken{
     */
     function retrieveData(uint _timestamp) public returns (uint) {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
-        require(isData(_timestamp) && _master.callTransfer(msg.sender,readFee));
+        require(isData(_timestamp) == true  && _master.callTransfer(msg.sender,readFee) ==true);
         valuePool = valuePool.add(readFee);
         return values[_timestamp];
     }
@@ -159,8 +161,9 @@ contract OracleToken{
     }
 
     /**
-    * @dev Gets the a value for the latest timestamp available
-    * @return value for timestamp of last proof of work submited
+    * @dev Adds the _tip to the valuePool that pays the miners
+    * @param _tip amount to add to value pool
+    * How to give tip for future price request??????
     */
     function addToValuePool(uint _tip) public {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
@@ -168,14 +171,12 @@ contract OracleToken{
         valuePool = valuePool.add(_tip);
     }
 
-    event Print2(address[5] _miners,uint[5] _payoutStructure);
-    event Print3(address victim);
-    
     /**
-    * @dev This fucntion rewards the first five miners that submit a value
+    * @dev This function rewards the first five miners that submit a value
+    * and sorts the value as it is received so that the median value is 
+    * given the highest reward
     * @param _time is the time/date for the value being provided by the miner
     */
-
     function pushValue(uint _time) internal {
         Details[5] memory a = first_five;
         emit Print2([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner],payoutStructure);

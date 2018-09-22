@@ -10,9 +10,9 @@ contract Token  {
     using SafeMath for uint256;
 
     struct  Checkpoint {
-        // `fromBlock` is the block number that the value was generated from
+        // fromBlock is the block number that the value was generated from
         uint128 fromBlock;
-        // `value` is the amount of tokens at a specific block number
+        // value is the amount of tokens at a specific block number
         uint128 value;
     }
 
@@ -55,12 +55,14 @@ contract Token  {
         return true;
     }
 
-    /// @notice Send `_amount` tokens to `_to` from `_from` on the condition it
-    ///  is approved by `_from`
-    /// @param _from The address holding the tokens being transferred
-    /// @param _to The address of the recipient
-    /// @param _amount The amount of tokens to be transferred
-    /// @return True if the transfer was successful
+    /**
+    * @notice Send _amount tokens to _to from _from on the condition it
+    * is approved by _from
+    * @param _from The address holding the tokens being transferred
+    * @param _to The address of the recipient
+    * @param _amount The amount of tokens to be transferred
+    * @return True if the transfer was successful
+    */
     function transferFrom(address _from, address _to, uint256 _amount) public returns (bool success) {
         require(allowed[_from][msg.sender] >= _amount);
         allowed[_from][msg.sender] -= _amount;
@@ -68,11 +70,12 @@ contract Token  {
         return true;
     }
 
-
-    /// @dev Queries the balance of `_owner` at a specific `_blockNumber`
-    /// @param _owner The address from which the balance will be retrieved
-    /// @param _blockNumber The block number when the balance is queried
-    /// @return The balance at `_blockNumber`
+    /**
+    * @dev Queries the balance of _owner at a specific _blockNumber
+    * @param _owner The address from which the balance will be retrieved
+    * @param _blockNumber The block number when the balance is queried
+    * @return The balance at _blockNumber
+    */
     function balanceOfAt(address _owner, uint _blockNumber) public constant returns (uint) {
         if ((balances[_owner].length == 0) || (balances[_owner][0].fromBlock > _blockNumber)) {
                 return 0;
@@ -82,9 +85,13 @@ contract Token  {
      }
     }
 
-     function getValueAt(Checkpoint[] storage checkpoints, uint _block) constant internal returns (uint) {
+    /**
+    * @dev Getter for balance for owner on the specified _block number
+    * @param checkpoints gets the mapping for the balances[owner]
+    * @param _block is the block number to search the balance on
+    */
+    function getValueAt(Checkpoint[] storage checkpoints, uint _block) constant internal returns (uint) {
         if (checkpoints.length == 0) return 0;
-
         // Shortcut for the actual value
         if (_block >= checkpoints[checkpoints.length-1].fromBlock)
             return checkpoints[checkpoints.length-1].value;
@@ -104,23 +111,30 @@ contract Token  {
         return checkpoints[min].value;
     }
 
-
-
-
-   function updateValueAtNow(Checkpoint[] storage checkpoints, uint _value
-    ) internal  {
+    /**
+    * @dev Updates value at current block number once doTransfer is complete??
+    * @param checkpoints gets the mapping for the balances[owner]
+    * @param _value is the new balance
+    */
+    function updateValueAtNow(Checkpoint[] storage checkpoints, uint _value) internal  {
         if ((checkpoints.length == 0)
         || (checkpoints[checkpoints.length -1].fromBlock < block.number)) {
                Checkpoint storage newCheckPoint = checkpoints[ checkpoints.length++ ];
                newCheckPoint.fromBlock =  uint128(block.number);
                newCheckPoint.value = uint128(_value);
-           } else {
+        } else {
                Checkpoint storage oldCheckPoint = checkpoints[checkpoints.length-1];
                oldCheckPoint.value = uint128(_value);
-           }
+        }
     }
-
-  function doTransfer(address _from, address _to, uint _amount) internal {
+    
+    /** 
+    * @dev Completes POWO transfers by updating the balances on the current block number
+    * @param _from address to transfer from
+    * @param _to addres to transfer to
+    * @param _amount to transfer 
+    */
+    function doTransfer(address _from, address _to, uint _amount) internal {
         if (_amount > 0) {
            require(_to != 0);
            uint previousBalance = balanceOfAt(_from, block.number);
