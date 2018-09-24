@@ -9,19 +9,18 @@ contract Token  {
 
     using SafeMath for uint256;
 
+    /*Variables*/
+    uint public constant total_supply = 2**256-1;
+    mapping (address => Checkpoint[]) balances;
+    mapping(address => mapping (address => uint)) internal allowed;
+
     struct  Checkpoint {
         // fromBlock is the block number that the value was generated from
         uint128 fromBlock;
         // value is the amount of tokens at a specific block number
         uint128 value;
     }
-
-
-    /*Variables*/
-    uint public constant total_supply = 2**256-1;
-    mapping (address => Checkpoint[]) balances;
-    mapping(address => mapping (address => uint)) internal allowed;
-        
+      
     /*Events*/
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
@@ -112,7 +111,7 @@ contract Token  {
     }
 
     /**
-    * @dev Updates value at current block number once doTransfer is complete??
+    * @dev Updates balance for from and to on the current block number via doTransfer
     * @param checkpoints gets the mapping for the balances[owner]
     * @param _value is the new balance
     */

@@ -13,11 +13,14 @@ contract ProofOfWorkToken is Token, CloneFactory {
 
     using SafeMath for uint256;
 
+    /*Variables*/
     string public constant name = "Proof-of-Work Oracle Token";
     string public constant symbol = "POWO";
     uint8 public constant decimals = 18;
+    address public dud_Oracle;
+    OracleDetails[] public oracle_list;
+    mapping(address => uint) oracle_index;
 
-    /*Variables*/
     struct OracleDetails {
         string API;
         address location;
@@ -37,16 +40,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     }
 
     /**
-    * @dev Set oracle dudd address to clone
-    * @param _dud_Oracle address to clone
-    */  
-    function setDudOracle(address _dud_Oracle) internal {
-        dud_Oracle = _dud_Oracle;
-        emit ChangeDudOracle(dud_Oracle);
-    }
-
-    /**
-    * @dev Deployes a new oracle 
+    * @dev Deploys a new oracle 
     * @param _api is the oracle api
     * @param _readFee is the fee for reading oracle information
     * @param _timeTarget for the dificulty adjustment
@@ -66,7 +60,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     }
 
     /**
-    * @dev Allows for a transfer of tokens to _miners
+    * @dev Allows for a transfer of tokens to _miners 
     * @param _miners The five addresses to send tokens to
     * @param _amount The amount of tokens to send to each address
     */
@@ -83,7 +77,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     }
 
     /**
-    * @dev Allows the OracleToken.sol to transfer the fee paid to retreive
+    * @dev Allows the OracleToken.RetreiveData to transfer the fee paid to retreive
     * data back to this contract
     * @param _from address to transfer from
     * @param _amount to transfer
@@ -108,6 +102,15 @@ contract ProofOfWorkToken is Token, CloneFactory {
         oracle_index[_last.location] = _index;
         oracle_list.length--;
         oracle_index[_removed] = 0;
+    }
+    
+    /**
+    * @dev Set oracle dudd address to clone
+    * @param _dud_Oracle address to clone
+    */  
+    function setDudOracle(address _dud_Oracle) internal {
+        dud_Oracle = _dud_Oracle;
+        emit ChangeDudOracle(dud_Oracle);
     }
 
     /**

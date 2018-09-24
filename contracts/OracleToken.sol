@@ -106,8 +106,13 @@ contract OracleToken{
         count++;
         first_five[count - 1].value = value;
         first_five[count - 1].miner = msg.sender;
+
+/*         first_five[count].value = value;
+        first_five[count].miner = msg.sender;
+        count++; */
         miners[currentChallenge][msg.sender] = true;
         emit NewValue(msg.sender,value);
+/*         if(count == 4) { */
         if(count == 5) {
             if (now - timeOfLastProof< timeTarget){
                 difficulty++;
@@ -129,6 +134,7 @@ contract OracleToken{
             currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
         }
         return (count,timeOfLastProof);
+/*         return (Details.length,timeOfLastProof); */
     }
 
     /**
@@ -136,9 +142,17 @@ contract OracleToken{
     * @param _timestamp to retreive data/value from
     * @return value for timestamp submitted
     */
+/*     function retrieveData(uint _timestamp) public returns (uint) {
+        ProofOfWorkToken _master = ProofOfWorkToken(master);
+        require(isData(_timestamp) && _master.callTransfer(msg.sender,readFee));
+        valuePool = valuePool.add(readFee);
+        return values[_timestamp];
+    } */
+
     function retrieveData(uint _timestamp) public returns (uint) {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
-        require(isData(_timestamp) == true  && _master.callTransfer(msg.sender,readFee) ==true);
+        require(isData(_timestamp) == true && _master.balanceOf(msg.sender)>=readFee);
+        _master.callTransfer(msg.sender,readFee);
         valuePool = valuePool.add(readFee);
         return values[_timestamp];
     }

@@ -149,8 +149,8 @@ import "./ProofOfWorkToken.sol";
     }
 
     /**
-    * @dev Adds the proposal information to the proposal struct
-    * the same logic is used in each proposal function and instead 
+    * @dev Adds the proposal information to the proposal struct.
+    * The same logic is used in each proposal function and instead 
     * of repeating the code it is just saved as its own function
     * @param _id is passed(hard coded) within each proposal function
     * @return the proposal Id
