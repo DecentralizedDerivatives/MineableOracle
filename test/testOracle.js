@@ -77,9 +77,9 @@ contract('Mining Tests', function(accounts) {
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;      
         console.log("begbal sender",await oraclevote.balanceOf(accounts[0])); 
-        data2 = await oracletoken.retrieveData(res);
-        console.log("retreived 2", data2);
-        data = await oracletoken.retrieveData.call(res.c[0]);
+/*        data2 = await oracletoken.retrieveData(res);
+        console.log("retreived 2", data2);*/
+        data = await oracletoken.retrieveData.call(res.c[0], {from:accounts[0]});
         console.log("retreived", data);
         assert((data- 0) == (val- 0));
         console.log("endbal sender",await oraclevote.balanceOf(accounts[0]));

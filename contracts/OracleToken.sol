@@ -35,6 +35,8 @@ contract OracleToken{
     }
  
 
+
+
     /*Events*/
     event Mine(address indexed to,uint _time, uint _value);
     event NewValue(address _miner, uint _value);
@@ -103,17 +105,12 @@ contract OracleToken{
     function proofOfWork(string nonce, uint value) external returns (uint256,uint256) {
         bytes32 n = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
         require(uint(n) % difficulty == 0 && value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a valueS  
-        count++;
-        first_five[count - 1].value = value;
-        first_five[count - 1].miner = msg.sender;
-
-/*         first_five[count].value = value;
+        first_five[count].value = value;
         first_five[count].miner = msg.sender;
-        count++; */
+        count++;
         miners[currentChallenge][msg.sender] = true;
         emit NewValue(msg.sender,value);
-/*         if(count == 4) { */
-        if(count == 5) {
+        if(count == 5) { 
             if (now - timeOfLastProof< timeTarget){
                 difficulty++;
             }
@@ -121,6 +118,9 @@ contract OracleToken{
                 difficulty--;
             }
             timeOfLastProof = now - (now % timeTarget);//should it be like this? So 10 minute intervals?;
+/*             if (isTipDate(timeOfLastProof)== true) {
+                valuePool = valuePool.add(getTipInfo(_timeOfLastProof));
+            } */
             emit Print(payoutTotal,valuePool);
             if(valuePool >= payoutTotal) {
                 payoutMultiplier = (valuePool + payoutTotal) / payoutTotal; //solidity should always round down
@@ -133,8 +133,7 @@ contract OracleToken{
             count = 0;
             currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
         }
-        return (count,timeOfLastProof);
-/*         return (Details.length,timeOfLastProof); */
+         return (count,timeOfLastProof); 
     }
 
     /**
@@ -142,17 +141,9 @@ contract OracleToken{
     * @param _timestamp to retreive data/value from
     * @return value for timestamp submitted
     */
-/*     function retrieveData(uint _timestamp) public returns (uint) {
-        ProofOfWorkToken _master = ProofOfWorkToken(master);
-        require(isData(_timestamp) && _master.callTransfer(msg.sender,readFee));
-        valuePool = valuePool.add(readFee);
-        return values[_timestamp];
-    } */
-
     function retrieveData(uint _timestamp) public returns (uint) {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
-        require(isData(_timestamp) == true && _master.balanceOf(msg.sender)>=readFee);
-        _master.callTransfer(msg.sender,readFee);
+        require(isData(_timestamp) && _master.callTransfer(msg.sender,readFee));
         valuePool = valuePool.add(readFee);
         return values[_timestamp];
     }
@@ -187,7 +178,8 @@ contract OracleToken{
 
     /**
     * @dev This function rewards the first five miners that submit a value
-    * and sorts the value as it is received so that the median value is 
+    * through the proofOfWork function and sorts the value as it is received 
+    * so that the median value is 
     * given the highest reward
     * @param _time is the time/date for the value being provided by the miner
     */
@@ -213,4 +205,56 @@ contract OracleToken{
         values[_time] = a[2].value;
         emit Mine(msg.sender,_time,a[2].value); // execute an event reflecting the change
     }
+
+    struct TipInfo {
+        uint tip;//uint []  tip; or could this be jus tip?? instead of separate value
+                           //we just keep adding to it.
+    }
+    mapping(uint => TipInfo) public tipTime;//maps the tipTime to the array in the struct with all the tips from everyone
+    uint[] public tipTimes;
+    //mapping (uint => uint) public tipTimesIndex;//may not need index if tipTimes is sorted
+    /**
+    *@dev getter function to get all tipTimes
+    */
+    function getTipTimes() view public returns (uint[]){
+        return tipTimes;
+    }
+
+    function isTipDate(uint _timestamp) public view returns(bool){
+        return (tipTime[_timestamp].tip > 0);
+    }
+    /**
+    *@dev Gets tip amount for timestamp
+    *@param _timestamp to view the tip amount
+    */
+    function getTipInfo(uint _timestamp) public constant returns(uint){
+        return (tipTime[_timestamp].tip);
+    }
+    /**
+    * @dev Adds the _tip to the valuePool that pays the miners
+    * @param _tip amount to add to value pool
+    * @param _timestamp unix time to disburse the tip
+    * How to give tip for future price request??????
+    */
+    function addTimeTip(uint _tip, uint _timestamp) public {
+        ProofOfWorkToken _master = ProofOfWorkToken(master);
+        require(_master.callTransfer(msg.sender,_tip));
+        TipInfo storage tips = tipTime[_timestamp];
+        //is i supposed to be my timestamp???????????????????????????
+        for (uint i = 1;i < tipTimes.length;i++){
+            uint temp = tipTimes[i];
+            uint j =i ;
+            while (j  > 0 && temp < tipTimes[j-1]){
+                tipTimes[j] = tipTimes[j-1];
+                j--;
+            }
+            if (j<i) {
+                tipTimes[j] = temp;
+            }
+        }
+        tipTimes.push(_timestamp);//how to sort this??? delete history??
+        tips.tip = tips.tip.add(_tip);
+        //valuePool = valuePool.add(_tip);
+    }
+
 }
