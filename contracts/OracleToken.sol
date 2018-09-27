@@ -34,7 +34,13 @@ contract OracleToken{
         address miner;
     }
  
-
+    struct TipInfo {
+        uint tip;
+        address tipper;
+    }
+    mapping(uint => TipInfo) public tipTime;//maps the tipTime to the array in the struct with all the tips from everyone
+    uint[] public tipTimes;
+    //mapping (uint => uint) public tipTimesIndex;//may not need index if tipTimes is sorted
 
 
     /*Events*/
@@ -207,14 +213,7 @@ contract OracleToken{
         emit Mine(msg.sender,_time,a[2].value); // execute an event reflecting the change
     }
 
-    struct TipInfo {
-        uint tip;//uint []  tip; or could this be jus tip?? instead of separate value
-                           //we just keep adding to it.
-        address tipper;
-    }
-    mapping(uint => TipInfo) public tipTime;//maps the tipTime to the array in the struct with all the tips from everyone
-    uint[] public tipTimes;
-    //mapping (uint => uint) public tipTimesIndex;//may not need index if tipTimes is sorted
+
     /**
     *@dev getter function to get all tipTimes
     */
@@ -235,6 +234,8 @@ contract OracleToken{
 
     function retreiveTipIfNoValue(uint _timestamp) public {
         require(_timestamp % 86400 == 0);//the date is a day
+        uint _dayStamp = now - (now % 86400);
+        //require( _dayStamp > _timestamp);
         require(isData(_timestamp)==false);
         TipInfo storage tips = tipTime[_timestamp];
         require(tips.tipper == msg.sender);
