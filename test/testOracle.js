@@ -36,7 +36,7 @@ contract('Mining Tests', function(accounts) {
         let res = await oraclevote.tallyVotes(2, {from:accounts[0]} );
         res = res.logs[0].args._newOracle;
         oracletoken = await oracleToken.at(res);
-        console.log("Acct0 bal",await oraclevote.balanceOf(accounts[0]));
+        //console.log("Acct0 bal",await oraclevote.balanceOf(accounts[0]));
     });
     it("getVariables", async function(){
         vars = await oracletoken.getVariables();
@@ -77,7 +77,7 @@ contract('Mining Tests', function(accounts) {
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;      
         console.log("begbal sender",await oraclevote.balanceOf(accounts[0])); 
-/*        data2 = await oracletoken.retrieveData(res);
+/*      data2 = await oracletoken.retrieveData(res);
         console.log("retreived 2", data2);*/
         data = await oracletoken.retrieveData.call(res.c[0], {from:accounts[0]});
         console.log("retreived", data);
@@ -130,38 +130,6 @@ contract('Mining Tests', function(accounts) {
         assert(vars[1] = 3);
     });
 
-    it("Test tip for specific timestamp", async function () {
-        var currentTime = new Date() ;
-        var _date = currentTime.setDate(currentTime.getDate());
-        var d = (_date - (_date % 86400000))/1000;
-        console.log("value pool sender begbal",await oraclevote.balanceOf(accounts[0]));
-        await oracletoken.addTimeTip(22,d);
-        console.log("value pool sender endbal",await oraclevote.balanceOf(accounts[0]));
-        balances = []
-        for(var i = 0;i<5;i++){
-            balances[i] = await oraclevote.balanceOf(accounts[i]);
-        }
-        logMineWatcher = await promisifyLogWatch(oracletoken.Mine({ fromBlock: 'latest' }));//or Event Mine?
-        new_balances = []
-        for(var i = 0;i<5;i++){
-            new_balances[i] = await oraclevote.balanceOf(accounts[i]);
-        }
-        assert((new_balances[0] - balances[0]) == 1 * 2);
-        assert((new_balances[1] - balances[1]) == 5* 2);
-        assert((new_balances[2] - balances[2]) == 10* 2);
-        assert((new_balances[3] - balances[3]) == 5* 2);
-        assert((new_balances[4] - balances[4]) == 1* 2);
-    });
 
-        it("Test tip for specific timestamp", async function () {
-        var currentTime = new Date() ;
-        var _date = currentTime.setDate(currentTime.getDate());
-        var d = (_date - (_date % 86400000))/1000;
-        console.log("value pool sender begbal",await oraclevote.balanceOf(accounts[4]));
-        await oracletoken.addTimeTip(22,d, {from:accounts[4]});
-        console.log("value pool sender endbal afer addTimeTip",await oraclevote.balanceOf(accounts[4]));
-        await oracletoken.retreiveTipIfNoValue(d, {from:accounts[4]});
-        console.log("value pool sender endbal",await oraclevote.balanceOf(accounts[4]));
-    });
 
 });

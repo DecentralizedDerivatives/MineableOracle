@@ -26,8 +26,6 @@ import "./ProofOfWorkToken.sol";
     mapping(uint => uint) public propUpdatePropVars;// saves proposed changes to minimum quorum, proposal fee, and vote duration
     mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
     
-    //removeOracle, addOracle,changeMinQuorum, changeVoteDuration, changeProposalFee, changeDudOracle
-
     struct Proposal {
         uint propType; //removeOracle, addOracle,changeMinQuorum, changeVoteDuration, changeProposalFee, changeDudOracle
         uint minExecutionDate; 
@@ -224,7 +222,6 @@ import "./ProofOfWorkToken.sol";
         emit ProposalTallied(_proposalId,prop.tally, prop.quorum, prop.proposalPassed); 
     }
 
-
     /**
     *@dev Get proposal information
     *@param _propId to pull propType and prop passed
@@ -241,13 +238,13 @@ import "./ProofOfWorkToken.sol";
     }
 
     /**
-    *@dev getter function to get all proposalsIds
+    * @dev getter function to get all proposalsIds
     */
     function getProposalsIds() view public returns (uint[]){
         return proposalsIds;
     }
 
-    /*
+    /**
     * @dev Propose updates to minimum quorum 
     * @param _minimumQuorum for passing and executing proposal
     */
@@ -257,7 +254,7 @@ import "./ProofOfWorkToken.sol";
         emit ChangeMinQuorum(minimumQuorum);
     }
 
-    /*
+    /**
     * @dev Updates the vote duration
     * @param _voteDuration in days
     */
@@ -265,7 +262,7 @@ import "./ProofOfWorkToken.sol";
         voteDuration = _voteDuration;
         emit ChangeVoteDuration(voteDuration);
     }
-    /*
+    /**
     * @dev Updates the proposal fee amount
     * @param _proposalFee fee amount in POWO tokens 
     */

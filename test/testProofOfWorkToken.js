@@ -8,8 +8,9 @@ contract('PoW Token Tests', function(accounts) {
   let oraclevote;
   
     beforeEach('Setup contract for each test', async function () {
-        oracletoken = await oracleToken.new(accounts[0],22,(86400/60)/6,[1,5,10,5,1]);
         oraclevote = await oracleVote.new(22,1,1);
+        oracletoken = await oracleToken.new(accounts[0],22,(86400/60)/6,[1,5,10,5,1]);
+        //oracletoken = await oracleToken.new(oraclevote,22,(86400/60)/6,[1,5,10,5,1]);
         await oraclevote.propDudOracle(oracletoken.address);
         await oraclevote.vote(1, true,{from:accounts[0]} );
         await oraclevote.tallyVotes(1, {from:accounts[0]} )
