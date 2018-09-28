@@ -164,6 +164,17 @@ contract('Oracle Vote Tests', function(accounts) {
         assert.equal(propFee1,26, "Proposal fee is now 26");
     });
 
+    it("Change Dud Oracle", async function(){
+        dudOracle = await oraclevote.dud_Oracle.call();
+        //assert.equal(dudOracle,oracletoken.address, "oracle dud address");
+        let oracletoken2 = await oracleToken.new(accounts[0],22,(86400/60)/6,[1,5,10,5,1]);
+        await oraclevote.propDudOracle(oracletoken2.address, {from:accounts[5]});
+        await oraclevote.vote(4, true,{from:accounts[0]} );
+        await oraclevote.tallyVotes(4, {from:accounts[0]} );
+        dudOracle1 = await oraclevote.dud_Oracle.call();
+        assert.equal(dudOracle1,oracletoken2.address, "new oracle dudd address");
+    });
+
     it("Get proposalsId list", async function(){
         proposalsList = await oraclevote.getProposalsIds();
         assert(proposalsList = [1,2,3], "proposals list");

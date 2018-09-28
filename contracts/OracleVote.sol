@@ -5,9 +5,12 @@ import "./ProofOfWorkToken.sol";
 
 
 /**
-* @title Stake voting
+* @title Oracle Vote 
 * This contract allows Oracle token holders to vote
-* to add or delete oracles.
+* to add or delete oracles, minimum quorum, proposal fee, vote duration
+* and oracle type via the propDudOracle.
+* Votes are weighted based on the amount of POWO tokens owned at the 
+* checkpoint during the tally.
 */
 
  contract OracleVote is ProofOfWorkToken {
@@ -18,27 +21,23 @@ import "./ProofOfWorkToken.sol";
     uint public minimumQuorum;
     uint public proposalFee;
     uint public voteDuration;//3days the same as voting period
-    
-    mapping(uint => Proposal) public proposals;
     uint[] public proposalsIds;
+    mapping(uint => Proposal) public proposals;
     mapping (uint => uint) public proposalsIdsIndex;//not sure i'll need it
-
     mapping(uint => address) public propRemoveOrUpdateOracle; //save addresses proposed to remove and proposed updates to DudOracle
     mapping(uint => uint) public propUpdatePropVars;// saves proposed changes to minimum quorum, proposal fee, and vote duration
     mapping(uint => propAddOracle) propAddOracles;//maps proposalID to struct
     
-    //removeOracle, addOracle,changeMinQuorum, changeVoteDuration, changeProposalFee, changeDudOracle
-
     struct Proposal {
         uint propType; //removeOracle, addOracle,changeMinQuorum, changeVoteDuration, changeProposalFee, changeDudOracle
         uint minExecutionDate; 
-        bool executed;
-        bool proposalPassed;
         uint numberOfVotes;
-        int tally;
         uint quorum;
-        mapping (address => bool) voted;
         uint  blockNumber;
+        int tally;
+        bool executed;
+        bool proposalPassed;       
+        mapping (address => bool) voted;
     }
 
     struct propAddOracle {
@@ -70,7 +69,7 @@ import "./ProofOfWorkToken.sol";
        voteDuration = _voteDuration;
     }
 
-    /*
+    /**
     * @dev Allows token holders to submit a proposal to remove an oracle
     * @param _removeOracle address of oracle to remove
     */
@@ -101,7 +100,7 @@ import "./ProofOfWorkToken.sol";
         return _propId;
         }
 
-    /*
+    /**
     * @dev Propose updates to minimum quorum 
     * @param _minimumQuorum from 1-100 representing a percentage of total circulating supply
     */
@@ -114,7 +113,7 @@ import "./ProofOfWorkToken.sol";
         return _propId;
     }
 
-    /*
+    /**
     * @dev Updates the vote duration
     * @param _voteDuration in days
     */
@@ -125,7 +124,7 @@ import "./ProofOfWorkToken.sol";
         emit ProposalVoteDuration(_propId, _voteDuration);
         return _propId;
     }
-    /*
+    /**
     * @dev Updates the proposal fee amount
     * @param _proposalFee fee amount for member
     */
@@ -149,7 +148,13 @@ import "./ProofOfWorkToken.sol";
         return _propId;
     }
 
-
+    /**
+    * @dev Adds the proposal information to the proposal struct.
+    * The same logic is used in each proposal function and instead 
+    * of repeating the code it is just saved as its own function
+    * @param _id is passed(hard coded) within each proposal function
+    * @return the proposal Id
+    */
     function propFuncs(uint _id) internal returns(uint){
         require(transfer(address(this), proposalFee));
         uint proposalId = proposalsIds.length + 1;
@@ -184,6 +189,7 @@ import "./ProofOfWorkToken.sol";
         emit Voted(_proposalId,_supportsProposal,msg.sender);
         return voteId;
     }
+    
     /**
     * @dev tallies the votes and executes if minimum quorum is met or exceeded.
     * @param _proposalId is the proposal id
@@ -191,7 +197,7 @@ import "./ProofOfWorkToken.sol";
     function tallyVotes(uint _proposalId) external{
         Proposal storage prop = proposals[_proposalId];
         require(prop.executed == false);
-        //require(now > prop.minExecutionDate && !prop.executed); //Uncomment for production-commented out for testing 
+        require(now > prop.minExecutionDate && !prop.executed); //Uncomment for production-commented out for testing 
         uint minQuorum = minimumQuorum;
          require(prop.quorum >= minQuorum); 
           if (prop.tally > 0 ) {
@@ -218,7 +224,6 @@ import "./ProofOfWorkToken.sol";
         emit ProposalTallied(_proposalId,prop.tally, prop.quorum, prop.proposalPassed); 
     }
 
-
     /**
     *@dev Get proposal information
     *@param _propId to pull propType and prop passed
@@ -235,13 +240,13 @@ import "./ProofOfWorkToken.sol";
     }
 
     /**
-    *@dev getter function to get all proposalsIds
+    * @dev getter function to get all proposalsIds
     */
     function getProposalsIds() view public returns (uint[]){
         return proposalsIds;
     }
 
-    /*
+    /**
     * @dev Propose updates to minimum quorum 
     * @param _minimumQuorum for passing and executing proposal
     */
@@ -251,7 +256,7 @@ import "./ProofOfWorkToken.sol";
         emit ChangeMinQuorum(minimumQuorum);
     }
 
-    /*
+    /**
     * @dev Updates the vote duration
     * @param _voteDuration in days
     */
@@ -259,7 +264,7 @@ import "./ProofOfWorkToken.sol";
         voteDuration = _voteDuration;
         emit ChangeVoteDuration(voteDuration);
     }
-    /*
+    /**
     * @dev Updates the proposal fee amount
     * @param _proposalFee fee amount in POWO tokens 
     */

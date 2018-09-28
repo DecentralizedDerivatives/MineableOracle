@@ -1,59 +1,94 @@
-![Header Image](https://github.com/SamuelLJackson/AngelHackTeam/blob/master/MOCHeader.PNG)
+![Header Image](./public/PowoFlow.png)
+
 
 ## Overview
-<b>"Minable Oracle Contract" (MOC)</b> is an oracle schema that implements a mineable proof of work (POW) competiton.  Once aggregated, validated, and processed into a consumable output - these oracle data entries will be internally referred to as 'truthpoints'.  
+<b>Proof of Work Oracle (POWO)</b> is a decentralized oracle governed by the POWO token owners. The POWO implements a mineable proof of work (POW) competiton where miners, along with the POW also provide an offchain value.  Once validated and processed the value is available for on-chain decentralized contracts to use.
+
+**Contracts**
+* OracleToken.sol -- is the Oracle contract. It allows miners to submit the proof of work and value, sorts the values, uses functions from ProofOfWorkToken to pay the miners, allows the data users to "tip" the miners for providing a value for a specific timestamp and allows the users to retreive the values.
+* OracleVote.sol -- contains the voting mechanism for adding or changing oracles(uses balance checkpoints to avoid double voting), minting, paying the the miners, ERC20 token functionallity, and cloning process for efficiently deploying new oracles. Oracle vote is ProofOfWorkToken.sol and ProofOfWorkToken.sol is CloneFactory.sol and Token.sol. 
+    * ProofOfWorkToken.sol
+    * CloneFactory.sol
+    * Token.sol
+
+Note: There is no owner of the OracleToken.sol or OracleVote.sol, these are are managed and governed by the POWO token owners.  
+
+
+
+### Instructions for quick start with Truffle Deployment 
+
+Follow the steps below to launch the Oracle contracts using Truffle. 
+
+Clone the repo, cd into it, and then:
+
+    $ npm install
+
+    $ truffle compile
+
+    $ truffle migrate
+
+    $ truffle exec scripts/DeployOracleandOracleVote.js
+
 
 This project draws high-level inspiration from the [EIP918 Mineable Token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-918.md) as an abstract standard that uses a challenge-driven keccak256 Proof of Work algorithm for token minting and distribution.  
 
-MOC leverages a proven game-theoretical competition to disintermediate and decentralize the existing 3rd party trust layer associated with centralized oracle services like Oraclize, which use basic API getters to provide smart-contracts with off-chain data.  This reduces the implicit cost of risk associated with third parties.  For more information, see:
+POWO leverages a proven game-theoretical competition to disintermediate and decentralize the existing 3rd party trust layer associated with centralized oracle services like Oraclize, which use basic API getters to provide smart-contracts with off-chain data.  This reduces the implicit cost of risk associated with third parties.  For more information, see:
 
 > "Trusted third parites are security holes" ~ Nick Szabo, 2001 (https://nakamotoinstitute.org/trusted-third-parties/)
 
 To summarize, by creating an oracle schema that uses an incented construct to derive the validity of off-chain data, we:
   1. <b>Reduce the risks</b> associated with single-party oracle providers, who can cut access to API data, forge message data, etc
   2. <b>Lay the foundation</b> for a superior oracle system where truth data is derived from a distributed set of participants which have both economic interest and 'stake' in the validity and success of the oracle data
-  3. <b>Create</b> an effective, secure, and incentivized system for off-chain data which ingests inputs from a signifigant sample of parties and disincentives dispersion and adversarial submissions
+  3. <b>Create</b> an effective, secure, and incentivized system for off-chain data which ingests inputs from five random parties(miners) and disincentives dispersion and adversarial submissions
 
 
 ## How It Works
-Users engage in a POW competition to find a nonce which satisfies the requirement of the challenge.  The users who find a nonce which correctly solves the POW puzzle input data for the POW Oracle contract and receive native tokens in exchange for their work.  The oracle data submissions are stored in contract memory as an array - which is subsequently operated upon to derive the median for the sample. In this implementation the amount of samples recorded may be stated as N=5.  
 
-Each input value is expressed as an integer with a median timestamp describing the point in time that the oracle truth corresponds to.  On average, these oracle truths are mined and recorded at an interval dynamically adjusted to correspond to the total work inputted - so that truthpoints (represented as values stored for P sub n variables) may be expressed in a timeseries array fed into another contract, or visualized in a front-end through an event (see UX section for an example).
+overview(https://medium.com/@nfett/proof-of-work-oracle-6de6f795d27)
+Users engage in a POW competition to find a nonce which satisfies the requirement of the challenge.  The first five users who solve the POW puzzle input data for the POW Oracle contract and receive native tokens in exchange for their work.  The oracle data submissions are stored in contract memory as an array - which is subsequently operated upon to derive the median value. 
 
-To ensure scalability and maximize usage potential, the smart-contract has been designed ground-up using the principle of 'gas-minimization'.  The contract is currently deployed on the both the Kovan and Rinkeby Ethereum testnets. We encourage testing, security auditing, and UX critiques.
+Each input value is expressed as an integer with a timestamp describing the point in time that the oracle truth corresponds to.  On average, these oracle truths are mined and recorded at an interval dynamically adjusted to correspond to the total work inputted - so that truthpoints (represented as values stored for P sub n variables) may be expressed in a timeseries array fed into another contract, or visualized in a front-end through an event (see UX section for an example).
+
+To ensure scalability and maximize usage potential, the smart-contract has been designed ground-up using the principle of 'gas-minimization'.  The contract is currently deployed on the Rinkeby Ethereum testnet. We encourage testing, security auditing, and UX critiques.
 
 
 ### The Oracle Mining Process
-MOC implements a quadriphasic approach to token mining and minting.  The current challenge, adjusted difficulty, count, and proof since last timestamp are all called during the 'proofOfWork' operation.
+The current challenge, adjusted difficulty, count, and proof since last timestamp are all called during the 'proofOfWork' operation.
 
-As explained in the initial section, MOC uses a native token as a reward for miners who solve the POW challenge and subsequently input data for the contract.  Thistoken inherets from the ERC-20 contract standard for fungible tokens, as may be seen in the 'contracts' hierarchy.
+As explained in the initial section, MOC uses a native token as a reward for miners who solve the POW challenge and subsequently input data for the contract.  This token inherets from the ERC-20 contract standard for fungible tokens, as may be seen in the 'contracts' hierarchy.
 
 The mining process is formally expressed as:
 
 ```solidity
-function proofOfWork(bytes nonce, uint value) returns (uint256) {
-        bytes32 n = sha3(currentChallenge,msg.sender,nonce); // generate random hash based on input
-        if (uint(n) % difficulty !=0) revert();
-        uint timeSinceLastProof = (now - timeOfLastProof); // Calculate time since last reward
-        if (timeSinceLastProof < 5 seconds) revert(); // Do not reward too quickly
-        difficulty = difficulty * 10 minutes / timeSinceLastProof + 1; // Adjusts the difficulty
-        timeOfLastProof = now - (now % 60);
-        if (count<5) {
-           first_five[count] = Details({
-                value: value,
-                miner: msg.sender
-            });  
-           emit NewValue(msg.sender,value);
-        } 
-        if(count==5) {
-            pushValue(timeOfLastProof);
-            emit Mine(msg.sender, value); // execute an event reflecting the change
-        }
-        else {
-        currentChallenge = sha3(nonce, currentChallenge, block.blockhash(block.number - 1)); // Save hash for next proof
-        }
+    function proofOfWork(string nonce, uint value) external returns (uint256,uint256) {
+        bytes32 n = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
+        require(uint(n) % difficulty == 0 && value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a valueS  
+        first_five[count].value = value;
+        first_five[count].miner = msg.sender;
         count++;
-        return (count);
+        miners[currentChallenge][msg.sender] = true;
+        emit NewValue(msg.sender,value);
+        if(count == 5) { 
+            if (now - timeOfLastProof< timeTarget){
+                difficulty++;
+            }
+            else if (now - timeOfLastProof > timeTarget && difficulty > 1){
+                difficulty--;
+            }
+            timeOfLastProof = now - (now % timeTarget);
+            emit Print(payoutTotal,valuePool);
+            if(valuePool >= payoutTotal) {
+                payoutMultiplier = (valuePool + payoutTotal) / payoutTotal; //solidity should always round down
+                valuePool = valuePool - (payoutTotal*(payoutMultiplier-1));
+            }
+            else{
+                payoutMultiplier = 1;
+            }
+            pushValue(timeOfLastProof);
+            count = 0;
+            currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
+        }
+         return (count,timeOfLastProof); 
     }
 ```
 
@@ -107,7 +142,7 @@ To interact with the smart-contract, we reccomend using an ingested web3 environ
 
 For reference purposes, we have included a few sample loops for the UX below.
 
-![UX Overview](https://github.com/SamuelLJackson/AngelHackTeam/blob/master/MOCgif.gif)
+![UX Overview]()
 
 Rinkeby Contract Address:  '0x34f65d2d9da5022592ba7e921783b9f5b1697333'
 

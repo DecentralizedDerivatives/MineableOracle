@@ -6,7 +6,7 @@ import "./ProofOfWorkToken.sol";
 //Instead of valuePool, can we balances of this address?
 
 /**
- * @title Mineable Token
+ * @title Oracle Token
  * @dev Turns a wallet into a mine for a specified ERC20 token
  */
 contract OracleToken{
@@ -15,37 +15,35 @@ contract OracleToken{
 
     /*Variables*/
     bytes32 public currentChallenge;
+    uint public valuePool;
     uint public timeOfLastProof; // time of last challenge solved
-    uint256 public difficulty; // Difficulty starts low
     uint public timeTarget;
-    uint count;
+    uint public count;
     uint public readFee;
-    address public master;
-    uint[5] public payoutStructure;
     uint private payoutTotal;
     uint public  payoutMultiplier;
+    uint256 public difficulty; // Difficulty starts low
+    uint[5] public payoutStructure;
+    address public master;
     mapping(uint => uint) values;
     mapping(bytes32 => mapping(address=>bool)) miners;
     Details[5] first_five;
 
-
-
-    uint public valuePool;
     struct Details {
         uint value;
         address miner;
     }
- 
 
     /*Events*/
     event Mine(address indexed to,uint _time, uint _value);
     event NewValue(address _miner, uint _value);
     event Print(uint _stuff,uint _more);
-
+    event Print2(address[5] _miners,uint[5] _payoutStructure);
+    
     /*Functions*/
-        /**
+    /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
-    * @param _master is the master oracle address? POWT?
+    * @param _master is the master oracleVote.address? POWT?
     * @param _readFee is the fee for reading oracle information
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
@@ -63,9 +61,10 @@ contract OracleToken{
             payoutTotal += _payoutStructure[i];
         }
     }
+
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
-    * @param _master is the master oracle address? POWT?
+    * @param _master is the master oracle address(OracleVote.address is ProofOfWorkToken)
     * @param _readFee is the fee for reading oracle information
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
@@ -87,6 +86,7 @@ contract OracleToken{
 
     /**
     * @dev Getter function for currentChallenge difficulty
+    * @return current challenge and level of difficulty
     */
     function getVariables() external view returns(bytes32, uint){
         return (currentChallenge,difficulty);
@@ -95,18 +95,18 @@ contract OracleToken{
     /**
     * @dev Proof of work to be done for mining
     * @param nonce uint submitted by miner
-    * @param value of api query?
+    * @param value of api query
     * @return count of values sumbitted so far and the time of the last submission
     */
     function proofOfWork(string nonce, uint value) external returns (uint256,uint256) {
         bytes32 n = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
         require(uint(n) % difficulty == 0 && value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a valueS  
+        first_five[count].value = value;
+        first_five[count].miner = msg.sender;
         count++;
-        first_five[count - 1].value = value;
-        first_five[count - 1].miner = msg.sender;
         miners[currentChallenge][msg.sender] = true;
         emit NewValue(msg.sender,value);
-        if(count == 5) {
+        if(count == 5) { 
             if (now - timeOfLastProof< timeTarget){
                 difficulty++;
             }
@@ -126,7 +126,7 @@ contract OracleToken{
             count = 0;
             currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
         }
-        return (count,timeOfLastProof);
+         return (count,timeOfLastProof); 
     }
 
     /**
@@ -159,8 +159,9 @@ contract OracleToken{
     }
 
     /**
-    * @dev Gets the a value for the latest timestamp available
-    * @return value for timestamp of last proof of work submited
+    * @dev Adds the _tip to the valuePool that pays the miners
+    * @param _tip amount to add to value pool
+    * How to give tip for future price request??????
     */
     function addToValuePool(uint _tip) public {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
@@ -168,14 +169,13 @@ contract OracleToken{
         valuePool = valuePool.add(_tip);
     }
 
-    event Print2(address[5] _miners,uint[5] _payoutStructure);
-    event Print3(address victim);
-    
     /**
-    * @dev This fucntion rewards the first five miners that submit a value
+    * @dev This function rewards the first five miners that submit a value
+    * through the proofOfWork function and sorts the value as it is received 
+    * so that the median value is 
+    * given the highest reward
     * @param _time is the time/date for the value being provided by the miner
     */
-
     function pushValue(uint _time) internal {
         Details[5] memory a = first_five;
         emit Print2([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner],payoutStructure);
@@ -198,4 +198,5 @@ contract OracleToken{
         values[_time] = a[2].value;
         emit Mine(msg.sender,_time,a[2].value); // execute an event reflecting the change
     }
+
 }

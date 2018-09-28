@@ -36,6 +36,7 @@ contract('Mining Tests', function(accounts) {
         let res = await oraclevote.tallyVotes(2, {from:accounts[0]} );
         res = res.logs[0].args._newOracle;
         oracletoken = await oracleToken.at(res);
+        //console.log("Acct0 bal",await oraclevote.balanceOf(accounts[0]));
     });
     it("getVariables", async function(){
         vars = await oracletoken.getVariables();
@@ -74,9 +75,14 @@ contract('Mining Tests', function(accounts) {
     it("Test Data Read", async function () {
         logMineWatcher = await promisifyLogWatch(oracletoken.Mine({ fromBlock: 'latest' }));//or Event Mine?
         res = logMineWatcher.args._time;
-        val = logMineWatcher.args._value;       
-        data = await oracletoken.retrieveData.call(res.c[0]);
+        val = logMineWatcher.args._value;      
+        console.log("begbal sender",await oraclevote.balanceOf(accounts[0])); 
+/*      data2 = await oracletoken.retrieveData(res);
+        console.log("retreived 2", data2);*/
+        data = await oracletoken.retrieveData.call(res.c[0], {from:accounts[0]});
+        console.log("retreived", data);
         assert((data- 0) == (val- 0));
+        console.log("endbal sender",await oraclevote.balanceOf(accounts[0]));
     });
 
       it("Test Miner Payout", async function () {
@@ -97,7 +103,9 @@ contract('Mining Tests', function(accounts) {
     });
     
     it("Test Add Value to Pool", async function () {
+        console.log("value pool sender begbal",await oraclevote.balanceOf(accounts[0]));
         await oracletoken.addToValuePool(22);
+        console.log("value pool sender endbal",await oraclevote.balanceOf(accounts[0]));
         balances = []
         for(var i = 0;i<5;i++){
             balances[i] = await oraclevote.balanceOf(accounts[i]);
@@ -121,4 +129,7 @@ contract('Mining Tests', function(accounts) {
         vars = await oracletoken.getVariables();
         assert(vars[1] = 3);
     });
+
+
+
 });
