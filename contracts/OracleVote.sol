@@ -5,10 +5,12 @@ import "./ProofOfWorkToken.sol";
 
 
 /**
-* @title Stake voting
+* @title Oracle Vote 
 * This contract allows Oracle token holders to vote
 * to add or delete oracles, minimum quorum, proposal fee, vote duration
 * and oracle type via the propDudOracle.
+* Votes are weighted based on the amount of POWO tokens owned at the 
+* checkpoint during the tally.
 */
 
  contract OracleVote is ProofOfWorkToken {
