@@ -195,7 +195,7 @@ import "./ProofOfWorkToken.sol";
     function tallyVotes(uint _proposalId) external{
         Proposal storage prop = proposals[_proposalId];
         require(prop.executed == false);
-        //require(now > prop.minExecutionDate && !prop.executed); //Uncomment for production-commented out for testing 
+        require(now > prop.minExecutionDate && !prop.executed); //Uncomment for production-commented out for testing 
         uint minQuorum = minimumQuorum;
          require(prop.quorum >= minQuorum); 
           if (prop.tally > 0 ) {

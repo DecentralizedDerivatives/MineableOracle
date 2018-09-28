@@ -1,12 +1,15 @@
 ![Header Image](./public/PowoFlow.png)
 
+
 ## Overview
 <b>Proof of Work Oracle (POWO)</b> is a decentralized oracle governed by the POWO token owners. The POWO implements a mineable proof of work (POW) competiton where miners, along with the POW also provide an offchain value.  Once validated and processed the value is available for on-chain decentralized contracts to use.
 
 **Contracts**
 * OracleToken.sol -- is the Oracle contract. It allows miners to submit the proof of work and value, sorts the values, uses functions from ProofOfWorkToken to pay the miners, allows the data users to "tip" the miners for providing a value for a specific timestamp and allows the users to retreive the values.
-* OracleVote.sol -- contains the voting mechanism for adding or changing oracles(uses balance checkpoints to avoid double voting), minting, paying the the miners, ERC20 token functionallity, and cloning process for efficiently deploying new oracles. Oracle vote is ProofOfWorkToken.sol and ProofOfWorkToken.sol is Token.sol, and CloneFactory.sol. 
-
+* OracleVote.sol -- contains the voting mechanism for adding or changing oracles(uses balance checkpoints to avoid double voting), minting, paying the the miners, ERC20 token functionallity, and cloning process for efficiently deploying new oracles. Oracle vote is ProofOfWorkToken.sol and ProofOfWorkToken.sol is CloneFactory.sol and Token.sol. 
+    * ProofOfWorkToken.sol
+    * CloneFactory.sol
+    * Token.sol
 
 Note: There is no owner of the OracleToken.sol or OracleVote.sol, these are are managed and governed by the POWO token owners.  
 
