@@ -1,9 +1,9 @@
-![Header Image](https://github.com/SamuelLJackson/AngelHackTeam/blob/master/MOCHeader.PNG)
+![Header Image](./public/PowoFlow.png)
 
 ## Overview
-<b>Proof of Work Oracle (POWO)</b> is a decentralized oracle a governed by the POWO token owners. The POWO implements a mineable proof of work (POW) competiton where miners, along with the POW also provide an offchain value.  Once validated and processed the value is available for on-chain decentralized contracts to use.
+<b>Proof of Work Oracle (POWO)</b> is a decentralized oracle governed by the POWO token owners. The POWO implements a mineable proof of work (POW) competiton where miners, along with the POW also provide an offchain value.  Once validated and processed the value is available for on-chain decentralized contracts to use.
 
-##Contracts
+**Contracts**
 * OracleToken.sol -- is the Oracle contract. It allows miners to submit the proof of work and value, sorts the values, uses functions from ProofOfWorkToken to pay the miners, allows the data users to "tip" the miners for providing a value for a specific timestamp and allows the users to retreive the values.
 * OracleVote.sol -- contains the voting mechanism for adding or changing oracles(uses balance checkpoints to avoid double voting), minting, paying the the miners, ERC20 token functionallity, and cloning process for efficiently deploying new oracles. Oracle vote is ProofOfWorkToken.sol and ProofOfWorkToken.sol is Token.sol, and CloneFactory.sol. 
 
@@ -24,6 +24,8 @@ Clone the repo, cd into it, and then:
 
     $ truffle migrate
 
+    $ truffle exec scripts/DeployOracleandOracleVote.js
+
 
 This project draws high-level inspiration from the [EIP918 Mineable Token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-918.md) as an abstract standard that uses a challenge-driven keccak256 Proof of Work algorithm for token minting and distribution.  
 
@@ -38,6 +40,7 @@ To summarize, by creating an oracle schema that uses an incented construct to de
 
 
 ## How It Works
+
 overview(https://medium.com/@nfett/proof-of-work-oracle-6de6f795d27)
 Users engage in a POW competition to find a nonce which satisfies the requirement of the challenge.  The first five users who solve the POW puzzle input data for the POW Oracle contract and receive native tokens in exchange for their work.  The oracle data submissions are stored in contract memory as an array - which is subsequently operated upon to derive the median value. 
 
