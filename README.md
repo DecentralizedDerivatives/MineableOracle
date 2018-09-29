@@ -7,9 +7,9 @@
 **Contracts**
 * OracleToken.sol -- is the Oracle contract. It allows miners to submit the proof of work and value, sorts the values, uses functions from ProofOfWorkToken to pay the miners, allows the data users to "tip" the miners for providing a value for a specific timestamp and allows the users to retreive the values.
 * OracleVote.sol -- contains the voting mechanism for adding or changing oracles(uses balance checkpoints to avoid double voting), minting, paying the the miners, ERC20 token functionallity, and cloning process for efficiently deploying new oracles. Oracle vote is ProofOfWorkToken.sol and ProofOfWorkToken.sol is CloneFactory.sol and Token.sol. 
-    * ProofOfWorkToken.sol
-    * CloneFactory.sol
-    * Token.sol
+    * ProofOfWorkToken.sol--Contains all the fucntionallity to set an origin(dud) oracle, deploy new oracles, remove oracles, and pay the miners. 
+    * CloneFactory.sol -- allows ProofOfWorkToken to create and deploy an oracle efficiently. It creates a "clone" the dud oracle. The dud oracle acts as a byte code library for all the oracle contracts deployed based on it. To over simplify it is similar to how contracts reference the SafeMath library. Checkout our article, Attack Of The Clones-How DDA Contracts Are So Cheap To Deploy (https://blog.goodaudience.com/attack-of-the-clones-how-dda-contracts-are-so-cheap-to-deploy-f3cee9c7566)
+    * Token.sol -- contains all the ERC20 token functionallity for the POWO Token
 
 Note: There is no owner of the OracleToken.sol or OracleVote.sol, these are are managed and governed by the POWO token owners.  
 
