@@ -2,6 +2,9 @@ function sleep_s(secs) {
   secs = (+new Date) + secs * 1000;
   while ((+new Date) < secs);
 }
+//truffle-flattener ./contracts/OracleVote.sol > ./flat_files/OracleVote_flat.sol
+// truffle exec scripts/DeployOracleandOracleVote.js --network rinkeby
+
 
 var oracleToken = artifacts.require("OracleToken");
 var oracleVote = artifacts.require("OracleVote");
@@ -19,7 +22,9 @@ module.exports =async function(callback) {
         oracletoken = await oracleToken.new(_sender,22,timeframe,[1,5,10,5,1]);
         console.log("oracletoken dud", oracletoken.address);
         await oraclevote.propDudOracle(oracletoken.address);
+        console.log("proposed dud");
         await oraclevote.vote(1, true);
+        console.log("voted");
  /*       await oraclevote.tallyVotes(1)
         await oraclevote.propAdd("json(https://api.gdax.com/products/BTC-USD/ticker).price",22,timeframe,[1,5,10,5,1]);
         await oraclevote.vote(2, true);
