@@ -15,7 +15,15 @@ The PoWO is governed by all PoWO owners. The PoWO owners can propose and vote to
 
 Votes are weighted based on the amount of PoWO tokens owned at the point in time (checkpoint) votes are tallied.
 
-Once an oracle contract is voted on and deployed(proposals for new oracles need to include an API) and the difficulty is adjusted to target 10 minutes. 
+Checkout our article, [Proof-of-Work Oracle](https://medium.com/@nfett/proof-of-work-oracle-6de6f795d27) for a quick  overview. 
+
+## How Does it work?
+Once a dud (origin) oracle contract is voted on and deployed, the new proposed oracles are "cloned" from the dud oracle (i.e. they use the dud oracle as a bytes library). All new proposals for new oracles specify the type of data (e.g. an API) to be submitted along with the PoW. The difficulty for the PoW is adjusted to target 10 minutes. Similar to the way Ethereum rewards ‘Uncles’ or miners who were close to winning, the first five miners to submit a PoW and off chain value are awarded the native PoWO token. The miner that submits the median value is awarded a larger quantity of the total payoff. Once the median value is selected, it is stored, and a new challenge is created.
+
+![Reward Mechanism](./public/RewardMechanism.PNG)
+
+The tokens that are paid out, will then be valuable to parties who want to access data from the OracleToken contract (PoWO tokens are charged for on chain reads). This gives each token value, and more importantly, the value goes up as more smart contracts use our Oracle, thus creating a stronger incentive for miners.
+
 
 **Contracts Description**
 * <b>OracleToken.sol</b> -- is the Oracle contract. It allows miners to submit the proof of work and value, sorts the values, uses functions from ProofOfWorkToken to pay the miners, allows the data users to "tip" the miners for providing a values and allows the users to retreive the values.
@@ -56,6 +64,7 @@ Clone the repo, cd into it, and then:
 
     $ truffle exec scripts/02_TallyVotesForDud.js
 
+Get at least 5 miners going.
 
 This project draws high-level inspiration from the [EIP918 Mineable Token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-918.md).
 
@@ -69,7 +78,7 @@ To summarize, by creating an oracle schema that uses an incented construct to de
   3. <b>Create</b> an effective, secure, and incentivized system for off chain data which ingests inputs from five random parties(miners) and disincentives dispersion and adversarial submissions
 
 
-## How It Works
+## median value
 
 overview(https://medium.com/@nfett/proof-of-work-oracle-6de6f795d27)
 Users engage in a POW competition to find a nonce which satisfies the requirement of the challenge.  The first five users who solve the POW puzzle input data for the POW Oracle contract and receive native tokens in exchange for their work.  The oracle data submissions are stored in contract memory as an array - which is subsequently operated upon to derive the median value. 
@@ -138,12 +147,11 @@ function pushValue(uint _time) internal {
         values[_time] = first_five[2].value;
 ```
 
-It may be visualized as so:
 
-![Reward Mechanism](https://github.com/SamuelLJackson/AngelHackTeam/blob/master/RewardMechanism.PNG)
 
 
 ## Example Usage Scenarios
+
 
 Within the context of ethereum, oracles can be thought of as authoritative sources of off-chain data (called truthpoints) These truthpoints allow smart contracts to receive and condition executional instructions using extrinsic information.  This is highly useful for a wide-array of derivitive scenarios.
 
