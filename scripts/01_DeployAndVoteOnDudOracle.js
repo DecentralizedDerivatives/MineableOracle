@@ -25,11 +25,5 @@ module.exports =async function(callback) {
         console.log("proposed dud");
         await oraclevote.vote(1, true);
         console.log("voted");
- /*       await oraclevote.tallyVotes(1)
-        await oraclevote.propAdd("json(https://api.gdax.com/products/BTC-USD/ticker).price",22,timeframe,[1,5,10,5,1]);
-        await oraclevote.vote(2, true);
-        let res = await oraclevote.tallyVotes(2);
-        res = res.logs[0].args._newOracle;
-        oracletoken = await oracleToken.at(res);
-        console.log("oracle token address:", oracletoken.address);*/
+
 }

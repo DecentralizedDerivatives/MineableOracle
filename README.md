@@ -1,17 +1,26 @@
 # Proof of Work Oracle (PoWO)
 
-<b>Proof of Work Oracle (PoWO)</b> is a decentralized oracle governed by the PoWO token owners. It provides a decentralized alternative for contracts to interact and obtain data from the offchain world. 
+<b>Proof of Work Oracle (PoWO)</b> is a decentralized oracle governed by the PoWO token owners. It provides a decentralized alternative for contracts to interact and obtain data from the off chain world. 
 
-The PoWO implements a mineable proof of work (PoW) where miners, along with the PoW also provide an offchain value.  Once validated and processed the value is available for on-chain decentralized contracts to use.
+The PoWO implements proof of work (PoW) where miners compete to solve a challenge and along with the PoW they also provide an off chain value.  Once validated and processed the value is available for on chain decentralized contracts to use.  
 
 ![Header Image](./public/PowoFlow.png)
 
 ## Overview
+Ethereum smart contracts cannot access off chain data. If your smart contract relies on off chain (e.g. internet) data to evaluate or excecute a function, you either have to manually feed the data to your contract, incentivize users to do it, or rely on a centralized party to provide the data (Oraclize.it is generally the standard). 
+
+To avoid a centralized option or the lest proven Proof of Stake method, the PoWO uses the proven method of POW and requires miners to submit the PoW along with an off chain value. We have implemented PoW because it is realiable, <b>now</b>. However, PoWO owners can decide to switch from PoW to Proof of Stake (PoS).
+
+The PoWO is governed by all PoWO owners. The PoWO owners can propose and vote to switch from PoW to PoS, add or remove an oracle, change the minimum quorum or vote duration for a vote to execute, and change the proposal fee.
+
+Votes are weighted based on the amount of PoWO tokens owned at the point in time (checkpoint) votes are tallied.
+
+Once an oracle contract is voted on and deployed(proposals for new oracles need to include an API) and the difficulty is adjusted to target 10 minutes. 
 
 **Contracts Description**
-* <b>OracleToken.sol</b> -- is the Oracle contract. It allows miners to submit the proof of work and value, sorts the values, uses functions from ProofOfWorkToken to pay the miners, allows the data users to "tip" the miners for providing a value for a specific timestamp and allows the users to retreive the values.
+* <b>OracleToken.sol</b> -- is the Oracle contract. It allows miners to submit the proof of work and value, sorts the values, uses functions from ProofOfWorkToken to pay the miners, allows the data users to "tip" the miners for providing a values and allows the users to retreive the values.
 
-* <b>OracleVote.sol</b> -- contains the voting mechanism for adding or changing oracles(uses balance checkpoints to avoid double voting), minting, paying the the miners, ERC20 token functionallity, and cloning process for efficiently deploying new oracles. Oracle vote is ProofOfWorkToken.sol and ProofOfWorkToken.sol is CloneFactory.sol and Token.sol.
+* <b>OracleVote.sol</b> -- contains the voting mechanism for adding or changing oracles(uses balance checkpoints to avoid double voting), minting, paying the the miners, ERC20 token functionallity, and cloning process for efficiently deploying new oracles. Oracle vote contains all the functions (is) in ProofOfWorkToken.sol, CloneFactory.sol and Token.sol.
 
     * <b>ProofOfWorkToken.sol</b> -- contains all the fucntionallity to set an origin(dud) oracle, deploy new oracles, remove oracles, and pay the miners. 
 
@@ -19,7 +28,16 @@ The PoWO implements a mineable proof of work (PoW) where miners, along with the 
 
     * <b>Token.sol</b> -- contains all the ERC20 token functionallity for the PoWO Token
 
-Note: There is no owner for the OracleToken.sol or OracleVote.sol, these are are managed and governed by the POWO token owners.  
+    * Proposal functions under OracleVote.sol:
+        * addOracle -- use to propose to add an oracle
+        * removeOracle -- use to propose to remove an oracle
+        * changeDudOracle -- use to propose to switch from PoW to PoS
+        * changeMinQuorum -- use to propose to change the minimum quorum for the vote
+        * changeVoteDuration -- use to propose to change the vote duration for the proposals
+        * changeProposalFee -- use to propose to change the fee for each proposal
+
+
+Note: There is no owner for the OracleToken.sol or OracleVote.sol, these are are managed and governed by the PoWO token owners.  
 
 
 ### Instructions for quick start with Truffle Deployment 
@@ -34,19 +52,21 @@ Clone the repo, cd into it, and then:
 
     $ truffle migrate
 
-    $ truffle exec scripts/DeployOracleandOracleVote.js
+    $ truffle exec scripts/01_DeployAndVoteOnDudOracle.js
+
+    $ truffle exec scripts/02_TallyVotesForDud.js
 
 
-This project draws high-level inspiration from the [EIP918 Mineable Token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-918.md) as an abstract standard that uses a challenge-driven keccak256 Proof of Work algorithm for token minting and distribution.  
+This project draws high-level inspiration from the [EIP918 Mineable Token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-918.md).
 
-POWO leverages a proven game-theoretical competition to disintermediate and decentralize the existing 3rd party trust layer associated with centralized oracle services like Oraclize, which use basic API getters to provide smart-contracts with off-chain data.  This reduces the implicit cost of risk associated with third parties.  For more information, see:
+PoWO leverages a proven game-theoretical competition to disintermediate and decentralize the existing 3rd party trust layer associated with centralized oracle services like Oraclize, which use basic API getters to provide smart-contracts with off-chain data.  This reduces the implicit cost of risk associated with third parties.  For more information, see:
 
 > "Trusted third parites are security holes" ~ Nick Szabo, 2001 (https://nakamotoinstitute.org/trusted-third-parties/)
 
 To summarize, by creating an oracle schema that uses an incented construct to derive the validity of off-chain data, we:
   1. <b>Reduce the risks</b> associated with single-party oracle providers, who can cut access to API data, forge message data, etc
-  2. <b>Lay the foundation</b> for a superior oracle system where truth data is derived from a distributed set of participants which have both economic interest and 'stake' in the validity and success of the oracle data
-  3. <b>Create</b> an effective, secure, and incentivized system for off-chain data which ingests inputs from five random parties(miners) and disincentives dispersion and adversarial submissions
+  2. <b>Lay the foundation</b> for a superior oracle system where data is derived from a distributed set of participants which have both economic interest and 'stake' in the validity and success of the oracle data
+  3. <b>Create</b> an effective, secure, and incentivized system for off chain data which ingests inputs from five random parties(miners) and disincentives dispersion and adversarial submissions
 
 
 ## How It Works
