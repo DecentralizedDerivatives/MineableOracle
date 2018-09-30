@@ -18,9 +18,37 @@ Votes are weighted based on the amount of PoWO tokens owned at the point in time
 Checkout our article, [Proof-of-Work Oracle](https://medium.com/@nfett/proof-of-work-oracle-6de6f795d27) for a quick  overview. 
 
 ## How Does it work?
-Once a dud (origin) oracle contract is voted on and deployed, the new proposed oracles are "cloned" from the dud oracle (i.e. they use the dud oracle as a bytes library). All new proposals for new oracles specify the type of data (e.g. an API) to be submitted along with the PoW. The difficulty for the PoW is adjusted to target 10 minutes. Similar to the way Ethereum rewards ‘Uncles’ or miners who were close to winning, the first five miners to submit a PoW and off chain value are awarded the native PoWO token. The miner that submits the median value is awarded a larger quantity of the total payoff. Once the median value is selected, it is stored, and a new challenge is created.
+Once a dud (origin) oracle contract is voted on and deployed, the new proposed oracles are "cloned" from the dud oracle (i.e. they use the dud oracle as a bytes library). All new proposals for new oracles specify the type of data (e.g. an API) to be submitted along with the PoW. The difficulty for the PoW is adjusted to target 10 minutes. Similar to the way Ethereum rewards ‘Uncles’ or miners who were close to winning, the first five miners to submit a PoW and off chain value are awarded the native PoWO token. The miner that submits the median value is awarded a larger quantity of the total payoff. 
 
 ![Reward Mechanism](./public/RewardMechanism.PNG)
+
+Once the median value is selected, it is stored, and a new challenge is created. The median value is selected efficiently via an insert sort in the pushValue function used within the OracleToken contract proofOfWork function:
+
+```solidity
+    function pushValue(uint _time) internal {
+        Details[5] memory a = first_five;
+        emit Print2([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner],payoutStructure);
+        for (uint i = 1;i <5;i++){
+            uint temp = a[i].value;
+            address temp2 = a[i].miner;
+            uint j = i;
+            while(j > 0 && temp < a[j-1].value){
+                a[j].value = a[j-1].value;
+                a[j].miner = a[j-1].miner;   
+                j--;
+            }
+            if(j<i){
+                a[j].value = temp;
+                a[j].miner= temp2;
+            }
+        }
+        emit Print(payoutStructure[0],payoutMultiplier);
+        ProofOfWorkToken(master).batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], [payoutStructure[0]*payoutMultiplier,payoutStructure[1]*payoutMultiplier,payoutStructure[2]*payoutMultiplier,payoutStructure[3]*payoutMultiplier,payoutStructure[4]*payoutMultiplier]);
+        values[_time] = a[2].value;
+        emit Mine(msg.sender,_time,a[2].value); // execute an event reflecting the change
+    }
+```
+
 
 The tokens that are paid out, will then be valuable to parties who want to access data from the OracleToken contract (PoWO tokens are charged for on chain reads). This gives each token value, and more importantly, the value goes up as more smart contracts use our Oracle, thus creating a stronger incentive for miners.
 
