@@ -10,6 +10,7 @@ var oracleToken = artifacts.require("OracleToken");
 var oracleVote = artifacts.require("OracleVote");
 //var timeframe = (86400/60)/6; //10mins
 var timeframe = (86400); //Daily
+
 var _sender = "0xe010ac6e0248790e08f42d5f697160dedf97e024";
 
 
