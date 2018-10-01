@@ -138,6 +138,8 @@ As miners submit the PoW and off-chain value, the value is sorted and as soon as
 
 Miners are rewarded with PoWo tokens. PoWO tokens are charged for on-chain reads. This gives each token value, and more importantly, the value goes up as more smart contracts use our Oracle, thus creating a stronger incentive for miners.
 
+Additionally, users can incentivize miners by posting a bounty via the addToValuePool function to ensure the next timestamp is mined. This function basically allows users to tip the miners.
+
 ### The Oracle Mining Process
 The current challenge, adjusted difficulty, count, and proof since last timestamp are all called during the 'proofOfWork' operation/function. The PoW, is basically guessing a nonce that produces a hash with a certain number of leading zeros. Miners can submit the PoW and the off-chain value using the function proofOfwork in OracleToken.sol.
 
