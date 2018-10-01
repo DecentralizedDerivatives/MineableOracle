@@ -45,7 +45,7 @@ Get at least 5 miners going.
 
 Production and test python miners are available under the miner subdirectory [here](./miner/).
 
-#### How to Contribute<a name="how2contribute"> </a>
+#### How to Contribute<a name="how2contribute"> </a>  
 Join our slack, shoot us an email or contact us: [<img src="./public/slack.png" width="24" height="24">](https://deriveth.slack.com/)
 [<img src="./public/telegram.png" width="24" height="24">](https://t.me/ddaorg)
 [<img src="./public/discord.png" width="24" height="24">](https://discordapp.com/invite/xtsdpbS)
@@ -54,7 +54,7 @@ Check out or ussues log here on Github or contribute to our future plans to impl
 
 Any contributions are welcome!
 
-## Documentation <a name="Documentation"> </a>
+## Documentation <a name="Documentation"> </a>  
 The documentation is broken down into three parts: contracts descriptions, scripts (javascript) descriptions, and steps for setting up, using and mining. 
 
 ### Contracts Description <a name="Contracts-Description"> </a>
@@ -113,16 +113,16 @@ OracleToken(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStruct
 
 * <b>03_TallyVotesForProposedOracles.js</b> -- Tallies the votes for the two new oracles proposed and if the vote is successful it will deploy them. 
 
-### Operator Setup <a name="operator-setup"> </a>
+### Operator Setup <a name="operator-setup"> </a>  
 The setup documentation is noted for acting as the operator.  Specific contract details are laid out for ease of use regardless of dev environment. Note that since the OracleToken is designed to be governed by a decentralized autonomous organization (DAO)/everyone that owns the PoWO tokens, the operator will eventually cede control to the PoWO owners.
 
-**Step 1: Operator - Deploy oracleVote.sol**
+**Step 1: Operator - Deploy oracleVote.sol**  
 The OracleVote contract contains the functionallity for the DAO, minting, and paying the miners. The cost to propose(\_proposalFee), minimum quorum to pass a vote (\_minimumQuorum), and how long the PoWO owners will have to cast their vote in days (\_voteDuration) will nave to be specified on deployment. 
 
 ```solidity
 OracleVote(uint _proposalFee, uint _minimumQuorum, uint _voteDuration)
 ```
-**Step 2: Operator - Deploy oracleToken.sol**
+**Step 2: Operator - Deploy oracleToken.sol**  
 The first deployed oracleToken.sol will serve as a bytes library for future oracleToken.sol deployment. We refer to this first deployment as the "dud oracle" and it is used as the "clone" source for future proposed oracles.
 
 The constructor arguments on the dud oracle do not affect future proposed oracles. But these are needed for successful deployment of the contract. The \_master address will be set to the OracleVote address automatically on future oracles, however, for the dud it has to be specified along with the rest of the constructor arguments. 
@@ -136,7 +136,7 @@ where:
 * \_timeTarget -- is the time target for the difficulty adjustment and determines how often values will be saved to the oracle timeseries
 * \_payoutStructure -- is used to specify how the readFee will be distributed among the five miners
 
-**Step 3: Operator - Propose and vote on the dud oracle**
+**Step 3: Operator - Propose and vote on the dud oracle**  
 Setting the dud oracle has to be decided by the PoWO holders. The operator has to propose to set the dud oracle to the address of the deployed oracleToken.sol on step 2. The operator is assigned 1,000,000 PoWO when oracleVote is deployed (see line 33 in Token.sol). Once the dud oracle is proposed, the opearator will have to vote for it and wait the vote duration period before tallying up the votes.
 
 ```javascript
@@ -149,7 +149,7 @@ where:
 * \_proposalID -- is the proposal ID emitted from propDudOracle (in this case it should be 1)
 * \_supportsProposal -- is used to cast a vote, use true to vote for and false to vote against
 
-**Step 4: Operator - Set dud oracle, propose and vote on new oracle**
+**Step 4: Operator - Set dud oracle, propose and vote on new oracle**  
 The tallyVotes function is the only function that can add/deploy, remove, change the dud oracle, vote duration, minimum quorum required to pass a proposal, and the proposal fee and can only be ran once the vote duration timeframe expires.
 
 ```javascript
@@ -170,7 +170,7 @@ where:
 
 Once the new oracle is proposed, the operator will have to vote for it and wait the vote duration period before tallying up the votes.
 
-**Step 5: Operator - Tally votes to set new oracle**
+**Step 5: Operator - Tally votes to set new oracle**  
 Once the dud oracle is set all the new oracles "clone" it's functionallity. The tallyVotes function will deploy the new oracle and use the oracleVote.address as its master address.
 
 ```javascript
@@ -180,12 +180,12 @@ oraclevote.tallyVotes(uint _proposalId);
 where:
 * \_proposalId -- is the proposal ID for the dud oracle proposed on step 4
 
-### User functions <a name="user-fx"> </a>
+### User functions <a name="user-fx"> </a>  
 Once the operator deploys OracleVote, sets the dud oracle and deploys an oracle, users or on-chain contracts can retrieve data and tip miners to increase incentive to have the next data point mined.
 
 Users can buy the ERC-20 PoWO token via an exchange or mine them.
 
-**Users: Retreive data**
+**Users: Retreive data**  
 Use the function retrieveData to retrieve data.
 
 ```javascript
@@ -194,7 +194,7 @@ oracleToken.retrieveData(uint _timestamp);
 where:
 * \_timestamp -- is the unix timestamp to retrieve a value from
 
-**Users: Tip miners**
+**Users: Tip miners**  
 Use the function addToValuePool to add PoWO tokens rewards for miners and ensure they mine the next block/value.
 
 ```javascript
@@ -203,7 +203,7 @@ oracleToken.addToValuePool(uint _tip);
 where:
 * \_tip -- is the amount of PoWO tokens to add to the value pool for miners
 
-### Miner function <a name="miner-fx"> </a>
+### Miner function <a name="miner-fx"> </a>  
 Miners can use the proofOfWork function to submit the PoW and off-chain value. Production and test python miners are available under the miner subdirectory [here](./miner/).  In the future, we plan to switch to a GPU miner (not built on python) but this will suffice for now for the proof of concept.
 
 ```javascript
@@ -214,7 +214,7 @@ where
 * value -- is the value of api query
 
 
-## Overview <a name="overview"> </a>
+## Overview <a name="overview"> </a>  
 Ethereum smart contracts cannot access off-chain data. If your smart contract relies on off-chain (e.g. internet) data to evaluate or execute a function, you either have to manually feed the data to your contract, incentivize users to do it, or rely on a centralized party to provide the data (Oraclize.it is generally the standard). 
 
 To avoid a centralized option or the less proven Proof of Stake method, the PoWO uses the proven method of PoW and requires miners to submit the PoW along with an off-chain value. We have implemented PoW because it is reliable, <b>now</b>. However, PoWO owners can decide to switch from PoW to Proof of Stake (PoS).
