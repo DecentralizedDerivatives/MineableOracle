@@ -1,11 +1,3 @@
-<div style="text-align:center">
-
-[<img src="./public/slack.png" width="24" height="24">](https://deriveth.slack.com/)
-[<img src="./public/telegram.png" width="24" height="24">](https://t.me/ddaorg)
-[<img src="./public/discord.png" width="24" height="24">](https://discordapp.com/invite/xtsdpbS)
-
-</div>
-
 # Proof of Work Oracle (PoWO)
 
 <b>Proof of Work Oracle (PoWO)</b> is a decentralized oracle governed by the PoWO token owners. It provides a decentralized alternative for contracts to interact and obtain data from the off-chain world. 
