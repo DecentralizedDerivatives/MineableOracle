@@ -49,18 +49,7 @@
     "whatwg-fetch": "1.0.0"
   },
   "dependencies": {
-    "bootstrap": "^4.1.1",
-    "chart.js": "^2.7.2",
     "dotenv": "^2.0.0",
-    "ethereumjs-abi": "^0.6.5",
-    "immutability-helper": "^2.7.1",
-    "moment": "^2.22.2",
-    "react": "^15.4.2",
-    "react-bootstrap": "^0.32.1",
-    "react-chartjs": "^1.2.0",
-    "react-dom": "^15.4.2",
-    "reactstrap": "^6.2.0",
-    "sha3": "^1.2.2",
     "truffle-hdwallet-provider": "0.0.5"
   },
   "scripts": {

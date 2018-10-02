@@ -1,8 +1,8 @@
 # Proof of Work Oracle (PoWO)
 
-<b>Proof of Work Oracle (PoWO)</b> is a decentralized oracle governed by the PoWO token owners. It provides a decentralized alternative for contracts to interact and obtain data from the off-chain world. 
+<b>Proof of Work Oracle (PoWO)</b> is a decentralized oracle governed by the PoWO token holders. It provides a decentralized alternative for contracts to interact with and obtain data from offchain. 
 
-The PoWO implements proof of work (PoW) where miners compete to solve a challenge and along with the PoW they also provide an off-chain value.  Once validated and processed the value is available for on-chain decentralized contracts to use.  
+The PoWO implements a mineable proof-of-work (PoW) where miners, along with the PoW solution also provide an offchain data point.  Once validated and processed the value is available for on-chain contracts to use.
 
 <details><summary>Table of Contents</summary>
 
@@ -185,8 +185,9 @@ Once the operator deploys OracleVote, sets the dud oracle and deploys an oracle,
 
 Users can buy the ERC-20 PoWO token via an exchange or mine them.
 
-**Users: Retreive data**  
-Use the function retrieveData to retrieve data.
+<b>Overview</b> :(https://medium.com/@nfett/proof-of-work-oracle-6de6f795d27)
+
+Users engage in a POW competition to find a nonce which satisfies the requirement of the challenge.  The first five users who solve the POW puzzle input data for the POW Oracle contract and receive native tokens in exchange for their work.  The oracle data submissions are stored in contract memory as an array - which is subsequently operated upon to derive the median value. 
 
 ```javascript
 oracleToken.retrieveData(uint _timestamp);
@@ -274,6 +275,7 @@ Additionally, users can incentivize miners by posting a bounty via the addToValu
 #### The Oracle Mining Process <a name="mining-process"> </a>
 The current challenge, adjusted difficulty, count, and proof since last timestamp are all called during the 'proofOfWork' operation/function. The PoW, is basically guessing a nonce that produces a hash with a certain number of leading zeros. Miners can submit the PoW and the off-chain value using the function proofOfwork in OracleToken.sol.
 
+
 The mining process is formally expressed as:
 
 ```solidity
@@ -292,7 +294,7 @@ The mining process is formally expressed as:
             else if (now - timeOfLastProof > timeTarget && difficulty > 1){
                 difficulty--;
             }
-            timeOfLastProof = now - (now % timeTarget);
+            timeOfLastProof = now - (now % timeTarget);//should it be like this? So 10 minute intervals?;
             emit Print(payoutTotal,valuePool);
             if(valuePool >= payoutTotal) {
                 payoutMultiplier = (valuePool + payoutTotal) / payoutTotal; //solidity should always round down
@@ -311,10 +313,13 @@ The mining process is formally expressed as:
 
 An implementation of the miner is described in python in the 'miner' sub directory.  In 'miner.py', the script imports the web3 library, pandas, and various other dependencies to solve the keccak256 puzzle.  In submitter.js, the nonce value inputs are submitted to the smart contract on-chain.  To examine the mining script, navigate [here](./miner/).
 
+
 ## Example Usage Scenarios <a name="usage-scenarios"> </a>
 
-As PoWO is a contract mechanism that allows oracle data to be derived in a competitive, decentralized manner - we envision a wide array of use cases for the OracleToken smart-contract.  Namely:
-1. <b>Exchange-rate data:</b> interval based exchange-rate truthpoints may be used to create trustless financial derivatives [ala Decentralized Derivitives](https://github.com/decentralizedderivatives/)
+Within the context of Ethereum, oracles can be thought of as authoritative sources of off-chain data. These data points allow smart contracts to receive and condition executional instructions using extrinsic information.  This is highly useful for a wide-array of derivitive scenarios.
+
+As PoWO is a contract mechanism that allows oracle data to be derived in a comeptitive, decentralized manner - we envision a wide array of use cases for this product.  Namely:
+1. <b>Exchange-rate data:</b> interval based exchange-rate truthpoints may be used to create trustless financial derivatives
 2. <b>Weather data logs:</b> for example, we may calculate insurance premium calculation based on a weather forecast
 3. <b>Static/pseudo-static data:</b> logging and indexing various identifiers, country codes, currency codes
 4. <b>Prediction Market Probability/Odds:</b> i.e. "What is the likelihood that X event will happen"
@@ -353,8 +358,10 @@ If you have questions, ask us on Slack: https://deriveth.slack.com/
 
 #### Contributors<a name="contributors"> </a>
 
+
 Nicholas Fett (nfett@decentralizedderivatives.org), Kevin Leffew (kleffew94@gmail.com), Sam Everett (severett29@gmail.com), Brenda Loya (bloya@decentralizedderivatives.org), Lucian Stroie (luciandstroie@gmail.com)
 
 
 #### Copyright
-MIT License [link.](https://github.com/SamuelLJackson/AngelHackTeam/blob/master/LICENSE)
+
+DDA Inc. 2018
