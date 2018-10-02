@@ -100,13 +100,13 @@ Note: There is no owner for the OracleToken.sol or OracleVote.sol, these are man
         * Note: The tallyVotes function is the only function that can add/deploy, remove, change the dud oracle, vote duration, minimum quorum required to pass a proposal, and the proposal fee.
 
     ```solidity
-OracleVote(uint _proposalFee, uint _minimumQuorum, uint _voteDuration)
+    OracleVote(uint _proposalFee, uint _minimumQuorum, uint _voteDuration)
     ```
 
     * To deploy OracleToken update OracleVote address, read fee, time target for PoW and payout structure.
 
     ```solidity
-OracleToken(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure)
+    OracleToken(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure)
     ```
 
 * <b>02_TallyVotesForDudOracle.js</b> -- Tallies the votes for the dud oracle, proposes two new oracles based on it, a daily and a 10 minute interval for Bitcoin and votes on them. For production environments, the vote duration timeframe has to elapse before the tallyVotes function can be ran. 
