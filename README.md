@@ -50,7 +50,7 @@ Join our slack, shoot us an email or contact us: [<img src="./public/slack.png" 
 [<img src="./public/telegram.png" width="24" height="24">](https://t.me/ddaorg)
 [<img src="./public/discord.png" width="24" height="24">](https://discordapp.com/invite/xtsdpbS)
 
-Check out or ussues log here on Github or contribute to our future plans to implement a GPU miner(not built in python), provide a way to pay in Ether for data, and improve our reward/incentives mechanism. 
+Check out or issues log here on Github or contribute to our future plans to implement a GPU miner(not built in python), provide a way to pay in Ether for data, and improve our reward/incentives mechanism. 
 
 Any contributions are welcome!
 
