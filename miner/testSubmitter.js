@@ -3,7 +3,7 @@
 const Web3 = require("web3");
 const fs = require('fs');
 const Tx = require('ethereumjs-tx')
-const web3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/zkGX3Vf8njIXiHEGRueB"));
+const web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
 var json = require('../build/contracts/OracleToken.json');
 
 solution = process.argv[2]
@@ -25,7 +25,7 @@ console.log('Value submitted: ',value,'              ')
     //data = "0x42e0857f0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000038400000000000000000000000000000000000000000000000000000000000000092733343132333431270000000000000000000000000000000000000000000000"
     var tx = new Tx({
       nonce: nonce,
-      gasPrice: web3.toHex(web3.toWei('5', 'gwei')),
+      gasPrice: web3.toHex(web3.toWei('20', 'gwei')),
       gasLimit: 4000000,
       to: address,
       value: 0,
