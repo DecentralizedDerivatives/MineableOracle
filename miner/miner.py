@@ -5,9 +5,7 @@ import pandas as pd
 from Naked.toolshed.shell import execute_js, muterun_js, run_js
 from multiprocessing import Process, freeze_support
 from struct import *
-
-#contract_address = "0x7a59bcbaf3bc4316c70338215446fd7a0456252c" #1 day
-contract_address = "0xc37b5b861bfc1a96f3ecef106392db42711d5c4d";#10 min
+contract_addresses = ["0x7a59bcbaf3bc4316c70338215446fd7a0456252c","0xc37b5b861bfc1a96f3ecef106392db42711d5c4d"];#1day and 10 min
 node_url ="https://rinkeby.infura.io/"
 net_id = 4 #eth network ID
 last_block = 0
@@ -46,23 +44,27 @@ def getAPIvalue():
 
 def masterMiner():
 	miners_started = 0
-	challenge,difficulty = getVariables();
-	while True:
-		nonce = mine(str(challenge),public_keys[miners_started],difficulty);
-		if(nonce > 0):
-			print ("You guessed the hash!");
-			value = getAPIvalue() - miners_started*10; #account 2 should always be winner
-			arg_string =""+ str(nonce) + " "+str(value)+" "+str(contract_address)+" "+str(public_keys[miners_started])+" "+str(private_keys[miners_started])
-			run_js('submitter.js',arg_string);
-			miners_started += 1
-			if(miners_started == 5):
-				challenge,difficulty = getVariables();
-				miners_started = 0;
-		else:
-			pass
+	for contract_address in contract_addresses:
+		x=0
+		print('c',contract_address);
+		challenge,difficulty = getVariables(contract_address);
+		while True and x < 1:
+			nonce = mine(str(challenge),public_keys[miners_started],difficulty);
+			if(nonce > 0):
+				print ("You guessed the hash!");
+				value = getAPIvalue() - miners_started*10; #account 2 should always be winner
+				arg_string =""+ str(nonce) + " "+str(value)+" "+str(contract_address)+" "+str(public_keys[miners_started])+" "+str(private_keys[miners_started])
+				run_js('submitter.js',arg_string);
+				miners_started += 1
+				if(miners_started == 5):
+					#challenge,difficulty = getVariables(contract_address);
+					miners_started = 0;
+					x += 1;
+			else:
+				pass
 	print('Miner Stopping')
 
-def getVariables():
+def getVariables(contract_address):
 	payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_call","params":[{"to":contract_address,"data":"0x94aef022"}, "latest"]}
 	r = requests.post(node_url, data=json.dumps(payload));
 	val = r.content

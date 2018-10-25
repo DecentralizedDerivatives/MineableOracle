@@ -85,14 +85,6 @@ contract OracleToken{
     }
 
     /**
-    * @dev Getter function for currentChallenge difficulty
-    * @return current challenge and level of difficulty
-    */
-    function getVariables() external view returns(bytes32, uint){
-        return (currentChallenge,difficulty);
-    }
-
-    /**
     * @dev Proof of work to be done for mining
     * @param nonce uint submitted by miner
     * @param value of api query
@@ -150,6 +142,14 @@ contract OracleToken{
         return (values[_timestamp] > 0);
     }
 
+        /**
+    * @dev Getter function for currentChallenge difficulty
+    * @return current challenge and level of difficulty
+    */
+    function getVariables() external view returns(bytes32, uint){
+        return (currentChallenge,difficulty);
+    }
+
     /**
     * @dev Gets the a value for the latest timestamp available
     * @return value for timestamp of last proof of work submited
@@ -198,5 +198,4 @@ contract OracleToken{
         values[_time] = a[2].value;
         emit Mine(msg.sender,_time,a[2].value); // execute an event reflecting the change
     }
-
 }
