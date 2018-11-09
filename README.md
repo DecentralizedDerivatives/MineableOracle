@@ -359,7 +359,7 @@ If you have questions, ask us on Slack: https://deriveth.slack.com/
 #### Contributors<a name="contributors"> </a>
 
 
-Nicholas Fett (nfett@decentralizedderivatives.org), Kevin Leffew (kleffew94@gmail.com), Sam Everett (severett29@gmail.com), Brenda Loya (bloya@decentralizedderivatives.org), Lucian Stroie (luciandstroie@gmail.com)
+Nicholas Fett (nfett@daxia.us), Kevin Leffew (kleffew94@gmail.com), Sam Everett (severett29@gmail.com), Brenda Loya (bloya@daxia.us), Lucian Stroie (luciandstroie@gmail.com)
 
 
 #### Copyright
