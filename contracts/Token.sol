@@ -11,15 +11,9 @@ contract Token  {
 
     /*Variables*/
     uint public constant total_supply = 2**256-1;
-    mapping (address => Checkpoint[]) balances;
+    mapping (address => uint) public balances;
     mapping(address => mapping (address => uint)) internal allowed;
 
-    struct  Checkpoint {
-        // fromBlock is the block number that the value was generated from
-        uint128 fromBlock;
-        // value is the amount of tokens at a specific block number
-        uint128 value;
-    }
       
     /*Events*/
     event Approval(address indexed owner, address indexed spender, uint256 value);
@@ -30,18 +24,10 @@ contract Token  {
     * @dev Constructor that sets the passed value as the token to be mineable.
     */
     constructor() public{
-        updateValueAtNow(balances[msg.sender], 1000000);
-        updateValueAtNow(balances[address(this)], 2**256 - 1000001);
+        balances[msg.sender] = 1000000;
+        balances[address(this)]= 2**256 - 1000001;
     }
     
-    /**
-    * @dev Gets balance of owner specified
-    * @param _owner is the owner address used to look up the balance
-    * @return Returns the balance associated with the passed in _owner
-    */
-    function balanceOf(address _owner) public view returns (uint bal) { 
-        return balanceOfAt(_owner, block.number); 
-    }
 
     /**
     * @dev Allows for a transfer of tokens to _to
@@ -69,81 +55,18 @@ contract Token  {
         return true;
     }
 
-    /**
-    * @dev Queries the balance of _owner at a specific _blockNumber
-    * @param _owner The address from which the balance will be retrieved
-    * @param _blockNumber The block number when the balance is queried
-    * @return The balance at _blockNumber
-    */
-    function balanceOfAt(address _owner, uint _blockNumber) public constant returns (uint) {
-        if ((balances[_owner].length == 0) || (balances[_owner][0].fromBlock > _blockNumber)) {
-                return 0;
-        }
-     else {
-        return getValueAt(balances[_owner], _blockNumber);
-     }
-    }
 
-    /**
-    * @dev Getter for balance for owner on the specified _block number
-    * @param checkpoints gets the mapping for the balances[owner]
-    * @param _block is the block number to search the balance on
-    */
-    function getValueAt(Checkpoint[] storage checkpoints, uint _block) constant internal returns (uint) {
-        if (checkpoints.length == 0) return 0;
-        // Shortcut for the actual value
-        if (_block >= checkpoints[checkpoints.length-1].fromBlock)
-            return checkpoints[checkpoints.length-1].value;
-        if (_block < checkpoints[0].fromBlock) return 0;
-
-        // Binary search of the value in the array
-        uint min = 0;
-        uint max = checkpoints.length-1;
-        while (max > min) {
-            uint mid = (max + min + 1)/ 2;
-            if (checkpoints[mid].fromBlock<=_block) {
-                min = mid;
-            } else {
-                max = mid-1;
-            }
-        }
-        return checkpoints[min].value;
-    }
-
-    /**
-    * @dev Updates balance for from and to on the current block number via doTransfer
-    * @param checkpoints gets the mapping for the balances[owner]
-    * @param _value is the new balance
-    */
-    function updateValueAtNow(Checkpoint[] storage checkpoints, uint _value) internal  {
-        if ((checkpoints.length == 0)
-        || (checkpoints[checkpoints.length -1].fromBlock < block.number)) {
-               Checkpoint storage newCheckPoint = checkpoints[ checkpoints.length++ ];
-               newCheckPoint.fromBlock =  uint128(block.number);
-               newCheckPoint.value = uint128(_value);
-        } else {
-               Checkpoint storage oldCheckPoint = checkpoints[checkpoints.length-1];
-               oldCheckPoint.value = uint128(_value);
-        }
-    }
-    
     /** 
-    * @dev Completes POWO transfers by updating the balances on the current block number
+    * @dev Completes POWO transfers by updating the balances
     * @param _from address to transfer from
     * @param _to addres to transfer to
     * @param _amount to transfer 
     */
     function doTransfer(address _from, address _to, uint _amount) internal {
-        if (_amount > 0) {
-           require(_to != 0);
-           uint previousBalance = balanceOfAt(_from, block.number);
-           require(previousBalance >= _amount);
-           updateValueAtNow(balances[_from], previousBalance - _amount);
-           previousBalance = balanceOfAt(_to, block.number);
-           require(previousBalance + _amount >= previousBalance); // Check for overflow
-           updateValueAtNow(balances[_to], previousBalance + _amount);
-       }
-       emit Transfer(_from, _to, _amount);
+        require(_amount > 0 && _to != 0);
+        balances[_from] = balances[_from].sub(_amount);
+        balances[_to] = balances[_to].add(_amount);
+        emit Transfer(_from, _to, _amount);
     }
 
     /**
@@ -157,7 +80,14 @@ contract Token  {
         emit Approval(msg.sender, _spender, _amount);
         return true;
     }
-
+    /**
+    * @dev Gets balance of owner specified
+    * @param _owner is the owner address used to look up the balance
+    * @return Returns the balance associated with the passed in _owner
+    */
+    function balanceOf(address _owner) public constant returns (uint bal) { 
+        return balances[_owner]; 
+    }
     /**
     * @param _owner address
     * @param _spender address

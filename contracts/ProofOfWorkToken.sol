@@ -18,6 +18,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     string public constant symbol = "POWO";
     uint8 public constant decimals = 18;
     address public dud_Oracle;
+    address public owner;
     OracleDetails[] public oracle_list;
     mapping(address => uint) oracle_index;
 
@@ -31,8 +32,15 @@ contract ProofOfWorkToken is Token, CloneFactory {
     event ChangeDudOracle(address newDudOracle);
     event Mined(address miner,uint reward);
     
+    /*Modifiers*/
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
+
     /*Functions*/
     constructor() public{
+        owner = msg.sender;
         oracle_list.push(OracleDetails({
             API: "",
             location: address(0)
@@ -47,7 +55,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     * @param _payoutStructure for miners
     * @return new oracle address
     */
-    function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) internal returns(address){
+    function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyOwner() returns(address){
         address new_oracle = createClone(dud_Oracle);
         OracleToken(new_oracle).init(address(this),_readFee,_timeTarget,_payoutStructure);
         oracle_index[new_oracle] = oracle_list.length;
@@ -93,7 +101,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     * @dev Allows  to remove oracle that are no longer in use
     * @param _removed is the oracle address to remove
     */
-    function removeOracle(address _removed) internal{        
+    function removeOracle(address _removed) public onlyOwner(){        
         uint _index = oracle_index[_removed];
         require(_index > 0);
         uint _last_index = oracle_list.length.sub(1);
@@ -108,7 +116,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     * @dev Set oracle dudd address to clone
     * @param _dud_Oracle address to clone
     */  
-    function setDudOracle(address _dud_Oracle) internal {
+    function setDudOracle(address _dud_Oracle) public onlyOwner() {
         dud_Oracle = _dud_Oracle;
         emit ChangeDudOracle(dud_Oracle);
     }
@@ -121,5 +129,13 @@ contract ProofOfWorkToken is Token, CloneFactory {
     function getDetails(address _oracle) public view returns(string,address){
         OracleDetails storage _current = oracle_list[oracle_index[_oracle]];
         return(_current.API,_current.location);
+    }
+
+    /**
+    *@dev Allows the owner to set a new owner address
+    *@param _new_owner the new owner address
+    */
+    function setOwner(address _new_owner) public onlyOwner() { 
+        owner = _new_owner; 
     }
 }

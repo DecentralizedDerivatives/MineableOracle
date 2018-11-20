@@ -1,4 +1,4 @@
-function sleep_s(secs) {
+/*function sleep_s(secs) {
   secs = (+new Date) + secs * 1000;
   while ((+new Date) < secs);
 }
@@ -29,4 +29,4 @@ module.exports =async function(callback) {
         console.log("get new oracle address 10 min", res);
         oracletoken2 = await oracleToken.at(res2);
         console.log("oracle token address 10 min:", oracletoken2.address);
-}
+}*/

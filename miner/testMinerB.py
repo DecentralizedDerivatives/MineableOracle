@@ -61,7 +61,7 @@ def masterMiner():
 				challenge,difficulty = getVariables();
 				miners_started = 0;
 		else:
-			pass
+			pass 
 	print('Miner Stopping')
 
 def getVariables():
