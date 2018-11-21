@@ -1,7 +1,7 @@
 /** This contract tests the typical workflow from the dApp 
 * (user contract, cash out)
 */
-/*var oracleToken = artifacts.require("./OracleToken.sol");
+var oracleToken = artifacts.require("./OracleToken.sol");
 var proofOfWorkToken = artifacts.require("ProofOfWorkToken.sol");
 
 var timeframe = (86400); //Daily
@@ -36,7 +36,8 @@ contract('Mining Tests', function(accounts) {
         await proofofworktoken.transfer(accounts[8],100,{from:accounts[0]});
         let res = await proofofworktoken.deployNewOracle(api,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
         res = res.logs[0].args._newOracle;
-        oracletoken = await oracleToken.at(res);   
+        oracletoken = await oracleToken.at(res);  
+        console.log(oracletoken .address); 
     });
 
     it("getVariables", async function(){
@@ -133,4 +134,4 @@ contract('Mining Tests', function(accounts) {
 
 
 
-});*/
+});
