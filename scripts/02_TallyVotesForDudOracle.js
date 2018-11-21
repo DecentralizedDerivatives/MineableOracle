@@ -1,4 +1,4 @@
-function sleep_s(secs) {
+/*function sleep_s(secs) {
   secs = (+new Date) + secs * 1000;
   while ((+new Date) < secs);
 }
@@ -29,4 +29,4 @@ module.exports =async function(callback) {
         console.log("propose add btc 10min");
         await oraclevote.vote(3, true);
         console.log("vote3");
-}
+}*/

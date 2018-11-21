@@ -2,7 +2,10 @@
 * (user contract, cash out)
 */
 var oracleToken = artifacts.require("./OracleToken.sol");
-var oracleVote = artifacts.require("./OracleVote.sol");
+var proofOfWorkToken = artifacts.require("ProofOfWorkToken.sol");
+
+var timeframe = (86400); //Daily
+var api = 'json(https://api.gdax.com/products/BTC-USD/ticker).price';
 
 function promisifyLogWatch(_event) {
   return new Promise((resolve, reject) => {
@@ -17,27 +20,26 @@ function promisifyLogWatch(_event) {
 
 contract('Mining Tests', function(accounts) {
   let oracletoken;
-  let oraclevote;
+  let proofofworktoken;
   let logNewValueWatcher;
+
+
     beforeEach('Setup contract for each test', async function () {
         oracletoken = await oracleToken.new(accounts[0],22,(86400/60)/6,[1,5,10,5,1]);
-        oraclevote = await oracleVote.new(22,1,1);
-        await oraclevote.propDudOracle(oracletoken.address);
-        await oraclevote.vote(1, true,{from:accounts[0]} );
-        await oraclevote.tallyVotes(1, {from:accounts[0]} )
-        balance0 = await (oraclevote.balanceOf(accounts[0],{from:accounts[0]}));
-        await oraclevote.transfer(accounts[4],100,{from:accounts[0]});
-        await oraclevote.transfer(accounts[5],100,{from:accounts[0]});
-        await oraclevote.transfer(accounts[6],100,{from:accounts[0]});
-        await oraclevote.transfer(accounts[7],100,{from:accounts[0]});
-        await oraclevote.transfer(accounts[8],100,{from:accounts[0]});-
-        await oraclevote.propAdd("testAddproposedOracle",22,(86400/60)/6,[1,5,10,5,1], {from:accounts[8]});
-        await oraclevote.vote(2, true,{from:accounts[0]} );
-        let res = await oraclevote.tallyVotes(2, {from:accounts[0]} );
+        proofofworktoken = await proofOfWorkToken.new();
+        await proofofworktoken.setDudOracle(oracletoken.address);
+        balance0 = await (proofofworktoken.balanceOf(accounts[0],{from:accounts[0]}));
+        await proofofworktoken.transfer(accounts[4],100,{from:accounts[0]});
+        await proofofworktoken.transfer(accounts[5],100,{from:accounts[0]});
+        await proofofworktoken.transfer(accounts[6],100,{from:accounts[0]});
+        await proofofworktoken.transfer(accounts[7],100,{from:accounts[0]});
+        await proofofworktoken.transfer(accounts[8],100,{from:accounts[0]});
+        let res = await proofofworktoken.deployNewOracle(api,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
         res = res.logs[0].args._newOracle;
-        oracletoken = await oracleToken.at(res);
-        //console.log("Acct0 bal",await oraclevote.balanceOf(accounts[0]));
+        oracletoken = await oracleToken.at(res);  
+        console.log(oracletoken .address); 
     });
+
     it("getVariables", async function(){
         vars = await oracletoken.getVariables();
         assert(vars[1] == 1);
@@ -76,24 +78,24 @@ contract('Mining Tests', function(accounts) {
         logMineWatcher = await promisifyLogWatch(oracletoken.Mine({ fromBlock: 'latest' }));//or Event Mine?
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;      
-        console.log("begbal sender",await oraclevote.balanceOf(accounts[0])); 
-/*      data2 = await oracletoken.retrieveData(res);
-        console.log("retreived 2", data2);*/
+        console.log("begbal sender",await proofofworktoken.balanceOf(accounts[0])); 
+        //data2 = await oracletoken.retrieveData(res);
+        //console.log("retreived 2", data2);
         data = await oracletoken.retrieveData.call(res.c[0], {from:accounts[0]});
         console.log("retreived", data);
         assert((data- 0) == (val- 0));
-        console.log("endbal sender",await oraclevote.balanceOf(accounts[0]));
+        console.log("endbal sender",await proofofworktoken.balanceOf(accounts[0]));
     });
 
       it("Test Miner Payout", async function () {
         balances = []
         for(var i = 0;i<5;i++){
-            balances[i] = await oraclevote.balanceOf(accounts[i]);
+            balances[i] = await proofofworktoken.balanceOf(accounts[i]);
         }
         logMineWatcher = await promisifyLogWatch(oracletoken.Mine({ fromBlock: 'latest' }));//or Event Mine?
         new_balances = []
         for(var i = 0;i<5;i++){
-            new_balances[i] = await oraclevote.balanceOf(accounts[i]);
+            new_balances[i] = await proofofworktoken.balanceOf(accounts[i]);
         }
         assert((new_balances[0] - balances[0]) == 1);
         assert((new_balances[1] - balances[1]) == 5);
@@ -103,17 +105,17 @@ contract('Mining Tests', function(accounts) {
     });
     
     it("Test Add Value to Pool", async function () {
-        console.log("value pool sender begbal",await oraclevote.balanceOf(accounts[0]));
+        console.log("value pool sender begbal",await proofofworktoken.balanceOf(accounts[0]));
         await oracletoken.addToValuePool(22);
-        console.log("value pool sender endbal",await oraclevote.balanceOf(accounts[0]));
+        console.log("value pool sender endbal",await proofofworktoken.balanceOf(accounts[0]));
         balances = []
         for(var i = 0;i<5;i++){
-            balances[i] = await oraclevote.balanceOf(accounts[i]);
+            balances[i] = await proofofworktoken.balanceOf(accounts[i]);
         }
         logMineWatcher = await promisifyLogWatch(oracletoken.Mine({ fromBlock: 'latest' }));//or Event Mine?
         new_balances = []
         for(var i = 0;i<5;i++){
-            new_balances[i] = await oraclevote.balanceOf(accounts[i]);
+            new_balances[i] = await proofofworktoken.balanceOf(accounts[i]);
         }
         assert((new_balances[0] - balances[0]) == 1 * 2);
         assert((new_balances[1] - balances[1]) == 5* 2);

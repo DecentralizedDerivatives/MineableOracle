@@ -25,6 +25,7 @@ contract OracleToken{
     uint256 public difficulty; // Difficulty starts low
     uint[5] public payoutStructure;
     address public master;
+    address public owner;
     mapping(uint => uint) values;
     mapping(bytes32 => mapping(address=>bool)) miners;
     Details[5] first_five;
@@ -40,6 +41,12 @@ contract OracleToken{
     event Print(uint _stuff,uint _more);
     event Print2(address[5] _miners,uint[5] _payoutStructure);
     
+    /*Modifiers*/
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
+    
     /*Functions*/
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
@@ -49,6 +56,7 @@ contract OracleToken{
     * @param _payoutStructure for miners
     */
     constructor(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public{
+        owner = msg.sender;
         timeOfLastProof = now;
         master = _master;
         readFee = _readFee;
@@ -167,6 +175,14 @@ contract OracleToken{
         ProofOfWorkToken _master = ProofOfWorkToken(master);
         require(_master.callTransfer(msg.sender,_tip));
         valuePool = valuePool.add(_tip);
+    }
+
+    /**
+    *@dev Allows the owner to set a new owner address
+    *@param _new_owner the new owner address
+    */
+    function setOwner(address _new_owner) public onlyOwner() { 
+        owner = _new_owner; 
     }
 
     /**
