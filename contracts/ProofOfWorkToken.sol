@@ -17,6 +17,10 @@ contract ProofOfWorkToken is Token, CloneFactory {
     string public constant name = "Proof-of-Work Oracle Token";
     string public constant symbol = "POWO";
     uint8 public constant decimals = 18;
+    uint firstDeployedTime;
+    uint firstWeekCount;
+    uint lastDeployedTime;
+    mapping(uint => bool) allowedWeekDeployment; 
     address public dud_Oracle;
     address public owner;
     OracleDetails[] public oracle_list;
@@ -41,6 +45,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     /*Functions*/
     constructor() public{
         owner = msg.sender;
+        firstDeployedTime = now - (now % 86400);
         oracle_list.push(OracleDetails({
             API: "",
             location: address(0)
@@ -55,18 +60,32 @@ contract ProofOfWorkToken is Token, CloneFactory {
     * @param _payoutStructure for miners
     * @return new oracle address
     */
-    function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyOwner() returns(address){
+    function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyOwner() {
+        uint _calledTime = now - (now % 86400);
+        bool _allowDeploy = allowedWeekDeployment[lastDeployedTime];
+        require(firstWeekCount<=10 && _calledTime - firstDeployedTime <= 604800 || _calledTime >= (lastDeployedTime + 604800) && _allowDeploy == false) ;
+            if (firstWeekCount <=10 && _calledTime - firstDeployedTime <= 604800){
+                firstWeekCount++; 
+                deployNewOracleHelper(_api, _readFee, _timeTarget, _payoutStructure);
+            } else if (_calledTime >= (lastDeployedTime + 604800) && _allowDeploy == false) {
+                lastDeployedTime = _calledTime;
+                allowedWeekDeployment[_calledTime] = true;
+                deployNewOracleHelper(_api, _readFee, _timeTarget, _payoutStructure);
+        }
+    }
+
+    function deployNewOracleHelper(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) internal returns(address){
+        //require(msg.sender = address(this)); //not sure if i need this
         address new_oracle = createClone(dud_Oracle);
         OracleToken(new_oracle).init(address(this),_readFee,_timeTarget,_payoutStructure);
         oracle_index[new_oracle] = oracle_list.length;
         oracle_list.length++;
         OracleDetails storage _current = oracle_list[oracle_list.length-1]; 
         _current.API = _api;
-        _current.location = new_oracle;  
+        _current.location = new_oracle; 
         emit Deployed(_api, new_oracle);
-        return new_oracle;
+        return new_oracle; 
     }
-
     /**
     * @dev Allows for a transfer of tokens to _miners 
     * @param _miners The five addresses to send tokens to
@@ -97,24 +116,11 @@ contract ProofOfWorkToken is Token, CloneFactory {
         return true;
     }
 
-    /**
-    * @dev Allows  to remove oracle that are no longer in use
-    * @param _removed is the oracle address to remove
-    */
-    function removeOracle(address _removed) public onlyOwner(){        
-        uint _index = oracle_index[_removed];
-        require(_index > 0);
-        uint _last_index = oracle_list.length.sub(1);
-        OracleDetails storage _last = oracle_list[_last_index];
-        oracle_list[_index] = _last;
-        oracle_index[_last.location] = _index;
-        oracle_list.length--;
-        oracle_index[_removed] = 0;
-    }
-    
+   
     /**
     * @dev Set oracle dudd address to clone
     * @param _dud_Oracle address to clone
+    * ///Brenda comment---move to constructor?//////
     */  
     function setDudOracle(address _dud_Oracle) public onlyOwner() {
         dud_Oracle = _dud_Oracle;
