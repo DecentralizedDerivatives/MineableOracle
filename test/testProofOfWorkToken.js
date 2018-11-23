@@ -7,6 +7,29 @@ var timeframe = (86400); //Daily
 var api = 'json(https://api.gdax.com/products/BTC-USD/ticker).price';
 var api2 = 'json(https://api.gdax.com/products/ETH-USD/ticker).price';
 
+async function expectThrow(promise){
+  try {
+    await promise;
+  } catch (error) {
+    // TODO: Check jump destination to destinguish between a throw
+    //       and an actual invalid jump.
+    const invalidOpcode = error.message.search('invalid opcode') >= 0;
+    // TODO: When we contract A calls contract B, and B throws, instead
+    //       of an 'invalid jump', we get an 'out of gas' error. How do
+    //       we distinguish this from an actual out of gas event? (The
+    //       testrpc log actually show an 'invalid jump' event.)
+    const outOfGas = error.message.search('out of gas') >= 0;
+    const revert = error.message.search('revert') >= 0;
+    assert(
+      invalidOpcode || outOfGas || revert,
+      'Expected throw, got \'' + error + '\' instead',
+    );
+    return;
+  }
+  assert.fail('Expected throw not received');
+};
+
+
 contract('PoW Token Tests', function(accounts) {
   let oracletoken;
   let proofofworktoken;
@@ -62,13 +85,54 @@ contract('PoW Token Tests', function(accounts) {
         csupply = (2**256) - 1;
         assert.equal(supply1,csupply,"Total Supply should be everything");
         contra = await proofofworktoken.balanceOf(proofofworktoken.address);
-        console.log("contra",contra);
         contra1 = contra.toNumber();
-        console.log("contra1",contra1);
         contrabal= 2**256 - 1000001;
-        console.log("contrabal",contrabal);
         assert.equal(contra1,contrabal,"Contract balance should be total supply-1000001");
 
     });
+
+    it("deploy 10 oracles", async function(){
+        let res3 = await proofofworktoken.deployNewOracle(api,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res3 = res3.logs[0].args._newOracle;
+        let res4 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res4 = res4.logs[0].args._newOracle;
+        let res5 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res5 = res5.logs[0].args._newOracle;
+        let res6 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res6 = res6.logs[0].args._newOracle;
+        let res7 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res7 = res7.logs[0].args._newOracle;
+        let res8 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res8 = res8.logs[0].args._newOracle;
+        let res9 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res9 = res9.logs[0].args._newOracle;
+        let res10 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res10 = res10.logs[0].args._newOracle;
+        let oracle_count = await proofofworktoken.getOracleCount();
+        let oracle_countn= oracle_count.toNumber();
+        console.log(oracle_count);
+        assert.equal(oracle_countn, 10, "should be 10, index zero is initialized with constructor");
+    })
+
+        it("deploy 10 oracles, throw on 11", async function(){
+        let res3 = await proofofworktoken.deployNewOracle(api,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res3 = res3.logs[0].args._newOracle;
+        let res4 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res4 = res4.logs[0].args._newOracle;
+        let res5 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res5 = res5.logs[0].args._newOracle;
+        let res6 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res6 = res6.logs[0].args._newOracle;
+        let res7 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res7 = res7.logs[0].args._newOracle;
+        let res8 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res8 = res8.logs[0].args._newOracle;
+        let res9 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res9 = res9.logs[0].args._newOracle;
+        let res10 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        res10 = res10.logs[0].args._newOracle;
+        console.log("res10",res10);
+        await expectThrow(proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]}));
+    })
 });
  

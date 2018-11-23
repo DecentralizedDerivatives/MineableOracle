@@ -17,10 +17,9 @@ contract ProofOfWorkToken is Token, CloneFactory {
     string public constant name = "Proof-of-Work Oracle Token";
     string public constant symbol = "POWO";
     uint8 public constant decimals = 18;
-    uint firstDeployedTime;
-    uint firstWeekCount;
-    uint lastDeployedTime;
-    mapping(uint => bool) allowedWeekDeployment; 
+    uint public firstDeployedTime;
+    uint public firstWeekCount = 0;
+    uint public lastDeployedTime;
     address public dud_Oracle;
     address public owner;
     OracleDetails[] public oracle_list;
@@ -35,6 +34,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     event Deployed(string _api,address _newOracle);
     event ChangeDudOracle(address newDudOracle);
     event Mined(address miner,uint reward);
+    event count(uint count, uint nextDate);
     
     /*Modifiers*/
     modifier onlyOwner() {
@@ -46,6 +46,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     constructor() public{
         owner = msg.sender;
         firstDeployedTime = now - (now % 86400);
+        lastDeployedTime = now - (now % 86400);
         oracle_list.push(OracleDetails({
             API: "",
             location: address(0)
@@ -62,20 +63,18 @@ contract ProofOfWorkToken is Token, CloneFactory {
     */
     function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyOwner() {
         uint _calledTime = now - (now % 86400);
-        bool _allowDeploy = allowedWeekDeployment[lastDeployedTime];
-        require(firstWeekCount<=10 && _calledTime - firstDeployedTime <= 604800 || _calledTime >= (lastDeployedTime + 604800) && _allowDeploy == false) ;
-            if (firstWeekCount <=10 && _calledTime - firstDeployedTime <= 604800){
+        require(firstWeekCount <= 9 && (_calledTime - firstDeployedTime) <= 604800 || _calledTime >= (lastDeployedTime + 604800));
+            if (firstWeekCount <= 9 && (_calledTime - firstDeployedTime) <= 604800){
                 firstWeekCount++; 
                 deployNewOracleHelper(_api, _readFee, _timeTarget, _payoutStructure);
-            } else if (_calledTime >= (lastDeployedTime + 604800) && _allowDeploy == false) {
+            } else if (_calledTime >= (lastDeployedTime + 604800)) {
                 lastDeployedTime = _calledTime;
-                allowedWeekDeployment[_calledTime] = true;
                 deployNewOracleHelper(_api, _readFee, _timeTarget, _payoutStructure);
-        }
+            }
+            emit count(firstWeekCount, lastDeployedTime + 604800 );
     }
 
     function deployNewOracleHelper(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) internal returns(address){
-        //require(msg.sender = address(this)); //not sure if i need this
         address new_oracle = createClone(dud_Oracle);
         OracleToken(new_oracle).init(address(this),_readFee,_timeTarget,_payoutStructure);
         oracle_index[new_oracle] = oracle_list.length;
@@ -135,6 +134,14 @@ contract ProofOfWorkToken is Token, CloneFactory {
     function getDetails(address _oracle) public view returns(string,address){
         OracleDetails storage _current = oracle_list[oracle_index[_oracle]];
         return(_current.API,_current.location);
+    }
+
+    /**
+    * @dev Getter function that gets the number of deployed oracles
+    * @return the oracle count
+    */
+    function getOracleCount() public view returns(uint){
+        return oracle_list.length-1;
     }
 
     /**
