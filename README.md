@@ -22,12 +22,13 @@ The PoWO implements a mineable proof-of-work (PoW) where miners, along with the 
     * [Updates](#Updates)
 </details>
 
-![How it works](./public/PowoFlow.png)
+<img src="./public/PowoFlow.png" width="600" height="500" alt = "How it works">
 
 ### Instructions for quick start with Truffle Deployment <a name="Quick-Deployment"> </a> 
 Follow the steps below to launch the Oracle contracts using Truffle. 
 
-Clone the repo, cd into it, and then run:
+Open terminal:
+    Clone the repo, cd into it, and then run:
 
     $ npm install
 
@@ -35,15 +36,25 @@ Clone the repo, cd into it, and then run:
 
     $ truffle migrate
 
-    $ truffle exec scripts/01_DeployAndVoteOnDudOracle.js
+    $ truffle exec scripts/01_DeployAndSetDudOracleAndTwoOracles.js
 
-    $ truffle exec scripts/02_TallyVotesForDudOracle.js
+##### Testing
 
-    $ truffle exec scripts/03_TallyVotesForProposedOracles.js
+Open a second terminal and run:
+   $ ganache-cli -m "nick lucian brenda kevin sam fiscal patch fly damp ocean produce wish"
 
-Get at least 5 miners going.
 
-Production and test python miners are available under the miner subdirectory [here](./miner/).
+On main terminal run: 
+
+    $   $ truffle test
+
+And wait for the message 'START MINING RIG!!'
+
+Kick off the python miner file [./miner/testMinerB.py](./miner/testMinerB.py).
+
+
+Production and test python miners are available under the miner subdirectory [here](./miner/). You will need to get at least 5 miners running.
+
 
 #### How to Contribute<a name="how2contribute"> </a>  
 Join our slack, shoot us an email or contact us: [<img src="./public/slack.png" width="24" height="24">](https://deriveth.slack.com/)
@@ -66,122 +77,60 @@ The documentation is broken down into three parts: contracts descriptions, scrip
         * proofOfWOrk -- used for miners to submit the PoW and off-chain value. It automatically adjusts the difficulty level to the target time.
         * pushValue -- used by proofOfWork to sort the values as they come in and pay out the miners
 
-* <b>OracleVote.sol</b> -- contains the voting mechanism for adding, removing and changing oracles(uses balance checkpoints to avoid double voting), minting, paying the miners, ERC20 token functionality, and cloning process for efficiently deploying new oracles. Oracle vote contains all the functions (is) in ProofOfWorkToken.sol, CloneFactory.sol and Token.sol.
-
-    * <b>ProofOfWorkToken.sol</b> -- contains all the functionality to set an origin(dud) oracle, deploy new oracles, remove oracles, and pay the miners. 
+* <b>ProofOfWorkToken.sol</b> -- contains all the functionality to set an origin(dud) oracle, deploy new oracles, remove oracles, and pay the miners. 
 
     * <b>CloneFactory.sol</b> -- allows ProofOfWorkToken to create and deploy an oracle efficiently. It creates a "clone" the dud oracle. The dud oracle acts as a byte code library for all the oracle contracts deployed based on it. To over simplify it is similar to how contracts reference the SafeMath library. Checkout our article, [Attack Of The Clones-How DDA Contracts Are So Cheap To Deploy](https://blog.goodaudience.com/attack-of-the-clones-how-dda-contracts-are-so-cheap-to-deploy-f3cee9c7566)
 
     * <b>Token.sol</b> -- contains all the ERC20 token functionality for the PoWO Token
 
-    * Notable functions under OracleVote.sol:
-        * addOracle -- use to propose to add an oracle
-        * removeOracle -- use to propose to remove an oracle
-        * changeDudOracle -- use to propose to switch from PoW to PoS
-        * changeMinQuorum -- use to propose to change the minimum quorum for the vote
-        * changeVoteDuration -- use to propose to change the vote duration for the proposals
-        * changeProposalFee -- use to propose to change the fee for each proposal
-        * vote -- use this function to vote on proposals
-        * tallyVotes -- use this function to tally the votes. It is the only function that can add, remove, or change an oracle or change the proposal fees, minimum quorum and vote duration.
-
-
-Note: There is no owner for the OracleToken.sol or OracleVote.sol, these are managed and governed by the PoWO token owners.  
 
 ### Scripts Description <a name="Scripts-Description"> </a>
 
-* <b>01_DeployAndVoteOnDudOracle.js</b> -- deploys the OracleVote and proposes the Oracle dud (origin).  
+* <b>01_DeployAndSetDudOracleAndTwoOracles.js</b> -- deploys the OracleToken and ProofOfWorkToken, sets dud and deploys two oracles(you can specify the API within the program).
 
-    * To deploy OracleVote update the proposal fee, minimum quorum and vote duration. The vote duration has to be specified in days.
-
-        * Before the votes can be tallied (tallyVotes function is ran) the vote duration needs to pass (keep in mind that for production deployments you may have to wait a day before being able to set the dud oracle).
-
-        * For testing, line 200 in OracleVote.sol can be commented out.
-
-        * Note: The tallyVotes function is the only function that can add/deploy, remove, change the dud oracle, vote duration, minimum quorum required to pass a proposal, and the proposal fee.
-
-    ```solidity
-    OracleVote(uint _proposalFee, uint _minimumQuorum, uint _voteDuration)
-    ```
-
-    * To deploy OracleToken update OracleVote address, read fee, time target for PoW and payout structure.
-
-    ```solidity
-    OracleToken(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure)
-    ```
-
-* <b>02_TallyVotesForDudOracle.js</b> -- Tallies the votes for the dud oracle, proposes two new oracles based on it, a daily and a 10 minute interval for Bitcoin and votes on them. For production environments, the vote duration timeframe has to elapse before the tallyVotes function can be ran. 
-
-* <b>03_TallyVotesForProposedOracles.js</b> -- Tallies the votes for the two new oracles proposed and if the vote is successful it will deploy them. 
 
 ### Operator Setup <a name="operator-setup"> </a>  
-The setup documentation is noted for acting as the operator.  Specific contract details are laid out for ease of use regardless of dev environment. Note that since the OracleToken is designed to be governed by a decentralized autonomous organization (DAO)/everyone that owns the PoWO tokens, the operator will eventually cede control to the PoWO owners.
+The setup documentation is noted for acting as the operator.  Specific contract details are laid out for ease of use regardless of dev environment. 
 
-**Step 1: Operator - Deploy oracleVote.sol**  
-The OracleVote contract contains the functionallity for the DAO, minting, and paying the miners. The cost to propose(\_proposalFee), minimum quorum to pass a vote (\_minimumQuorum), and how long the PoWO owners will have to cast their vote in days (\_voteDuration) will nave to be specified on deployment. 
+**Step 1: Operator - Deploy ProofOfWorkToken.sol**  
+The ProofOfWorkToken contract contains all the functionality to set an origin(dud) oracle, deploy new oracles, remove oracles, and pay the miners. The operator is assigned 1,000,000 PoWO when ProofOfWorkToken is deployed (see line 33 in Token.sol).
 
 ```solidity
-OracleVote(uint _proposalFee, uint _minimumQuorum, uint _voteDuration)
+ProofOfWorkToken()
 ```
-**Step 2: Operator - Deploy oracleToken.sol**  
+**Step 2: Operator - Deploy OracleToken.sol**  
 The first deployed oracleToken.sol will serve as a bytes library for future oracleToken.sol deployment. We refer to this first deployment as the "dud oracle" and it is used as the "clone" source for future proposed oracles.
 
-The constructor arguments on the dud oracle do not affect future proposed oracles. But these are needed for successful deployment of the contract. The \_master address will be set to the OracleVote address automatically on future oracles, however, for the dud it has to be specified along with the rest of the constructor arguments. 
+The constructor arguments on the dud oracle do not affect future proposed oracles. But these are needed for successful deployment of the contract. The \_master address will be set to the ProofOfWorkToken address automatically on future oracles, however, for the dud it has to be specified along with the rest of the constructor arguments. 
 
 ```solidity
 OracleToken(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure)
 ```
 where: 
-* \_master -- is the OracleVote address
+* \_master -- is the ProofOfWorkToken address
 * \_readFee -- is the fee(number of PoWO) users will be charged for data reads
 * \_timeTarget -- is the time target for the difficulty adjustment and determines how often values will be saved to the oracle timeseries
 * \_payoutStructure -- is used to specify how the readFee will be distributed among the five miners
 
-**Step 3: Operator - Propose and vote on the dud oracle**  
-Setting the dud oracle has to be decided by the PoWO holders. The operator has to propose to set the dud oracle to the address of the deployed oracleToken.sol on step 2. The operator is assigned 1,000,000 PoWO when oracleVote is deployed (see line 33 in Token.sol). Once the dud oracle is proposed, the opearator will have to vote for it and wait the vote duration period before tallying up the votes.
-
-```javascript
-oraclevote = await oracleVote.at(address _oraclevote);
-oraclevote.propDudOracle(address _dudOracle);
-oraclevote.vote(uint _proposalId, bool _supportsProposal);
-```
-where:
-* \_dudOracle -- is the address of OracleToken.sol deployed on step 2
-* \_proposalID -- is the proposal ID emitted from propDudOracle (in this case it should be 1)
-* \_supportsProposal -- is used to cast a vote, use true to vote for and false to vote against
-
-**Step 4: Operator - Set dud oracle, propose and vote on new oracle**  
+**Step 3: Operator - Set dud oracle, and deploy a new oracle**  
 The tallyVotes function is the only function that can add/deploy, remove, change the dud oracle, vote duration, minimum quorum required to pass a proposal, and the proposal fee and can only be ran once the vote duration timeframe expires.
 
 ```javascript
-oraclevote = await oracleVote.at(address _oraclevote);
-oraclevote.tallyVotes(uint _proposalId);
-oraclevote.propAdd(string _api,uint _readFee, uint _timeTarget,uint[5] _payoutStructure);
-oraclevote.vote(uint _proposalId, bool _supportsProposal);
+ProofOfWorkToken = await ProofOfWorkToken.at(address _ProofOfWorkToken);
+proofofworktoken = await proofOfWorkToken.new();
+await proofofworktoken.setDudOracle(oracletoken.address);
+await proofofworktoken.deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure); (e.g. 'json(https://api.gdax.com/products/BTC-USD/ticker).price',22,timeframe,[1,5,10,5,1])
 ```
 where:
-* \_oracleVote -- is the OracleVote address deployed on step 1
-* \_proposalId -- is the proposal ID for the dud oracle proposed on step 3
+* \_dudOracle -- is the address of OracleToken.sol deployed on step 2
 * \_api -- is the proposed oracle api
 * \_readFee -- is the proposed fee for reading oracle information
-* \_timeTarget -- is the proposed time for the difficulty adjustment in unix time
+* \_timeTarget -- is the difficulty adjustment time target or how often you want to save data points
 * \_payoutStructure -- is the proposed payout structure for miners
-* \_proposalID -- is the proposal ID emitted from propAdd
-* \_supportsProposal -- is used to cast a vote, use true to vote for and false to vote against
 
-Once the new oracle is proposed, the operator will have to vote for it and wait the vote duration period before tallying up the votes.
-
-**Step 5: Operator - Tally votes to set new oracle**  
-Once the dud oracle is set all the new oracles "clone" it's functionallity. The tallyVotes function will deploy the new oracle and use the oracleVote.address as its master address.
-
-```javascript
-oraclevote.tallyVotes(uint _proposalId);
-```
-
-where:
-* \_proposalId -- is the proposal ID for the dud oracle proposed on step 4
 
 ### User functions <a name="user-fx"> </a>  
-Once the operator deploys OracleVote, sets the dud oracle and deploys an oracle, users or on-chain contracts can retrieve data and tip miners to increase incentive to have the next data point mined.
+Once the operator deploys ProofOfWorkToken, sets the dud oracle and deploys an oracle, users or on-chain contracts can retrieve data and tip miners to increase incentive to have the next data point mined.
 
 Users can buy the ERC-20 PoWO token via an exchange or mine them.
 
@@ -218,11 +167,7 @@ where
 ## Overview <a name="overview"> </a>  
 Ethereum smart contracts cannot access off-chain data. If your smart contract relies on off-chain (e.g. internet) data to evaluate or execute a function, you either have to manually feed the data to your contract, incentivize users to do it, or rely on a centralized party to provide the data (Oraclize.it is generally the standard). 
 
-To avoid a centralized option or the less proven Proof of Stake method, the PoWO uses the proven method of PoW and requires miners to submit the PoW along with an off-chain value. We have implemented PoW because it is reliable, <b>now</b>. However, PoWO owners can decide to switch from PoW to Proof of Stake (PoS).
-
-The PoWO is governed by all PoWO owners. The PoWO owners can propose and vote to switch from PoW to PoS, add or remove an oracle, change the minimum quorum or vote duration for a vote to execute, and change the proposal fee.
-
-Votes are weighted based on the amount of PoWO tokens owned at the point in time (checkpoint) votes are tallied.
+To avoid a centralized option or the less proven Proof of Stake method, the PoWO uses the proven method of PoW and requires miners to submit the PoW along with an off-chain value. We have implemented PoW because it is reliable, <b>now</b>. However, once Proof of Stake (PoS) is proven Daxia can decide to switch from PoW to Proof of Stake (PoS).
 
 Checkout our article, [Proof-of-Work Oracle](https://medium.com/@nfett/proof-of-work-oracle-6de6f795d27) for a quick  overview. 
 
