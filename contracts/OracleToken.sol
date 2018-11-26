@@ -15,18 +15,17 @@ contract OracleToken{
 
     /*Variables*/
     bytes32 public currentChallenge;
-    uint public valuePool;
     uint public timeOfLastProof; // time of last challenge solved
     uint public timeTarget;
     uint public count;
     uint public readFee;
     uint private payoutTotal;
-    uint public  payoutMultiplier;
     uint256 public difficulty; // Difficulty starts low
     uint[5] public payoutStructure;
     address public master;
-    address public owner;
     mapping(uint => uint) values;
+    mapping(uint => address[5]) minersbyvalue;
+    mapping(uint => uint) payoutPool;
     mapping(bytes32 => mapping(address=>bool)) miners;
     Details[5] first_five;
 
@@ -36,17 +35,11 @@ contract OracleToken{
     }
 
     /*Events*/
-    event Mine(address indexed to,uint _time, uint _value);
-    event NewValue(address _miner, uint _value);
-    event Print(uint _stuff,uint _more);
-    event Print2(address[5] _miners,uint[5] _payoutStructure);
-    
-    /*Modifiers*/
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-    
+    event Mine(address[5] _miners, uint[5] _values);
+    event NewValue(uint _time, uint _value);
+    event PoolPayout(address[5] _miners, uint[5] _values);
+    event ValueAddedToPool(uint _value,uint _time);
+
     /*Functions*/
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
@@ -56,13 +49,11 @@ contract OracleToken{
     * @param _payoutStructure for miners
     */
     constructor(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public{
-        owner = msg.sender;
-        timeOfLastProof = now;
+        timeOfLastProof = now - now  % timeTarget;
         master = _master;
         readFee = _readFee;
         timeTarget = _timeTarget;
         payoutStructure = _payoutStructure;
-        payoutMultiplier = 1;
         currentChallenge = keccak256(abi.encodePacked(timeOfLastProof,currentChallenge, blockhash(block.number - 1)));
         difficulty = 1;
         for(uint i = 0;i<5;i++){
@@ -84,7 +75,6 @@ contract OracleToken{
         readFee = _readFee;
         timeTarget = _timeTarget;
         payoutStructure = _payoutStructure;
-        payoutMultiplier = 1;
         currentChallenge = keccak256(abi.encodePacked(timeOfLastProof,currentChallenge, blockhash(block.number - 1)));
         difficulty = 1;
         for(uint i = 0;i<5;i++){
@@ -99,34 +89,55 @@ contract OracleToken{
     * @return count of values sumbitted so far and the time of the last submission
     */
     function proofOfWork(string nonce, uint value) external returns (uint256,uint256) {
-        bytes32 n = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
+        bytes32 _solution = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
+        uint _rem = uint(_solution) % 3;
+        bytes32 n;
+        if(_rem == 3){
+            n = keccak256(abi.encodePacked(_solution));
+        }
+        else if(_rem ==1){
+            n = sha256(abi.encodePacked(_solution));
+        }
+        else{
+            n = keccak256(abi.encodePacked(ripemd160(abi.encodePacked(_solution))));
+        }
+
         require(uint(n) % difficulty == 0 && value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a valueS  
         first_five[count].value = value;
         first_five[count].miner = msg.sender;
         count++;
         miners[currentChallenge][msg.sender] = true;
-        emit NewValue(msg.sender,value);
+        uint _payoutMultiplier;
         if(count == 5) { 
-            if (now - timeOfLastProof< timeTarget){
+            if (now - timeOfLastProof < timeTarget){
                 difficulty++;
             }
             else if (now - timeOfLastProof > timeTarget && difficulty > 1){
                 difficulty--;
             }
-            timeOfLastProof = now - (now % timeTarget);//should it be like this? So 10 minute intervals?;
-            emit Print(payoutTotal,valuePool);
+            
+            uint i = (now - (now % timeTarget) - timeOfLastProof) / timeTarget;
+            timeOfLastProof = now - (now % timeTarget);
+            uint valuePool;
+            while(i > 0){
+                valuePool += payoutPool[timeOfLastProof - (i - 1) * timeTarget];
+                i--;
+            }
             if(valuePool >= payoutTotal) {
-                payoutMultiplier = (valuePool + payoutTotal) / payoutTotal; //solidity should always round down
-                valuePool = valuePool - (payoutTotal*(payoutMultiplier-1));
+                _payoutMultiplier = (valuePool + payoutTotal) / payoutTotal; //solidity should always round down
+                payoutPool[timeOfLastProof] = valuePool % payoutTotal;
+                valuePool = valuePool - (payoutTotal*(_payoutMultiplier-1));
             }
             else{
-                payoutMultiplier = 1;
+                payoutPool[timeOfLastProof] = valuePool;
+                _payoutMultiplier = 1;
             }
-            pushValue(timeOfLastProof);
+            pushValue(timeOfLastProof,_payoutMultiplier);
             count = 0;
             currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
         }
-         return (count,timeOfLastProof); 
+     emit NewValue(timeOfLastProof,value);
+     return (count,timeOfLastProof); 
     }
 
     /**
@@ -137,7 +148,7 @@ contract OracleToken{
     function retrieveData(uint _timestamp) public returns (uint) {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
         require(isData(_timestamp) && _master.callTransfer(msg.sender,readFee));
-        valuePool = valuePool.add(readFee);
+        payoutPool[_timestamp] = payoutPool[_timestamp] + readFee;
         return values[_timestamp];
     }
 
@@ -171,18 +182,28 @@ contract OracleToken{
     * @param _tip amount to add to value pool
     * How to give tip for future price request??????
     */
-    function addToValuePool(uint _tip) public {
+    function addToValuePool(uint _tip, uint _timestamp) public {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
         require(_master.callTransfer(msg.sender,_tip));
-        valuePool = valuePool.add(_tip);
+        if(_timestamp == 0){
+            payoutPool[timeOfLastProof.add(timeTarget)].add(_tip);
+        }
+        else{
+            payoutPool[_timestamp % timeTarget].add(_tip);
+        }
+        emit ValueAddedToPool(_tip,_timestamp);
     }
-
     /**
-    *@dev Allows the owner to set a new owner address
-    *@param _new_owner the new owner address
+    * @dev Retrieve money from the data reads
+    * @param _timestamp amount to add to value pool
+    * How to give tip for future price request??????
     */
-    function setOwner(address _new_owner) public onlyOwner() { 
-        owner = _new_owner; 
+    function retrievePayoutPool(uint _timestamp) public {
+        uint _payoutMultiplier = payoutPool[_timestamp] / 22;
+        require (_payoutMultiplier > 0 && now > _timestamp);
+        uint[5] memory _payout = [payoutStructure[0]*_payoutMultiplier,payoutStructure[1]*_payoutMultiplier,payoutStructure[2]*_payoutMultiplier,payoutStructure[3]*_payoutMultiplier,payoutStructure[4]*_payoutMultiplier];
+        ProofOfWorkToken(master).batchTransfer([minersbyvalue[_timestamp][0],minersbyvalue[_timestamp][1],minersbyvalue[_timestamp][2],minersbyvalue[_timestamp][3],minersbyvalue[_timestamp][4]], _payout,false);
+        emit PoolPayout([minersbyvalue[_timestamp][0],minersbyvalue[_timestamp][1],minersbyvalue[_timestamp][2],minersbyvalue[_timestamp][3],minersbyvalue[_timestamp][4]], _payout);
     }
 
     /**
@@ -192,9 +213,8 @@ contract OracleToken{
     * given the highest reward
     * @param _time is the time/date for the value being provided by the miner
     */
-    function pushValue(uint _time) internal {
+    function pushValue(uint _time, uint _payoutMultiplier) internal {
         Details[5] memory a = first_five;
-        emit Print2([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner],payoutStructure);
         for (uint i = 1;i <5;i++){
             uint temp = a[i].value;
             address temp2 = a[i].miner;
@@ -209,9 +229,10 @@ contract OracleToken{
                 a[j].miner= temp2;
             }
         }
-        emit Print(payoutStructure[0],payoutMultiplier);
-        ProofOfWorkToken(master).batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], [payoutStructure[0]*payoutMultiplier,payoutStructure[1]*payoutMultiplier,payoutStructure[2]*payoutMultiplier,payoutStructure[3]*payoutMultiplier,payoutStructure[4]*payoutMultiplier]);
+        uint[5] memory _payout = [payoutStructure[0]*_payoutMultiplier,payoutStructure[1]*_payoutMultiplier,payoutStructure[2]*_payoutMultiplier,payoutStructure[3]*_payoutMultiplier,payoutStructure[4]*_payoutMultiplier];
+        ProofOfWorkToken(master).batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,false);
         values[_time] = a[2].value;
-        emit Mine(msg.sender,_time,a[2].value); // execute an event reflecting the change
+        minersbyvalue[_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
+        emit Mine([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
     }
 }

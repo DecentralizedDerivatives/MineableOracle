@@ -10,7 +10,7 @@ contract Token  {
     using SafeMath for uint256;
 
     /*Variables*/
-    uint public constant total_supply = 2**256-1;
+    uint public total_supply;
     mapping (address => uint) public balances;
     mapping(address => mapping (address => uint)) internal allowed;
 
@@ -24,8 +24,9 @@ contract Token  {
     * @dev Constructor that sets the passed value as the token to be mineable.
     */
     constructor() public{
-        balances[msg.sender] = 1000000;
-        balances[address(this)]= 2**256 - 1000001;
+        total_supply += 1000000;
+        balances[msg.sender] = total_supply;
+        balances[address(this)]= 2**256 - 1;
     }
     
 
@@ -95,14 +96,6 @@ contract Token  {
     */
     function allowance(address _owner, address _spender) public view returns (uint) {
        return allowed[_owner][_spender]; }
-
-    /**
-    * @dev Getter for the total_supply of oracle tokens
-    * @return total supply
-    */
-    function totalSupply() public pure returns (uint) {
-       return total_supply;
-    }
 
 }
 
