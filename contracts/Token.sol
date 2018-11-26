@@ -24,7 +24,7 @@ contract Token  {
     * @dev Constructor that sets the passed value as the token to be mineable.
     */
     constructor() public{
-        total_supply += 1000000;
+        total_supply = 1000000;
         balances[msg.sender] = total_supply;
         balances[address(this)]= 2**256 - 1;
     }
@@ -97,5 +97,8 @@ contract Token  {
     function allowance(address _owner, address _spender) public view returns (uint) {
        return allowed[_owner][_spender]; }
 
+    function totalSupply() public view returns(uint){
+        return total_supply;
+    }
 }
 

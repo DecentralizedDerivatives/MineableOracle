@@ -67,7 +67,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
         for(uint i = 0;i<5;i++){
             _payout += _payoutStructure[i];
         }
-        require(_payout.mul(_timeTarget) <=  25 ether);
+        require(_payout.mul(86400).div(_timeTarget) <=  25*1e18);
         require(firstWeekCount <= 9 && (_calledTime - firstDeployedTime) <= 604800 || _calledTime >= (lastDeployedTime + 604800));
             if (firstWeekCount <= 9 && (_calledTime - firstDeployedTime) <= 604800){
                 firstWeekCount++; 

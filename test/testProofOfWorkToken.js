@@ -35,7 +35,7 @@ contract('PoW Token Tests', function(accounts) {
   let proofofworktoken;
   let logNewValueWatcher;
     beforeEach('Setup contract for each test', async function () {
-        oracletoken = await oracleToken.new(accounts[0],22,(86400/60)/6,[1,5,10,5,1]);
+        oracletoken = await oracleToken.new(accounts[0],1e18,(86400/60)/6,[1e18,5e18,10e18,5e18,1e18]);
         proofofworktoken = await proofOfWorkToken.new();
         await proofofworktoken.setDudOracle(oracletoken.address);
         balance0 = await (proofofworktoken.balanceOf(accounts[0],{from:accounts[0]}));
@@ -44,12 +44,12 @@ contract('PoW Token Tests', function(accounts) {
         await proofofworktoken.transfer(accounts[6],100,{from:accounts[0]});
         await proofofworktoken.transfer(accounts[7],100,{from:accounts[0]});
         await proofofworktoken.transfer(accounts[8],100,{from:accounts[0]});
-        let res = await proofofworktoken.deployNewOracle(api,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        let res = await proofofworktoken.deployNewOracle(api,22,timeframe,[1e18,5e18,10e18,5e18,1e18], {from:accounts[0]});
         res = res.logs[0].args._newOracle;
         oracletoken = await oracleToken.at(res);   
-        let res2 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
+        let res2 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1e18,5e18,10e18,5e18,1e18], {from:accounts[0]});
         res2 = res2.logs[0].args._newOracle;
-        oracletoken2 = await oracleToken.at(res2); 
+        oracletoken2 = await oracleToken.at(res2);
     });
 
     it("Token transfer", async function(){
@@ -82,12 +82,11 @@ contract('PoW Token Tests', function(accounts) {
     it("Total Supply", async function(){
         supply = await proofofworktoken.totalSupply();
         supply1 = supply.toNumber();
-        csupply = (2**256) - 1;
-        assert.equal(supply1,csupply,"Total Supply should be everything");
+        assert.equal(supply1,1000000,"Supply should be 1000000");
         contra = await proofofworktoken.balanceOf(proofofworktoken.address);
         contra1 = contra.toNumber();
-        contrabal= 2**256 - 1000001;
-        assert.equal(contra1,contrabal,"Contract balance should be total supply-1000001");
+        contrabal= 2**256 - 1;
+        assert.equal(contra1,contrabal,"Contract balance should be max");
 
     });
 
@@ -110,7 +109,6 @@ contract('PoW Token Tests', function(accounts) {
         res10 = res10.logs[0].args._newOracle;
         let oracle_count = await proofofworktoken.getOracleCount();
         let oracle_countn= oracle_count.toNumber();
-        console.log(oracle_count);
         assert.equal(oracle_countn, 10, "should be 10, index zero is initialized with constructor");
     })
 
@@ -131,7 +129,6 @@ contract('PoW Token Tests', function(accounts) {
         res9 = res9.logs[0].args._newOracle;
         let res10 = await proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]});
         res10 = res10.logs[0].args._newOracle;
-        console.log("res10",res10);
         await expectThrow(proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]}));
     })
 });

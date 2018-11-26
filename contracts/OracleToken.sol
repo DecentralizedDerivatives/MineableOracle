@@ -1,7 +1,6 @@
 pragma solidity ^0.4.24;
 
 import "./libraries/SafeMath.sol";
-import "./Token.sol";
 import "./ProofOfWorkToken.sol";
 //Instead of valuePool, can we balances of this address?
 
@@ -49,7 +48,7 @@ contract OracleToken{
     * @param _payoutStructure for miners
     */
     constructor(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public{
-        timeOfLastProof = now - now  % timeTarget;
+        timeOfLastProof = now - now  % _timeTarget;
         master = _master;
         readFee = _readFee;
         timeTarget = _timeTarget;
