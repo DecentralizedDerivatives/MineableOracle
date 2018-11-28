@@ -32,9 +32,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
 
     /*Events*/
     event Deployed(string _api,address _newOracle);
-    event ChangeDudOracle(address newDudOracle);
     event Mined(address miner,uint reward);
-    event Count(uint count, uint nextDate);
     
     /*Modifiers*/
     modifier onlyOwner() {
@@ -43,8 +41,9 @@ contract ProofOfWorkToken is Token, CloneFactory {
     }
 
     /*Functions*/
-    constructor() public{
+    constructor(address _dud_Oracle) public{
         owner = msg.sender;
+        dud_Oracle = _dud_Oracle;
         firstDeployedTime = now - (now % 86400);
         lastDeployedTime = now - (now % 86400);
         oracle_list.push(OracleDetails({
@@ -76,7 +75,6 @@ contract ProofOfWorkToken is Token, CloneFactory {
                 lastDeployedTime = _calledTime;
                 deployNewOracleHelper(_api, _readFee, _timeTarget, _payoutStructure);
             }
-            emit Count(firstWeekCount, lastDeployedTime + 604800 );
     }
 
     function deployNewOracleHelper(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) internal returns(address){
@@ -126,17 +124,6 @@ contract ProofOfWorkToken is Token, CloneFactory {
         return true;
     }
 
-   
-    /**
-    * @dev Set oracle dudd address to clone
-    * @param _dud_Oracle address to clone
-    * ///Brenda comment---move to constructor?//////
-    */  
-    function setDudOracle(address _dud_Oracle) public onlyOwner() {
-        dud_Oracle = _dud_Oracle;
-        emit ChangeDudOracle(dud_Oracle);
-    }
-
     /**
     * @dev Getter function that gets the oracle API
     * @param _oracle is the oracle address to look up
@@ -155,6 +142,14 @@ contract ProofOfWorkToken is Token, CloneFactory {
         return oracle_list.length-1;
     }
 
+    /**
+    * @dev Getter function that gets the number of deployed oracles
+    * @param _oracle is the oracle address to look up
+    * @return the oracle count
+    */
+    function getOracleIndex(address _oracle) public view returns(uint){
+        return oracle_index[_oracle];
+    }
     /**
     *@dev Allows the owner to set a new owner address
     *@param _new_owner the new owner address

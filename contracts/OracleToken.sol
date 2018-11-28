@@ -16,9 +16,11 @@ contract OracleToken{
     bytes32 public currentChallenge;
     uint public timeOfLastProof; // time of last challenge solved
     uint public timeTarget;
+    uint public timeCreated;
     uint public count;
     uint public readFee;
-    uint private payoutTotal;
+    uint public payoutTotal;
+    uint public miningMultiplier;
     uint256 public difficulty; // Difficulty starts low
     uint[5] public payoutStructure;
     address public master;
@@ -34,10 +36,13 @@ contract OracleToken{
     }
 
     /*Events*/
-    event Mine(address[5] _miners, uint[5] _values);
+    event Mine(address sender,address[5] _miners, uint[5] _values);
     event NewValue(uint _time, uint _value);
-    event PoolPayout(address[5] _miners, uint[5] _values);
-    event ValueAddedToPool(uint _value,uint _time);
+    event PoolPayout(address sender,address[5] _miners, uint[5] _values);
+    event ValueAddedToPool(address sender,uint _value,uint _time);
+    event MiningMultiplierChanged(uint _newMultiplier);
+    event DataRetrieved(address _sender, uint _value);
+    event NonceSubmitted(address _miner, string _nonce, uint _value);
 
     /*Functions*/
     /**
@@ -48,10 +53,13 @@ contract OracleToken{
     * @param _payoutStructure for miners
     */
     constructor(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public{
+        require(_timeTarget > 60);
         timeOfLastProof = now - now  % _timeTarget;
+        timeCreated = now;
         master = _master;
         readFee = _readFee;
         timeTarget = _timeTarget;
+        miningMultiplier = 1e18;
         payoutStructure = _payoutStructure;
         currentChallenge = keccak256(abi.encodePacked(timeOfLastProof,currentChallenge, blockhash(block.number - 1)));
         difficulty = 1;
@@ -68,11 +76,13 @@ contract OracleToken{
     * @param _payoutStructure for miners
     */
     function init(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) external {
-        require (timeOfLastProof == 0);
-        timeOfLastProof = now;
+        require (timeOfLastProof == 0 && _timeTarget > 60);
+        timeOfLastProof = now - now  % _timeTarget;
+        timeCreated = now;
         master = _master;
         readFee = _readFee;
         timeTarget = _timeTarget;
+        miningMultiplier = 1e18;
         payoutStructure = _payoutStructure;
         currentChallenge = keccak256(abi.encodePacked(timeOfLastProof,currentChallenge, blockhash(block.number - 1)));
         difficulty = 1;
@@ -91,7 +101,7 @@ contract OracleToken{
         bytes32 _solution = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
         uint _rem = uint(_solution) % 3;
         bytes32 n;
-        if(_rem == 3){
+        if(_rem == 2){
             n = keccak256(abi.encodePacked(_solution));
         }
         else if(_rem ==1){
@@ -107,8 +117,9 @@ contract OracleToken{
         count++;
         miners[currentChallenge][msg.sender] = true;
         uint _payoutMultiplier;
+        emit NonceSubmitted(msg.sender,nonce,value);
         if(count == 5) { 
-            if (now - timeOfLastProof < timeTarget){
+            if (now - timeOfLastProof < (timeTarget *60)/100){
                 difficulty++;
             }
             else if (now - timeOfLastProof > timeTarget && difficulty > 1){
@@ -134,11 +145,26 @@ contract OracleToken{
             pushValue(timeOfLastProof,_payoutMultiplier);
             count = 0;
             currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
-        }
-     emit NewValue(timeOfLastProof,value);
+             emit NewValue(timeOfLastProof,value);
+         }
+
      return (count,timeOfLastProof); 
     }
 
+
+    /*@dev Change the payoutTotal*/
+    function updatePayoutTotal() public returns(uint _newTotal){
+        uint yearsSince = (now - timeCreated) / (86400 * 365);
+        if(yearsSince >=5){
+            miningMultiplier = 0;
+            emit MiningMultiplierChanged(miningMultiplier);
+        }
+        else if (yearsSince >=1){
+            miningMultiplier = 1e18 * (5 - yearsSince);
+            emit MiningMultiplierChanged(miningMultiplier);
+        }
+        return miningMultiplier;
+    }
     /**
     * @dev Retreive value from oracle based on timestamp
     * @param _timestamp to retreive data/value from
@@ -148,9 +174,17 @@ contract OracleToken{
         ProofOfWorkToken _master = ProofOfWorkToken(master);
         require(isData(_timestamp) && _master.callTransfer(msg.sender,readFee));
         payoutPool[_timestamp] = payoutPool[_timestamp] + readFee;
+        emit DataRetrieved(msg.sender,values[_timestamp]);
         return values[_timestamp];
     }
 
+    function getMinersByValue(uint _timestamp) public view returns(address[5]){
+        return minersbyvalue[_timestamp];
+    }
+
+    function didMine(bytes32 _challenge,address _miner) public view returns(bool){
+        return miners[_challenge][_miner];
+    }
     /**
     * @dev Checks if a value exists for the timestamp provided
     * @param _timestamp to retreive data/value from
@@ -176,6 +210,19 @@ contract OracleToken{
         return retrieveData(timeOfLastProof);
     }
 
+            /**
+    * @dev Getter function for currentChallenge difficulty
+    * @return current challenge and level of difficulty
+    */
+    function getValuePoolAt(uint _timestamp) external view returns(uint){
+        if(_timestamp == 0){
+            return payoutPool[timeOfLastProof.add(timeTarget)];
+        }
+        else{
+            return payoutPool[_timestamp];
+        }
+    }
+
     /**
     * @dev Adds the _tip to the valuePool that pays the miners
     * @param _tip amount to add to value pool
@@ -188,9 +235,9 @@ contract OracleToken{
             payoutPool[timeOfLastProof.add(timeTarget)].add(_tip);
         }
         else{
-            payoutPool[_timestamp % timeTarget].add(_tip);
+            payoutPool[_timestamp - _timestamp % timeTarget].add(_tip);
         }
-        emit ValueAddedToPool(_tip,_timestamp);
+        emit ValueAddedToPool(msg.sender,_tip,_timestamp);
     }
     /**
     * @dev Retrieve money from the data reads
@@ -198,11 +245,11 @@ contract OracleToken{
     * How to give tip for future price request??????
     */
     function retrievePayoutPool(uint _timestamp) public {
-        uint _payoutMultiplier = payoutPool[_timestamp] / 22;
+        uint _payoutMultiplier = payoutPool[_timestamp] / payoutTotal;
         require (_payoutMultiplier > 0 && now > _timestamp);
         uint[5] memory _payout = [payoutStructure[0]*_payoutMultiplier,payoutStructure[1]*_payoutMultiplier,payoutStructure[2]*_payoutMultiplier,payoutStructure[3]*_payoutMultiplier,payoutStructure[4]*_payoutMultiplier];
         ProofOfWorkToken(master).batchTransfer([minersbyvalue[_timestamp][0],minersbyvalue[_timestamp][1],minersbyvalue[_timestamp][2],minersbyvalue[_timestamp][3],minersbyvalue[_timestamp][4]], _payout,false);
-        emit PoolPayout([minersbyvalue[_timestamp][0],minersbyvalue[_timestamp][1],minersbyvalue[_timestamp][2],minersbyvalue[_timestamp][3],minersbyvalue[_timestamp][4]], _payout);
+        emit PoolPayout(msg.sender,[minersbyvalue[_timestamp][0],minersbyvalue[_timestamp][1],minersbyvalue[_timestamp][2],minersbyvalue[_timestamp][3],minersbyvalue[_timestamp][4]], _payout);
     }
 
     /**
@@ -214,6 +261,7 @@ contract OracleToken{
     */
     function pushValue(uint _time, uint _payoutMultiplier) internal {
         Details[5] memory a = first_five;
+        uint[5] memory _payout;
         for (uint i = 1;i <5;i++){
             uint temp = a[i].value;
             address temp2 = a[i].miner;
@@ -228,10 +276,12 @@ contract OracleToken{
                 a[j].miner= temp2;
             }
         }
-        uint[5] memory _payout = [payoutStructure[0]*_payoutMultiplier,payoutStructure[1]*_payoutMultiplier,payoutStructure[2]*_payoutMultiplier,payoutStructure[3]*_payoutMultiplier,payoutStructure[4]*_payoutMultiplier];
+        for (i = 0;i <5;i++){
+            _payout[i] = payoutStructure[i]*_payoutMultiplier*miningMultiplier/1e18;
+        }
         ProofOfWorkToken(master).batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,false);
         values[_time] = a[2].value;
         minersbyvalue[_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
-        emit Mine([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
+        emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
     }
 }
