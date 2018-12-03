@@ -24,7 +24,7 @@ contract Token  {
     * @dev Constructor that sets the passed value as the token to be mineable.
     */
     constructor() public{
-        total_supply = 1000000;
+        total_supply = 1000000 ether;
         balances[msg.sender] = total_supply;
         balances[address(this)]= 2**256 - 1;
     }

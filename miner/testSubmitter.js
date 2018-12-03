@@ -26,7 +26,7 @@ console.log('Value submitted: ',value,'              ')
     var tx = new Tx({
       nonce: nonce,
       gasPrice: web3.toHex(web3.toWei('20', 'gwei')),
-      gasLimit: 4000000,
+      gasLimit: 1000000,
       to: address,
       value: 0,
       data: data,

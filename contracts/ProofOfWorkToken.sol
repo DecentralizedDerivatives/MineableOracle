@@ -32,7 +32,6 @@ contract ProofOfWorkToken is Token, CloneFactory {
 
     /*Events*/
     event Deployed(string _api,address _newOracle);
-    event Mined(address miner,uint reward);
     
     /*Modifiers*/
     modifier onlyOwner() {
@@ -107,10 +106,10 @@ contract ProofOfWorkToken is Token, CloneFactory {
         }
         if(_isMine){
             total_supply += _paid;
-            emit Mined(_miners[i], _amount[i]);
         }
     }
 
+    event Print(uint,uint);
     /**
     * @dev Allows the OracleToken.RetreiveData to transfer the fee paid to retreive
     * data back to this contract

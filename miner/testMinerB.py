@@ -43,10 +43,8 @@ def mine(challenge, public_address, difficulty):
 			r = requests.post(node_url, data=json.dumps(payload));
 			d = jsonParser(r);
 			last_block = int(d['result'],16)
-			_challenge,_difficulty = getVariables();
-			if _challenge == challenge:
-				pass;
-			else:
+			_challenge,_difficulty,v = getVariables();
+			if (v == True):
 				return 0;
 
 def getAPIvalue():
@@ -68,8 +66,16 @@ def masterMiner():
 			run_js('testSubmitter.js',arg_string);
 			miners_started += 1
 			if(miners_started == 5):
+				v = False;
 				getAddress();
-				challenge,difficulty = getVariables();
+				while(v == False):
+					_challenge,difficulty = getVariables();
+					if challenge == _challenge:
+						v = False
+						time.sleep(10);
+					else:
+						v = True
+						challenge = _challenge;
 				miners_started = 0;
 		else:
 			pass 
@@ -87,8 +93,7 @@ def getVariables():
 	val3 = bytes.decode(val2)
 	print(val3)
 	_difficulty = int(val3);
-
-	return _challenge,_difficulty;
+	return _challenge,_difficulty
 
 def jsonParser(_info):
 	my_json = _info.content
@@ -119,13 +124,13 @@ def getAddress():
 					last_block = block 
 					block = 0;
 					print('New Contract Address',contract_address)
-					return
+					return True;
 			except:
 				pass
 		except:
 			pass
 		block = block - 1;
-	return 
+	return False;
 
 def bytes2int(str):
  return int(str.encode('hex'), 32)
