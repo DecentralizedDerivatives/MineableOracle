@@ -169,11 +169,11 @@ contract('Mining Tests', function(accounts) {
             new_balances[i] = await proofofworktoken.balanceOf(accounts[i]);
             console.log(i, new_balances[i]);
         }
-/*        assert((new_balances[0] - balances[0]) == web3.toWei(1, 'ether'));
-        assert((new_balances[1] - balances[1]) == web3.toWei(5, 'ether'));
-        assert((new_balances[2] - balances[2]) == web3.toWei(10, 'ether'));
-        assert((new_balances[3] - balances[3]) == web3.toWei(5, 'ether'));
-        assert((new_balances[4] - balances[4]) == web3.toWei(1, 'ether'));*/
+/*        assert((balances[0]*1 - new_balances[0]*1) == web3.toWei(1, 'ether'));
+        assert((new_balances[1]*1 - balances[1]*1) == web3.toWei(5, 'ether'));
+        assert((new_balances[2]*1 - balances[2]*1) == web3.toWei(10, 'ether'));
+        assert((new_balances[3]*1 - balances[3]*1) == web3.toWei(5, 'ether'));
+        assert((new_balances[4]*1 - balances[4]*1) == web3.toWei(1, 'ether'));*/
     });
          it("Test Retrieve payout pool", async function () {
           await proofofworktoken.transfer(accounts[9],1000,{from:accounts[0]});
