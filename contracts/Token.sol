@@ -26,7 +26,7 @@ contract Token  {
     constructor() public{
         total_supply = 1000000 ether;
         balances[msg.sender] = total_supply;
-        balances[address(this)]= 2**256 - 1;
+        balances[address(this)]= 2**256 -  1000000 ether;
     }
     
 
