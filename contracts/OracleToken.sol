@@ -164,7 +164,7 @@ contract OracleToken{
         emit ValueAddedToPool(msg.sender,_tip,_time);//_time instead of timestamp?
     }
 
-    event Print(uint _dumb,uint _shit);
+
     /**
     * @dev Retrieve money from the data reads
     * @param _timestamp amount to add to value pool
@@ -172,7 +172,6 @@ contract OracleToken{
     */
     function retrievePayoutPool(uint _timestamp) public {
         uint _payoutMultiplier = payoutPool[_timestamp] / payoutTotal;
-        emit Print( payoutPool[_timestamp] , payoutTotal);
         require (_payoutMultiplier > 0 && values[_timestamp] > 0);
         uint[5] memory _payout = [payoutStructure[4]*_payoutMultiplier,payoutStructure[3]*_payoutMultiplier,payoutStructure[2]*_payoutMultiplier,payoutStructure[1]*_payoutMultiplier,payoutStructure[0]*_payoutMultiplier];
         ProofOfWorkToken(master).batchTransfer(minersbyvalue[_timestamp], _payout,false);
