@@ -57,6 +57,7 @@ contract('Mining Tests', function(accounts) {
     it("getVariables", async function(){
         vars = await oracletoken.getVariables();
         assert(vars[1] == 1);
+        console.log(vars);
     }); 
     it("Test miner", async function () {
         console.log('START MINING RIG!!');

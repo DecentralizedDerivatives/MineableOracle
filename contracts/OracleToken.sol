@@ -6,7 +6,9 @@ import "./ProofOfWorkToken.sol";
 
 /**
  * @title Oracle Token
- * @dev Turns a wallet into a mine for a specified ERC20 token
+ * @dev Oracle contract where miners can submit the proof of work along with the value.
+ * Includes functions for users to read data from, tip the miners and for miners to submit
+ * values and get paid out from the master ProofOfWorkToken contract
  */
 contract OracleToken{
     using SafeMath for uint256;
@@ -35,7 +37,7 @@ contract OracleToken{
     /*Events*/
     event Mine(address sender,address[5] _miners, uint[5] _values);//Emits upon a succesful value mine, indicates the msg.sender, 5 miners included in block, and the mined value
     event NewValue(uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
-    event PoolPayout(address sender,uint _timestamp, address[5] _miners, uint[5] _values);//Emits when a pool is paid out and who is included and the amount(money collected from reads)
+    event PoolPayout(address sender,uint _timestamp, address[5] _miners, uint[5] _values);//Emits when a pool is paid out, who is included and the amount(money collected from reads)
     event ValueAddedToPool(address sender,uint _value,uint _time);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
     event MiningMultiplierChanged(uint _newMultiplier);//Each year, the mining reward decreases by 1/5 of the initial mining reward
     event DataRetrieved(address _sender, uint _value);//Emits when someone retireves data, this shows the msg.sender and the value retrieved
@@ -44,7 +46,7 @@ contract OracleToken{
     /*Constructors*/
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
-    * @param _master is the master oracleVote.address
+    * @param _master is the master ProofOfWorkToken.address
     * @param _readFee is the fee for reading oracle information
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
@@ -67,7 +69,7 @@ contract OracleToken{
 
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
-    * @param _master is the master oracle address(OracleVote.address is ProofOfWorkToken)
+    * @param _master is the master ProofOfWorkToken.address
     * @param _readFee is the fee for reading oracle information
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
@@ -90,7 +92,7 @@ contract OracleToken{
 
     /*Functions*/
     /**
-    * @dev Proof of work to be called when mining to submit your solution
+    * @dev Proof of work is called by the miner when they submit the solution (proof of work and value)
     * @param nonce uint submitted by miner
     * @param value of api query
     * @return count of values sumbitted so far and the time of the last successful mine
@@ -148,7 +150,9 @@ contract OracleToken{
     /**
     * @dev Adds the _tip to the valuePool that pays the miners
     * @param _tip amount to add to value pool
-    * How to give tip for future price request??????
+    * @param _timestamp is the timestamp that will be given the _tip once it is mined.
+    * It should be the time stamp the user wants to ensure gets mined. They can do that 
+    * by adding a _tip to insentivize the miners to submit a value for the time stamp. 
     */
     function addToValuePool(uint _tip, uint _timestamp) public {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
@@ -166,9 +170,8 @@ contract OracleToken{
 
 
     /**
-    * @dev Retrieve money from the data reads
-    * @param _timestamp amount to add to value pool
-    * How to give tip for future price request??????
+    * @dev Retrieve payout from the data reads. It pays out the 5 miners.
+    * @param _timestamp for which to retreive the payout from
     */
     function retrievePayoutPool(uint _timestamp) public {
         uint _payoutMultiplier = payoutPool[_timestamp] / payoutTotal;
@@ -178,8 +181,11 @@ contract OracleToken{
         emit PoolPayout(msg.sender,_timestamp,minersbyvalue[_timestamp], _payout);
     }
 
-
-    /*@dev Change the payoutTotal*/
+    /**
+    * @dev Changes the base miner payout by decreasiung by 1/5 for 5 years.
+    * After 5 years all miners rewards come from data reads.
+    * @return _newTotal after the payout is decreased
+    */
     function updatePayoutTotal() public returns(uint _newTotal){
         uint yearsSince = (now - timeCreated) / (86400 * 365);
         if(yearsSince >=5){
@@ -192,6 +198,7 @@ contract OracleToken{
         }
         return miningMultiplier;
     }
+
     /**
     * @dev Retreive value from oracle based on timestamp
     * @param _timestamp to retreive data/value from
@@ -205,13 +212,24 @@ contract OracleToken{
         return values[_timestamp];
     }
 
+    /**
+    * @dev Gets the 5 miners who mined the value for the specified _timestamp 
+    * @param _timestamp is the timestampt to look up miners for
+    */
     function getMinersByValue(uint _timestamp) public view returns(address[5]){
         return minersbyvalue[_timestamp];
     }
 
+    /**
+    * @dev This function tells you if a given challenge has been completed by a given miner
+    * @param _challenge the challenge to search for
+    * @param _miner address that you want to know if they solved the challenge
+    * @return true if the _miner address provided solved the 
+    */
     function didMine(bytes32 _challenge,address _miner) public view returns(bool){
         return miners[_challenge][_miner];
     }
+    
     /**
     * @dev Checks if a value exists for the timestamp provided
     * @param _timestamp to retreive data/value from
@@ -221,7 +239,7 @@ contract OracleToken{
         return (values[_timestamp] > 0);
     }
 
-        /**
+    /**
     * @dev Getter function for currentChallenge difficulty
     * @return current challenge and level of difficulty
     */
@@ -238,8 +256,11 @@ contract OracleToken{
     }
 
     /**
-    * @dev Getter function for currentChallenge difficulty
-    * @return current challenge and level of difficulty
+    * @dev Getter function for the payoutPool total for the specified _timestamp
+    * If the _timestamp is not specified(_timestamp=0) it will return the total payoutPool
+    * for the _timestamp being mined
+    * @param _timestamp to look up the total payoutPool value 
+    * @return the value of the total payoutPool
     */
     function getValuePoolAt(uint _timestamp) external view returns(uint){
         if(_timestamp == 0){

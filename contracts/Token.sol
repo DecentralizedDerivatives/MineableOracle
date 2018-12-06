@@ -89,7 +89,9 @@ contract Token  {
     function balanceOf(address _owner) public constant returns (uint bal) { 
         return balances[_owner]; 
     }
+
     /**
+    * @dev Getter function allows you to view the allowance left based on the _owner and _spender
     * @param _owner address
     * @param _spender address
     * @return Returns the remaining allowance of tokens granted to the _spender from the _owner
@@ -97,6 +99,10 @@ contract Token  {
     function allowance(address _owner, address _spender) public view returns (uint) {
        return allowed[_owner][_spender]; }
 
+    /**
+    *@dev Getter for the total_supply of token
+    *@return total supply
+    */
     function totalSupply() public view returns(uint){
         return total_supply;
     }
