@@ -2,14 +2,16 @@
 * (user contract, cash out)
 */
 
-var BigNumber = require('bignumber.js');
-
-
 var oracleToken = artifacts.require("./OracleToken.sol");
 var proofOfWorkToken = artifacts.require("ProofOfWorkToken.sol");
 
-var timeframe = (86400); //Daily
+var timeframeM = (86400/60)/6; //10mins
+//var timeframeD = (86400); //Daily
 var api = 'json(https://api.gdax.com/products/BTC-USD/ticker).price';
+var pay1 = 1e18;
+var pay2 = 5e18;
+var pay3 = 10e18;
+var readFee = 1e18;
 
 
 const jsonrpc = '2.0'
@@ -63,7 +65,7 @@ contract('Mining Tests', function(accounts) {
     });
     it("Test Full Miner", async function () {
         logMineWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
-        assert(logMineWatcher.args._value > 0);
+        assert(logMineWatcher.args._value > 0, "The value submitted by the miner should not be zero");
     });
 
 
@@ -72,57 +74,36 @@ contract('Mining Tests', function(accounts) {
         logMineWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
         newTotalSupply = await proofofworktoken.totalSupply();
         payout = await oracletoken.payoutTotal.call();
-        console.log("payout", payout);
-        console.log('Init Supply', initTotalSupply);
-        console.log('NewTotal Supply', newTotalSupply);
-        console.log("diff", newTotalSupply - initTotalSupply);
-/*        newTotal = web3.toWei(newTotalSupply, 'ether');
-        initTotal = web3.toWei(initTotalSupply, 'ether');
-        payoutet = web3.toWei(payout, 'ether');
-        console.log("newTotal", newTotal);
-        console.log("initTotal", initTotal);
-        console.log("payoutet:", payoutet);
-        console.log(newTotal-initTotal);
-        newTotalN = newTotalSupply.toNumber();
-        initTotalN = initTotalSupply.toNumber();
-        payoutetN = payout.toNumber();
-        console.log("newTotalN", newTotalN);
-        console.log("initTotalN", initTotalN);
-        console.log("payoutetN", payoutetN);
-        console.log(newTotalN-initTotalN);
-        newTotalB = newTotalSupply.BigNumber();
-        initTotalB = initTotalSupply.BigNumber();
-        payoutetB = payout.BigNumber();
-        console.log("newTotalB", newTotalB);
-        console.log("initTotalB", initTotalB);
-        console.log("payoutetB", payoutetB);
-        console.log(newTotalB-initTotalB);*/
-        //assert.deepEqual(newTotalSupply - initTotalSupply == payout);
-        //assert.deepEqual((newTotal - initTotal) == payout);
+        it= await web3.fromWei(initTotalSupply, 'ether').toNumber();
+        ts= await web3.fromWei(newTotalSupply, 'ether').toNumber();
+        pt= await web3.fromWei(payout, 'ether').toNumber();            
+        assert((ts-it) == pt , "Difference should equal the payout");
     });
 
 
     it("Test 10 Mines", async function () {
         for(var i = 0;i < 10;i++){
             logMineWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
-            console.log('Mining...',i);
+            //console.log('Mining...',i);
         }
         res = logMineWatcher.args._value;
-        assert(res > 0);
+        assert(res > 0, "Ensure miners are working by checking the submitted value of 10 miners is not zero");
     });
     it("Test Is Data", async function () {
         logMineWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;       
-        data = await oracletoken.isData.call(res.c[0]);
-        assert(data == true);
+        //data = await oracletoken.isData.call(res.c[0]);
+        data = await oracletoken.isData(res.c[0]);
+        assert(data == true, "Should be true if Data exist for that point in time");
     });
    it("Test Get Last Query", async function () {
         logMineWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;       
         data = await oracletoken.getLastQuery.call();
-        assert(data > 0);
+        console.log("data", data);
+        assert(data > 0, "Ensure data exist for the last mine value");
     });
     
     it("Test Data Read", async function () {
@@ -135,10 +116,10 @@ contract('Mining Tests', function(accounts) {
         resSender = data.logs[0].args._sender;
         assert((resValue- 0) == (val- 0));
         endbal_sender =await proofofworktoken.balanceOf(accounts[4]);
-        assert(begbal_sender - endbal_sender == web3.toWei(1, 'ether'));
+        assert(begbal_sender - endbal_sender == web3.toWei(1, 'ether'), "Should be equal to fee per read");
     });
 
-      it("Test Miner Payout", async function () {
+    it("Test Miner Payout", async function () {
         balances = []
         for(var i = 0;i<6;i++){
             balances[i] = await proofofworktoken.balanceOf(accounts[i]);
@@ -194,11 +175,11 @@ contract('Mining Tests', function(accounts) {
             new_balances[i] = await proofofworktoken.balanceOf(accounts[i]);
             //console.log(i, new_balances[i]);
         }
-        assert((new_balances[5] - balances[5]) == web3.toWei(1, 'ether'));
-        assert((new_balances[1] - balances[1]) == web3.toWei(5, 'ether'));
-        assert((new_balances[2] - balances[2]) == web3.toWei(10, 'ether'));
-        assert((new_balances[3] - balances[3]) == web3.toWei(5, 'ether'));
-        assert((new_balances[4] - balances[4]) == web3.toWei(1, 'ether'));
+        assert((new_balances[5] - balances[5]) == web3.toWei(1, 'ether'), "Assert miner 5(furthest from median) got lowest reward");
+        assert((new_balances[1] - balances[1]) == web3.toWei(5, 'ether'), "Assert miner 1(second from median) got lowest reward");
+        assert((new_balances[2] - balances[2]) == web3.toWei(10, 'ether'),"Assert miner 2(median) got largest reward");
+        assert((new_balances[3] - balances[3]) == web3.toWei(5, 'ether'),"Assert miner 3(second from median) got lowest reward");
+        assert((new_balances[4] - balances[4]) == web3.toWei(1, 'ether'), "Assert miner 4(furthest from median) got lowest reward");
     });
     it("Test Retrieve payout pool", async function () {
         await proofofworktoken.transfer(accounts[9],23e18,{from:accounts[0]});
@@ -211,11 +192,12 @@ contract('Mining Tests', function(accounts) {
              totalvp2 = await oracletoken.getValuePoolAt(res.c[0]);
         }
         totalvp3 = await oracletoken.getValuePoolAt(res.c[0]);
+        console.log(totalvp3);
         balance1 = await proofofworktoken.balanceOf(accounts[9]);
         balance2 = await proofofworktoken.balanceOf(accounts[2]);
         await oracletoken.retrievePayoutPool(res.c[0]);     
         balance22 = await proofofworktoken.balanceOf(accounts[2]);
-        assert(balance22-balance2 == web3.toWei(10, 'ether'));
+        assert(balance22-balance2 == web3.toWei(10, 'ether'), "Assert miner 2(median) got largest reward");
     });
 
     it("Test UpdatePayoutTotal", async function () {
@@ -225,27 +207,27 @@ contract('Mining Tests', function(accounts) {
        await oracletoken.updatePayoutTotal();
        payoutTotal = await oracletoken.miningMultiplier.call();
        val = web3.fromWei(payoutTotal.toNumber(), "ether" ) 
-       assert(val == 1 * 4 /5)
+       assert(val == 1 * 4 /5, "Miner reward should decrease 1/5 after year=1")
        await timeTravel(86400 * 366)
        await oracletoken.updatePayoutTotal();
        payoutTotal = await oracletoken.miningMultiplier.call();
         val = web3.fromWei(payoutTotal.toNumber(), "ether" ) 
-       assert(val == 1 * 3 /5)
+       assert(val == 1 * 3 /5, "Miner reward should decrease 1/5 from year1 to year2")
        await timeTravel(86400 * 366)
        await oracletoken.updatePayoutTotal();
        payoutTotal = await oracletoken.miningMultiplier.call();
         val = web3.fromWei(payoutTotal.toNumber(), "ether" ) 
-       assert(val == 1 * 2 /5)
+       assert(val == 1 * 2 /5, "Miner reward should decrease 1/5 from year2 to year3")
        await timeTravel(86400 * 366)
        await oracletoken.updatePayoutTotal();
        payoutTotal = await oracletoken.miningMultiplier.call();
         val = web3.fromWei(payoutTotal.toNumber(), "ether" ) 
-       assert(val == 1 * 1 /5)
+       assert(val == 1 * 1 /5, "Miner reward should decrease 1/5 from year4 to year5")
        await timeTravel(86400 * 366)
        await oracletoken.updatePayoutTotal();
         payoutTotal = await oracletoken.miningMultiplier.call();
         val = web3.fromWei(payoutTotal.toNumber(), "ether" ) 
-       assert(val == 0)
+       assert(val == 0, "Miner reward should be zero after year 5")
     });
     
 });

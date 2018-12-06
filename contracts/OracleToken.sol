@@ -237,7 +237,7 @@ contract OracleToken{
         return retrieveData(timeOfLastProof);
     }
 
-            /**
+    /**
     * @dev Getter function for currentChallenge difficulty
     * @return current challenge and level of difficulty
     */
@@ -257,6 +257,8 @@ contract OracleToken{
     * so that the median value is 
     * given the highest reward
     * @param _time is the time/date for the value being provided by the miner
+    * @param _payoutMultiplier is calculated in the proofOfWork function to 
+    * allocate the additional miner tip added via the addToValuePool function
     */
     function pushValue(uint _time, uint _payoutMultiplier) internal {
         Details[5] memory a = first_five;
