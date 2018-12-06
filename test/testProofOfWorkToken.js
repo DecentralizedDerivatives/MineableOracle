@@ -1,4 +1,5 @@
-/** This contract tests the ProofOfWorkToken functions
+/** 
+* This contract tests the ProofOfWorkToken functions
 */ 
 var oracleToken = artifacts.require("./OracleToken.sol");
 var proofOfWorkToken = artifacts.require("./ProofOfWorkToken.sol");
