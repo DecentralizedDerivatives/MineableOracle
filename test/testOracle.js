@@ -257,21 +257,25 @@ contract('Mining Tests', function(accounts) {
     });
 
     it("Test contract read no tokens", async function(){
+        logMineWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
+        res = logMineWatcher.args._time;
+        val = logMineWatcher.args._value;      
         balance = await proofofworktoken.balanceOf(readcontract.address);
-        console.log("balance", balance);
         await expectThrow(readcontract.getLastValue(oracletoken.address));
         balance1 = await proofofworktoken.balanceOf(readcontract.address);
-        console.log("balance1", balance1);
     }); 
 
     it("Test contract read with tokens", async function(){
+        logMineWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
+        res = logMineWatcher.args._time;
+        val = logMineWatcher.args._value;      
         await proofofworktoken.transfer(readcontract.address,2e18,{from:accounts[0]});
         balance = await proofofworktoken.balanceOf(readcontract.address);
-        console.log("balance", balance);
-        read = await readcontract.getLastValue(oracletoken.address);
+        await await readcontract.getLastValue(oracletoken.address);
+        readc = await readcontract.value.call();
         balance1 = await proofofworktoken.balanceOf(readcontract.address);
-        console.log("balance1", balance1);
-        console.log("read", read);
+        assert(val - readc == 0, "The value read and the last value should be the same")
+        assert(balance - balance1 == readFee, "readfee is charged")
     }); 
     
 });
