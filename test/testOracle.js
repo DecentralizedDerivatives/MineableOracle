@@ -268,7 +268,7 @@ contract('Mining Tests', function(accounts) {
         await proofofworktoken.transfer(readcontract.address,2e18,{from:accounts[0]});
         balance = await proofofworktoken.balanceOf(readcontract.address);
         console.log("balance", balance);
-        read = readcontract.getLastValue(oracletoken.address);
+        read = await readcontract.getLastValue(oracletoken.address);
         balance1 = await proofofworktoken.balanceOf(readcontract.address);
         console.log("balance1", balance1);
         console.log("read", read);
