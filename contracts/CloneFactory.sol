@@ -2,7 +2,7 @@ pragma solidity ^0.4.24;
 
 /**
 * @title CloneFactory
-* This contracts helps clone an oracle.
+* @dev This contracts helps clone an oracle.
 * The address of the targeted contract to clone has to be provided.
 */
 contract CloneFactory {

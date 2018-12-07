@@ -4,11 +4,13 @@ import "./libraries/SafeMath.sol";
 import "./Token.sol";
 import "./CloneFactory.sol";
 import "./OracleToken.sol";
+
 /**
 * @title Proof of Work token
 * This is the master token where you deploy new oracles from.  
 * Each oracle gets the API value specified
 */
+
 contract ProofOfWorkToken is Token, CloneFactory {
 
     using SafeMath for uint256;
@@ -32,9 +34,6 @@ contract ProofOfWorkToken is Token, CloneFactory {
 
     /*Events*/
     event Deployed(string _api,address _newOracle);
-    event ChangeDudOracle(address newDudOracle);
-    event Mined(address miner,uint reward);
-    event Count(uint count, uint nextDate);
     
     /*Modifiers*/
     modifier onlyOwner() {
@@ -43,8 +42,9 @@ contract ProofOfWorkToken is Token, CloneFactory {
     }
 
     /*Functions*/
-    constructor() public{
+    constructor(address _dud_Oracle) public{
         owner = msg.sender;
+        dud_Oracle = _dud_Oracle;
         firstDeployedTime = now - (now % 86400);
         lastDeployedTime = now - (now % 86400);
         oracle_list.push(OracleDetails({
@@ -54,12 +54,12 @@ contract ProofOfWorkToken is Token, CloneFactory {
     }
 
     /**
-    * @dev Deploys a new oracle 
+    * @dev Deploys new oracles. It allows up to 10 oracles to be deployed the first week 
+    * the ProofOfOWorkToken contract is deployed and 1 oracle per week thereafter.  
     * @param _api is the oracle api
     * @param _readFee is the fee for reading oracle information
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
-    * @return new oracle address
     */
     function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyOwner() {
         uint _calledTime = now - (now % 86400);
@@ -76,9 +76,16 @@ contract ProofOfWorkToken is Token, CloneFactory {
                 lastDeployedTime = _calledTime;
                 deployNewOracleHelper(_api, _readFee, _timeTarget, _payoutStructure);
             }
-            emit Count(firstWeekCount, lastDeployedTime + 604800 );
     }
 
+    /**
+    * @dev Helps Deploy a new oracle 
+    * @param _api is the oracle api
+    * @param _readFee is the fee for reading oracle information
+    * @param _timeTarget for the dificulty adjustment
+    * @param _payoutStructure for miners
+    * @return new oracle address
+    */
     function deployNewOracleHelper(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) internal returns(address){
         address new_oracle = createClone(dud_Oracle);
         OracleToken(new_oracle).init(address(this),_readFee,_timeTarget,_payoutStructure);
@@ -90,10 +97,16 @@ contract ProofOfWorkToken is Token, CloneFactory {
         emit Deployed(_api, new_oracle);
         return new_oracle; 
     }
+
     /**
-    * @dev Allows for a transfer of tokens to _miners 
+    * @dev Allows for a transfer of tokens to the first 5 _miners that solve the challenge and 
+    * updates the total_supply of the token(total_supply is saved in token.sol)
+    * The function is called by the OracleToken.retrievePayoutPool and OracleToken.pushValue.
+    * Only oracles that have this ProofOfWOrkToken address as their master contract can call this 
+    * function
     * @param _miners The five addresses to send tokens to
     * @param _amount The amount of tokens to send to each address
+    * @param _isMine is true if the timestamp has been mined and miners have been paid out
     */
     function batchTransfer(address[5] _miners, uint256[5] _amount, bool _isMine) external{
         require(oracle_index[msg.sender] > 0);
@@ -109,9 +122,9 @@ contract ProofOfWorkToken is Token, CloneFactory {
         }
         if(_isMine){
             total_supply += _paid;
-            emit Mined(_miners[i], _amount[i]);
         }
     }
+
 
     /**
     * @dev Allows the OracleToken.RetreiveData to transfer the fee paid to retreive
@@ -124,17 +137,6 @@ contract ProofOfWorkToken is Token, CloneFactory {
         require(oracle_index[msg.sender] > 0);
         doTransfer(_from,address(this), _amount);
         return true;
-    }
-
-   
-    /**
-    * @dev Set oracle dudd address to clone
-    * @param _dud_Oracle address to clone
-    * ///Brenda comment---move to constructor?//////
-    */  
-    function setDudOracle(address _dud_Oracle) public onlyOwner() {
-        dud_Oracle = _dud_Oracle;
-        emit ChangeDudOracle(dud_Oracle);
     }
 
     /**
@@ -155,6 +157,14 @@ contract ProofOfWorkToken is Token, CloneFactory {
         return oracle_list.length-1;
     }
 
+    /**
+    * @dev Getter function that gets the index of the specified deployed oracle
+    * @param _oracle is the oracle address to look up
+    * @return the oracle index
+    */
+    function getOracleIndex(address _oracle) public view returns(uint){
+        return oracle_index[_oracle];
+    }
     /**
     *@dev Allows the owner to set a new owner address
     *@param _new_owner the new owner address

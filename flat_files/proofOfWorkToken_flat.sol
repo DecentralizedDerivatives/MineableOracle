@@ -1,7 +1,69 @@
 pragma solidity ^0.4.24;
 
-import "./libraries/SafeMath.sol";
-import "./ProofOfWorkToken.sol";
+// File: contracts\CloneFactory.sol
+
+/**
+* @title CloneFactory
+* @dev This contracts helps clone an oracle.
+* The address of the targeted contract to clone has to be provided.
+*/
+contract CloneFactory {
+
+    /**
+    * @dev Creates oracle clone
+    * @param target is the address being cloned
+    * @return address for clone
+    */
+    function createClone(address target) internal returns (address result) {
+        bytes memory clone = hex"600034603b57603080600f833981f36000368180378080368173bebebebebebebebebebebebebebebebebebebebe5af43d82803e15602c573d90f35b3d90fd";
+        bytes20 targetBytes = bytes20(target);
+        for (uint i = 0; i < 20; i++) {
+            clone[26 + i] = targetBytes[i];
+        }
+        assembly {
+            let len := mload(clone)
+            let data := add(clone, 0x20)
+            result := create(0, data, len)
+        }
+    }
+}
+
+// File: contracts\libraries\SafeMath.sol
+
+//Slightly modified SafeMath library - includes a min function
+library SafeMath {
+  function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+    uint256 c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
+  }
+
+  function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    // assert(b > 0); // Solidity automatically throws when dividing by 0
+    uint256 c = a / b;
+    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+    return c;
+  }
+
+  function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+    assert(b <= a);
+    return a - b;
+  }
+
+  function add(uint256 a, uint256 b) internal pure returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
+  }
+
+  function min(uint a, uint b) internal pure returns (uint256) {
+    return a < b ? a : b;
+  }
+}
+
+// File: contracts\OracleToken.sol
+
+//import "./ProofOfWorkToken.sol";
 //Instead of valuePool, can we balances of this address?
 
 /**
@@ -306,5 +368,286 @@ contract OracleToken{
         minersbyvalue[_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
         emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
         emit NewValue(timeOfLastProof,a[2].value);
+    }
+}
+
+// File: contracts\Token.sol
+
+/**
+* @title Token
+* This contracts contains the ERC20 token functions
+*/
+contract Token  {
+
+    using SafeMath for uint256;
+
+    /*Variables*/
+    uint public total_supply;
+    mapping (address => uint) public balances;
+    mapping(address => mapping (address => uint)) internal allowed;
+
+      
+    /*Events*/
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    /*Functions*/
+    /**
+    * @dev Constructor that sets the passed value as the token to be mineable.
+    */
+    constructor() public{
+        total_supply = 1000000 ether;
+        balances[msg.sender] = total_supply;
+        //balances[address(this)]= 2**256 -  1000000 ether;
+        balances[address(this)]= (2**256) - 1 - total_supply;
+    }
+    
+
+    /**
+    * @dev Allows for a transfer of tokens to _to
+    * @param _to The address to send tokens to
+    * @param _amount The amount of tokens to send
+    * @return true if transfer is successful
+    */
+     function transfer(address _to, uint256 _amount) public returns (bool success) {
+        doTransfer(msg.sender, _to, _amount);
+        return true;
+    }
+
+    /**
+    * @notice Send _amount tokens to _to from _from on the condition it
+    * is approved by _from
+    * @param _from The address holding the tokens being transferred
+    * @param _to The address of the recipient
+    * @param _amount The amount of tokens to be transferred
+    * @return True if the transfer was successful
+    */
+    function transferFrom(address _from, address _to, uint256 _amount) public returns (bool success) {
+        require(allowed[_from][msg.sender] >= _amount);
+        allowed[_from][msg.sender] -= _amount;
+        doTransfer(_from, _to, _amount);
+        return true;
+    }
+
+
+    /** 
+    * @dev Completes POWO transfers by updating the balances
+    * @param _from address to transfer from
+    * @param _to addres to transfer to
+    * @param _amount to transfer 
+    */
+    function doTransfer(address _from, address _to, uint _amount) internal {
+        require(_amount > 0 && _to != 0);
+        balances[_from] = balances[_from].sub(_amount);
+        balances[_to] = balances[_to].add(_amount);
+        emit Transfer(_from, _to, _amount);
+    }
+
+    /**
+    * @dev This function approves a _spender an _amount of tokens to use
+    * @param _spender address
+    * @param _amount amount the spender is being approved for
+    * @return true if spender appproved successfully
+    */
+    function approve(address _spender, uint _amount) public returns (bool) {
+        allowed[msg.sender][_spender] = _amount;
+        emit Approval(msg.sender, _spender, _amount);
+        return true;
+    }
+    /**
+    * @dev Gets balance of owner specified
+    * @param _owner is the owner address used to look up the balance
+    * @return Returns the balance associated with the passed in _owner
+    */
+    function balanceOf(address _owner) public constant returns (uint bal) { 
+        return balances[_owner]; 
+    }
+
+    /**
+    * @dev Getter function allows you to view the allowance left based on the _owner and _spender
+    * @param _owner address
+    * @param _spender address
+    * @return Returns the remaining allowance of tokens granted to the _spender from the _owner
+    */
+    function allowance(address _owner, address _spender) public view returns (uint) {
+       return allowed[_owner][_spender]; }
+
+    /**
+    *@dev Getter for the total_supply of token
+    *@return total supply
+    */
+    function totalSupply() public view returns(uint){
+        return total_supply;
+    }
+}
+
+// File: contracts\proofOfWorkToken.sol
+
+/**
+* @title Proof of Work token
+* This is the master token where you deploy new oracles from.  
+* Each oracle gets the API value specified
+*/
+
+contract ProofOfWorkToken is Token, CloneFactory {
+
+    using SafeMath for uint256;
+
+    /*Variables*/
+    string public constant name = "Proof-of-Work Oracle Token";
+    string public constant symbol = "POWO";
+    uint8 public constant decimals = 18;
+    uint public firstDeployedTime;
+    uint public firstWeekCount = 0;
+    uint public lastDeployedTime;
+    address public dud_Oracle;
+    address public owner;
+    OracleDetails[] public oracle_list;
+    mapping(address => uint) oracle_index;
+
+    struct OracleDetails {
+        string API;
+        address location;
+    }
+
+    /*Events*/
+    event Deployed(string _api,address _newOracle);
+    
+    /*Modifiers*/
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
+
+    /*Functions*/
+    constructor(address _dud_Oracle) public{
+        owner = msg.sender;
+        dud_Oracle = _dud_Oracle;
+        firstDeployedTime = now - (now % 86400);
+        lastDeployedTime = now - (now % 86400);
+        oracle_list.push(OracleDetails({
+            API: "",
+            location: address(0)
+        }));
+    }
+
+    /**
+    * @dev Deploys new oracles. It allows up to 10 oracles to be deployed the first week 
+    * the ProofOfOWorkToken contract is deployed and 1 oracle per week thereafter.  
+    * @param _api is the oracle api
+    * @param _readFee is the fee for reading oracle information
+    * @param _timeTarget for the dificulty adjustment
+    * @param _payoutStructure for miners
+    */
+    function deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public onlyOwner() {
+        uint _calledTime = now - (now % 86400);
+        uint _payout;
+        for(uint i = 0;i<5;i++){
+            _payout += _payoutStructure[i];
+        }
+        require(_payout.mul(86400).div(_timeTarget) <=  25*1e18);
+        require(firstWeekCount <= 9 && (_calledTime - firstDeployedTime) <= 604800 || _calledTime >= (lastDeployedTime + 604800));
+            if (firstWeekCount <= 9 && (_calledTime - firstDeployedTime) <= 604800){
+                firstWeekCount++; 
+                deployNewOracleHelper(_api, _readFee, _timeTarget, _payoutStructure);
+            } else if (_calledTime >= (lastDeployedTime + 604800)) {
+                lastDeployedTime = _calledTime;
+                deployNewOracleHelper(_api, _readFee, _timeTarget, _payoutStructure);
+            }
+    }
+
+    /**
+    * @dev Helps Deploy a new oracle 
+    * @param _api is the oracle api
+    * @param _readFee is the fee for reading oracle information
+    * @param _timeTarget for the dificulty adjustment
+    * @param _payoutStructure for miners
+    * @return new oracle address
+    */
+    function deployNewOracleHelper(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) internal returns(address){
+        address new_oracle = createClone(dud_Oracle);
+        OracleToken(new_oracle).init(address(this),_readFee,_timeTarget,_payoutStructure);
+        oracle_index[new_oracle] = oracle_list.length;
+        oracle_list.length++;
+        OracleDetails storage _current = oracle_list[oracle_list.length-1]; 
+        _current.API = _api;
+        _current.location = new_oracle; 
+        emit Deployed(_api, new_oracle);
+        return new_oracle; 
+    }
+
+    /**
+    * @dev Allows for a transfer of tokens to the first 5 _miners that solve the challenge and 
+    * updates the total_supply of the token(total_supply is saved in token.sol)
+    * The function is called by the OracleToken.retrievePayoutPool and OracleToken.pushValue.
+    * Only oracles that have this ProofOfWOrkToken address as their master contract can call this 
+    * function
+    * @param _miners The five addresses to send tokens to
+    * @param _amount The amount of tokens to send to each address
+    * @param _isMine is true if the timestamp has been mined and miners have been paid out
+    */
+    function batchTransfer(address[5] _miners, uint256[5] _amount, bool _isMine) external{
+        require(oracle_index[msg.sender] > 0);
+        uint _paid;
+        for (uint i = 0; i < _miners.length; i++) {
+            if (balanceOf(address(this)) >= _amount[i]
+            && _amount[i] > 0
+            && balanceOf(_miners[i]).add(_amount[i]) > balanceOf(_miners[i])) {
+                doTransfer(address(this),_miners[i],_amount[i]);
+                _paid += _amount[i];
+
+            }
+        }
+        if(_isMine){
+            total_supply += _paid;
+        }
+    }
+
+
+    /**
+    * @dev Allows the OracleToken.RetreiveData to transfer the fee paid to retreive
+    * data back to this contract
+    * @param _from address to transfer from
+    * @param _amount to transfer
+    * @return true after transfer 
+    */
+    function callTransfer(address _from,uint _amount) public returns(bool){
+        require(oracle_index[msg.sender] > 0);
+        doTransfer(_from,address(this), _amount);
+        return true;
+    }
+
+    /**
+    * @dev Getter function that gets the oracle API
+    * @param _oracle is the oracle address to look up
+    * @return the API and oracle address
+    */
+    function getDetails(address _oracle) public view returns(string,address){
+        OracleDetails storage _current = oracle_list[oracle_index[_oracle]];
+        return(_current.API,_current.location);
+    }
+
+    /**
+    * @dev Getter function that gets the number of deployed oracles
+    * @return the oracle count
+    */
+    function getOracleCount() public view returns(uint){
+        return oracle_list.length-1;
+    }
+
+    /**
+    * @dev Getter function that gets the index of the specified deployed oracle
+    * @param _oracle is the oracle address to look up
+    * @return the oracle index
+    */
+    function getOracleIndex(address _oracle) public view returns(uint){
+        return oracle_index[_oracle];
+    }
+    /**
+    *@dev Allows the owner to set a new owner address
+    *@param _new_owner the new owner address
+    */
+    function setOwner(address _new_owner) public onlyOwner() { 
+        owner = _new_owner; 
     }
 }

@@ -2,6 +2,7 @@ import web3,json
 from web3 import Web3
 import requests,json, time,random
 import pandas as pd
+import hashlib
 from Naked.toolshed.shell import execute_js, muterun_js, run_js
 from multiprocessing import Process, freeze_support
 
@@ -10,8 +11,8 @@ node_url ="http://localhost:8545" #https://rinkeby.infura.io/
 net_id = 60 #eth network ID
 last_block = 0
 
-public_keys = ["0xe010ac6e0248790e08f42d5f697160dedf97e024","0xcdd8fa31af8475574b8909f135d510579a8087d3","0xb9dd5afd86547df817da2d0fb89334a6f8edd891","0x230570cd052f40e14c14a81038c6f3aa685d712b","0x3233afa02644ccd048587f8ba6e99b3c00a34dcc"]
-private_keys = ["3a10b4bc1258e8bfefb95b498fb8c0f0cd6964a811eabca87df5630bcacd7216","d32132133e03be292495035cf32e0e2ce0227728ff7ec4ef5d47ec95097ceeed","d13dc98a245bd29193d5b41203a1d3a4ae564257d60e00d6f68d120ef6b796c5","4beaa6653cdcacc36e3c400ce286f2aefd59e2642c2f7f29804708a434dd7dbe","78c1c7e40057ea22a36a0185380ce04ba4f333919d1c5e2effaf0ae8d6431f14"]
+public_keys = ["0xe037ec8ec9ec423826750853899394de7f024fee","0xcdd8fa31af8475574b8909f135d510579a8087d3","0xb9dd5afd86547df817da2d0fb89334a6f8edd891","0x230570cd052f40e14c14a81038c6f3aa685d712b","0x3233afa02644ccd048587f8ba6e99b3c00a34dcc"]
+private_keys = ["4bdc16637633fa4b4854670fbb83fa254756798009f52a1d3add27fb5f5a8e16","d32132133e03be292495035cf32e0e2ce0227728ff7ec4ef5d47ec95097ceeed","d13dc98a245bd29193d5b41203a1d3a4ae564257d60e00d6f68d120ef6b796c5","4beaa6653cdcacc36e3c400ce286f2aefd59e2642c2f7f29804708a434dd7dbe","78c1c7e40057ea22a36a0185380ce04ba4f333919d1c5e2effaf0ae8d6431f14"]
 
 static_jazz1 = "0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000"
 static_jazz2 = "00000000000000000000000000000000000000000000000000000000000000386a736f6e2868747470733a2f2f6170692e676461782e636f6d2f70726f64756374732f4254432d5553442f7469636b6572292e70726963650000000000000000"
@@ -25,17 +26,25 @@ def mine(challenge, public_address, difficulty):
 		x += 1;
 		nonce = Web3.toHex(str.encode(str(generate_random_number())))
 		_string = str(challenge[1:]).strip() + public_address[2:].strip() + nonce[2:].strip()
-		print("_string:", _string)
-		n = Web3.toHex(Web3.sha3(text=_string.strip()))
+		_solution = Web3.toHex(Web3.sha3(text=_string.strip()))
+		rem = ( int(_solution,16) % 3)
+		if(rem == 2):
+			n = Web3.toHex(Web3.sha3(hexstr=_solution))
+		elif(rem == 1):
+			n = "0x" + hashlib.new('sha256',bytes.fromhex(_solution[2:])).hexdigest()
+		else:
+			n = Web3.toHex(Web3.sha3(hexstr=(hashlib.new('ripemd160',bytes.fromhex(_solution[2:])).hexdigest())));
 		print("n",n)
 		hash1 = int(n,16)
 		if hash1 % difficulty == 0:
 			return int(nonce,16);
 		if x % 10000 == 0:
-			_challenge,_difficulty = getVariables();
-			if _challenge == challenge:
-				pass;
-			else:
+			payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_blockNumber"}
+			r = requests.post(node_url, data=json.dumps(payload));
+			d = jsonParser(r);
+			last_block = int(d['result'],16)
+			_challenge,_difficulty,v = getVariables();
+			if (v == True):
 				return 0;
 
 def getAPIvalue():
@@ -57,8 +66,16 @@ def masterMiner():
 			run_js('testSubmitter.js',arg_string);
 			miners_started += 1
 			if(miners_started == 5):
+				v = False;
 				getAddress();
-				challenge,difficulty = getVariables();
+				while(v == False):
+					_challenge,difficulty = getVariables();
+					if challenge == _challenge:
+						v = False
+						time.sleep(10);
+					else:
+						v = True
+						challenge = _challenge;
 				miners_started = 0;
 		else:
 			pass 
@@ -76,8 +93,7 @@ def getVariables():
 	val3 = bytes.decode(val2)
 	print(val3)
 	_difficulty = int(val3);
-
-	return _challenge,_difficulty;
+	return _challenge,_difficulty
 
 def jsonParser(_info):
 	my_json = _info.content
@@ -101,7 +117,6 @@ def getAddress():
 			r = requests.post(node_url, data=json.dumps(payload));
 			d = jsonParser(r);
 			tx = d['result']
-			print (tx['logs'][0])
 			try:
 				logs =tx['logs'][0]['data']
 				if static_jazz1 and static_jazz2 in logs:
@@ -109,13 +124,13 @@ def getAddress():
 					last_block = block 
 					block = 0;
 					print('New Contract Address',contract_address)
-					return
+					return True;
 			except:
 				pass
 		except:
 			pass
 		block = block - 1;
-	return 
+	return False;
 
 def bytes2int(str):
  return int(str.encode('hex'), 32)
@@ -128,6 +143,18 @@ def bytes_to_int(bytes):
 
     return result
 
+
+# def testHash():
+# 	_solutions = '0xbc756c25d68ea2f260ea5f15e1e1c734c019cbc014270dd386eacca4699f60f6';
+# 	v = Web3.toHex(Web3.sha3(hexstr=_solutions))
+# 	x = "0x" + hashlib.new('sha256',bytes.fromhex(_solutions[2:])).hexdigest()
+# 	z= Web3.toHex(Web3.sha3(hexstr=(hashlib.new('ripemd160',bytes.fromhex(_solutions[2:])).hexdigest())));
+# 	print("v",v)
+# 	print("x",x);
+# 	print("z",z);
+
+
+#testHash();
 #working()
 #getVariables()
 masterMiner();

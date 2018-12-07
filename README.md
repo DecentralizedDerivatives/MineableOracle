@@ -218,41 +218,60 @@ Miners are rewarded with PoWo tokens. PoWO tokens are charged for on-chain reads
 Additionally, users can incentivize miners by posting a bounty via the addToValuePool function to ensure the next timestamp is mined. This function basically allows users to tip the miners.
 
 #### The Oracle Mining Process <a name="mining-process"> </a>
-The current challenge, adjusted difficulty, count, and proof since last timestamp are all called during the 'proofOfWork' operation/function. The PoW, is basically guessing a nonce that produces a hash with a certain number of leading zeros. Miners can submit the PoW and the off-chain value using the function proofOfwork in OracleToken.sol.
+The current challenge, adjusted difficulty, count, and proof since last timestamp are all called during the 'proofOfWork' operation/function. The PoW, is basically guessing a nonce that produces a hash with a certain number of leading zeros. The PoW challenge is chosen at random from the three challenges included in the proofOfWork function.  Miners can submit the PoW and the off-chain value using the function proofOfwork in OracleToken.sol. 
 
 
 The mining process is formally expressed as:
 
 ```solidity
     function proofOfWork(string nonce, uint value) external returns (uint256,uint256) {
-        bytes32 n = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
-        require(uint(n) % difficulty == 0 && value > 0 && miners[currentChallenge][msg.sender] == false);   
+        bytes32 _solution = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
+        uint _rem = uint(_solution) % 3;
+        bytes32 n;
+        if(_rem == 2){
+            n = keccak256(abi.encodePacked(_solution));
+        }
+        else if(_rem ==1){
+            n = sha256(abi.encodePacked(_solution));
+        }
+        else{
+            n = keccak256(abi.encodePacked(ripemd160(abi.encodePacked(_solution))));
+        }
+
+        require(uint(n) % difficulty == 0 && value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a valueS  
         first_five[count].value = value;
         first_five[count].miner = msg.sender;
         count++;
         miners[currentChallenge][msg.sender] = true;
-        emit NewValue(msg.sender,value);
+        uint _payoutMultiplier = 1;
+        emit NonceSubmitted(msg.sender,nonce,value);
         if(count == 5) { 
-            if (now - timeOfLastProof< timeTarget){
+            if (now - timeOfLastProof < (timeTarget *60)/100){
                 difficulty++;
             }
             else if (now - timeOfLastProof > timeTarget && difficulty > 1){
                 difficulty--;
             }
-            timeOfLastProof = now - (now % timeTarget);//should it be like this? So 10 minute intervals?;
-            emit Print(payoutTotal,valuePool);
+            
+            uint i = (now - (now % timeTarget) - timeOfLastProof) / timeTarget;
+            timeOfLastProof = now - (now % timeTarget);
+            uint valuePool;
+            while(i > 0){
+                valuePool += payoutPool[timeOfLastProof - (i - 1) * timeTarget];
+                i = i - 1;
+            }
             if(valuePool >= payoutTotal) {
-                payoutMultiplier = (valuePool + payoutTotal) / payoutTotal; //solidity should always round down
-                valuePool = valuePool - (payoutTotal*(payoutMultiplier-1));
+                _payoutMultiplier = (valuePool + payoutTotal) / payoutTotal; //solidity should always round down
+                payoutPool[timeOfLastProof] = valuePool % payoutTotal;
             }
             else{
-                payoutMultiplier = 1;
+                payoutPool[timeOfLastProof] = valuePool;
             }
-            pushValue(timeOfLastProof);
+            pushValue(timeOfLastProof,_payoutMultiplier);
             count = 0;
             currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
-        }
-         return (count,timeOfLastProof); 
+         }
+     return (count,timeOfLastProof); 
     }
 ```
 

@@ -1,4 +1,5 @@
-/** This contract tests the ProofOfWorkToken functions
+/** 
+* This contract tests the ProofOfWorkToken functions
 */ 
 var oracleToken = artifacts.require("./OracleToken.sol");
 var proofOfWorkToken = artifacts.require("./ProofOfWorkToken.sol");
@@ -36,8 +37,7 @@ contract('PoW Token Tests', function(accounts) {
   let logNewValueWatcher;
     beforeEach('Setup contract for each test', async function () {
         oracletoken = await oracleToken.new(accounts[0],1e18,(86400/60)/6,[1e18,5e18,10e18,5e18,1e18]);
-        proofofworktoken = await proofOfWorkToken.new();
-        await proofofworktoken.setDudOracle(oracletoken.address);
+        proofofworktoken = await proofOfWorkToken.new(oracletoken.address);
         balance0 = await (proofofworktoken.balanceOf(accounts[0],{from:accounts[0]}));
         await proofofworktoken.transfer(accounts[4],100,{from:accounts[0]});
         await proofofworktoken.transfer(accounts[5],100,{from:accounts[0]});
@@ -82,10 +82,10 @@ contract('PoW Token Tests', function(accounts) {
     it("Total Supply", async function(){
         supply = await proofofworktoken.totalSupply();
         supply1 = supply.toNumber();
-        assert.equal(supply1,1000000,"Supply should be 1000000");
+        assert.equal(supply1,1000000000000000000000000,"Supply should be 1000000");
         contra = await proofofworktoken.balanceOf(proofofworktoken.address);
         contra1 = contra.toNumber();
-        contrabal= 2**256 - 1;
+        contrabal= 2**256 -  1000000000000000000000000;
         assert.equal(contra1,contrabal,"Contract balance should be max");
 
     });
@@ -131,5 +131,10 @@ contract('PoW Token Tests', function(accounts) {
         res10 = res10.logs[0].args._newOracle;
         await expectThrow(proofofworktoken.deployNewOracle(api2,22,timeframe,[1,5,10,5,1], {from:accounts[0]}));
     })
+     it("Test GetOracleIndex", async function () {
+        let oracle_index = await proofofworktoken.getOracleIndex(oracletoken2.address);
+        let oracle_countn= oracle_index.toNumber();
+        assert.equal(oracle_countn, 2, "should be in index position 2");
+    });
 });
  
