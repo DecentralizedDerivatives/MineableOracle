@@ -4,6 +4,7 @@
 
 var oracleToken = artifacts.require("./OracleToken.sol");
 var proofOfWorkToken = artifacts.require("ProofOfWorkToken.sol");
+var reader = artifacts.require("Reader.sol");
 
 //var timeframeM = (86400/60)/6; //10mins
 var timeframe = (86400); //Daily
@@ -34,6 +35,28 @@ function promisifyLogWatch(_event) {
     });
 }
 
+async function expectThrow(promise){
+  try {
+    await promise;
+  } catch (error) {
+    // TODO: Check jump destination to destinguish between a throw
+    //       and an actual invalid jump.
+    const invalidOpcode = error.message.search('invalid opcode') >= 0;
+    // TODO: When we contract A calls contract B, and B throws, instead
+    //       of an 'invalid jump', we get an 'out of gas' error. How do
+    //       we distinguish this from an actual out of gas event? (The
+    //       testrpc log actually show an 'invalid jump' event.)
+    const outOfGas = error.message.search('out of gas') >= 0;
+    const revert = error.message.search('revert') >= 0;
+    assert(
+      invalidOpcode || outOfGas || revert,
+      'Expected throw, got \'' + error + '\' instead',
+    );
+    return;
+  }
+  assert.fail('Expected throw not received');
+};
+
 contract('Mining Tests', function(accounts) {
   let oracletoken;
   let proofofworktoken;
@@ -41,6 +64,7 @@ contract('Mining Tests', function(accounts) {
 
 
     beforeEach('Setup contract for each test', async function () {
+        readcontract = await reader.new();
         oracletoken = await oracleToken.new(accounts[0],1e18,(86400/60)/6,[1e18,5e18,10e18,5e18,1e18]);
         proofofworktoken = await proofOfWorkToken.new(oracletoken.address);
         balance0 = await (proofofworktoken.balanceOf(accounts[0],{from:accounts[0]}));
@@ -57,7 +81,6 @@ contract('Mining Tests', function(accounts) {
     it("getVariables", async function(){
         vars = await oracletoken.getVariables();
         assert(vars[1] == 1);
-        console.log(vars);
     }); 
     it("Test miner", async function () {
         console.log('START MINING RIG!!');
@@ -232,5 +255,23 @@ contract('Mining Tests', function(accounts) {
         val = web3.fromWei(payoutTotal.toNumber(), "ether" ) 
        assert(val == 0, "Miner reward should be zero after year 5")
     });
+
+    it("Test contract read no tokens", async function(){
+        balance = await proofofworktoken.balanceOf(readcontract.address);
+        console.log("balance", balance);
+        await expectThrow(readcontract.getLastValue(oracletoken.address));
+        balance1 = await proofofworktoken.balanceOf(readcontract.address);
+        console.log("balance1", balance1);
+    }); 
+
+    it("Test contract read with tokens", async function(){
+        await proofofworktoken.transfer(readcontract.address,2e18,{from:accounts[0]});
+        balance = await proofofworktoken.balanceOf(readcontract.address);
+        console.log("balance", balance);
+        read = readcontract.getLastValue(oracletoken.address);
+        balance1 = await proofofworktoken.balanceOf(readcontract.address);
+        console.log("balance1", balance1);
+        console.log("read", read);
+    }); 
     
 });

@@ -1,7 +1,10 @@
 pragma solidity ^0.4.24;
 
 import './OracleToken.sol';
-
+/**
+* @title Reader
+* This contracts tests for authorized and unauthorized access to data
+*/
 contract Reader{
 
 	uint public value;
