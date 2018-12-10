@@ -43,16 +43,11 @@ The documentation is broken down into three parts: steps for setting up, users a
 ### Operator Setup <a name="operator-setup"> </a>  
 The setup documentation is noted for acting as the operator.  Specific contract details are laid out for ease of use regardless of dev environment. 
 
-**Step 1: Operator - Deploy ProofOfWorkToken.sol**  
-The ProofOfWorkToken contract contains all the functionality to set an origin(dud) oracle, deploy new oracles, remove oracles, and pay the miners. The operator is assigned 1,000,000 PoWO when ProofOfWorkToken is deployed (see line 33 in Token.sol).
 
-```solidity
-ProofOfWorkToken()
-```
-**Step 2: Operator - Deploy OracleToken.sol**  
+**Step 1: Operator - Deploy OracleToken.sol**  
 The first deployed oracleToken.sol will serve as a bytes library for future oracleToken.sol deployment. We refer to this first deployment as the "dud oracle" and it is used as the "clone" source for future proposed oracles.
 
-The constructor arguments on the dud oracle do not affect future proposed oracles. But these are needed for successful deployment of the contract. The \_master address will be set to the ProofOfWorkToken address automatically on future oracles, however, for the dud it has to be specified along with the rest of the constructor arguments. 
+The constructor arguments on the dud oracle do not affect future oracles. But these are needed for successful deployment of the contract. The \_master address will be set to the ProofOfWorkToken address automatically on future oracles, however, for the dud it has to be specified along with the rest of the constructor arguments. 
 
 ```solidity
 OracleToken(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure)
@@ -63,23 +58,30 @@ where:
 * \_timeTarget -- is the time target for the difficulty adjustment and determines how often values will be saved to the oracle timeseries
 * \_payoutStructure -- is used to specify how the readFee will be distributed among the five miners
 
-**Step 3: Operator - Set dud oracle, and deploy a new oracle**  
+**Step 2: Operator - Deploy ProofOfWorkToken.sol and set dud oracle**  
+The ProofOfWorkToken contract contains all the functionality to set an origin(dud) oracle, deploy new oracles, remove oracles, and pay the miners. The operator is assigned 1,000,000 PoWO when ProofOfWorkToken is deployed (see line 33 in Token.sol).
+
+```solidity
+ProofOfWorkToken(address _dud_Oracle)
+```
+
+where:
+* \_dudOracle -- is the address of OracleToken.sol deployed on step 1
+
+**Step 3: Operator - deploy a new oracle**  
 The tallyVotes function is the only function that can add/deploy, remove, change the dud oracle, vote duration, minimum quorum required to pass a proposal, and the proposal fee and can only be ran once the vote duration timeframe expires.
 
 ```javascript
 ProofOfWorkToken = await ProofOfWorkToken.at(address _ProofOfWorkToken);
-proofofworktoken = await proofOfWorkToken.new();
-await proofofworktoken.setDudOracle(oracletoken.address);
 await proofofworktoken.deployNewOracle(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure); (e.g. 'json(https://api.gdax.com/products/BTC-USD/ticker).price',22,timeframe,[1,5,10,5,1])
 ```
 where:
-* \_dudOracle -- is the address of OracleToken.sol deployed on step 2
 * \_api -- is the proposed oracle api
 * \_readFee -- is the proposed fee for reading oracle information
 * \_timeTarget -- is the difficulty adjustment time target or how often you want to save data points
 * \_payoutStructure -- is the proposed payout structure for miners
 
-#### Testing
+#### Testing <a name="testing"> </a>
 
 1. Open a second terminal and run:
 ```solidity

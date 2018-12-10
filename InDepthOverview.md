@@ -22,7 +22,7 @@
 
     
 ## Table of Contents
-
+   * [Overview](#overview)
    * [How Does it work?](#how-it-works)
    * [The Oracle Mining Process](#mining-process)
    * [Example Usage Scenarios](#usage-scenarios)
@@ -36,22 +36,37 @@
    * [Copyright](#copyright)
  </details>
 
+### Overview <a name="overview"> </a>
+Ethereum smart contracts cannot access off-chain data. If your smart contract relies on off-chain (e.g. internet) data to evaluate or execute a function, you either have to manually feed the data to your contract, incentivize users to do it, or rely on a centralized party to provide the data (Oraclize.it is generally the standard). 
 
+<b>Proof of Work Oracle (PoWO)</b> is a decentralized oracle. It provides a decentralized alternative for contracts to interact with and obtain data from off-chain. 
+
+The PoWO implements a mineable proof-of-work (PoW) where miners, along with the PoW solution also provide an off-chain data point. The first five miners to provide the PoW and off-chain data point are rewarded: the miner with the median value is given the highest reward since that is what is used as the 'offical' value and the four miners get a lower reward that decreases the further they are from the median. Once validated and processed the value is available for on-chain contracts to use.
+
+We have implemented PoW because it is reliable, <b>now</b>. However, once Proof of Stake (PoS) is proven Daxia can decide to switch from PoW to Proof of Stake (PoS).
+
+<p align="center">
+<img src="./public/Powo.png" width="500" height="300" alt = "How it works">
+</p>
 
 ### How Does it work? <a name="how-it-works"> </a>
 
-Once a dud (origin) oracle contract is voted on and deployed, the new proposed oracles are "cloned" from the dud oracle (i.e. they use the dud oracle as a bytes library). All new proposals for new oracles specify the type of data (e.g. an API) to be submitted along with the PoW. The difficulty for the PoW is adjusted to target 10 minutes. Similar to the way Ethereum rewards ‘Uncles’ or miners who were close to winning, the first five miners to submit a PoW and off-chain value are awarded the native PoWO token. The miner that submits the median value is awarded a larger quantity of the total payoff. The payout structure can be specified when proposing a new oracle. 
+The PoWO provides an effective, secure system for off-chain data that requires inputs from five random parties(miners) and disincentives dispersion and adversarial submissions through the payout structure and a proof of work challenge that is chosen at random for each submission. 
 
-Proof Of Work Oracle Reward Mechanism  
+### Incentives
+Miners are given two types of rewards, a base reward per every successful submission, read rewards per every time a user reads the value they mined and user tips. The base reward is phased out over the first five years from when the oracle is deployed. After five years miners are only paid via data read fees and tips. However, overall PoWO token minting does not stop after five years, instead the base reward is phased out for each specific oracle over five years.
+
+#### Mining base reward
+Similar to the way Ethereum rewards ‘Uncles’ or miners who were close to winning, the first five miners to submit a PoW and off-chain value are awarded the native PoWO token. The miner that submits the median value is awarded a larger quantity of the total payoff. The current incentive structure leverages game-theory to disincentivize dispersion and adversarial submissions. The payout structure is specified when deploying a new oracle. 
+
+Proof Of Work Oracle Base Reward Mechanism  
 
 <div style="text-align:center">
 
 ![Reward Mechanism](./public/RewardMechanism.PNG)
 </div>
 
-The current incentive structure leverages game-theory to disincentivize dispersion and adversarial submissions.
-
-Once the median value is selected, it is stored, and a new challenge is created. The median value is selected efficiently via an insert sort in the pushValue function used within the OracleToken contract proofOfWork function:
+As miners submit the PoW and off-chain value, the value is sorted and as soon as five values are received, the median value (integer) and the timestamp (Unix timestamp) are saved to create an on-chain timeseries and a new challenge is chosen at random. The median value is selected efficiently via an insert sort in the pushValue function used within the OracleToken contract proofOfWork function:
 
 ```solidity
     function pushValue(uint _time) internal {
@@ -78,15 +93,29 @@ Once the median value is selected, it is stored, and a new challenge is created.
     }
 ```
 
-As miners submit the PoW and off-chain value, the value is sorted and as soon as five values are received, the median value (integer) and the timestamp (Unix timestamp) are saved to create an on-chain timeseries.
+The base reward is phased out over the first five years of deploying the PoWO by decreasing the reward 1/5 each year. This structure incentivises early adoption among miners since the base reward ends for the oracle but the demand for PoWO tokens will continue to increase as reads continue. Miners are rewarded with PoWO tokens. PoWO tokens are charged for on-chain reads. This gives each token value, and more importantly, the value goes up as more smart contracts use our Oracle, thus creating a stronger incentive for miners.
 
-Miners are rewarded with PoWo tokens. PoWO tokens are charged for on-chain reads. This gives each token value, and more importantly, the value goes up as more smart contracts use our Oracle, thus creating a stronger incentive for miners.
 
-Additionally, users can incentivize miners by posting a bounty via the addToValuePool function to ensure the next timestamp is mined. This function basically allows users to tip the miners.
+#### Mining read rewards and tips
+
+The miner that adds the official data point to the on-chain timeseries becomes the owner of that data point forever. Meaning that anytime a user reads that value, they are paid out the read fee. Additionally, users can incentivize miners by posting a bounty via the addToValuePool function to ensure the timestamp they are interested on is mined. This function basically allows users to tip the miners.
+
+During the first five years miners get a base reward, read rewards and tips. After the first five years, miners are rewarded only read rewards and tips. This structure acts as a DAO(Decentralized Automous Organization) of sorts, since miners are only incentivised to continue to mine on active oracles. There is no need to get users to vote if they can just use their funds/PoWO tokens to steer miners. 
+
+
+#### PoWO Token Supply
+PoWO supply can be affected by the number of oracles deployed, the time target(how often an on-chain value is added/mined) of the oracle and when it is deployed. To avoid flooding the market, Daxia is set up to be able to deploy 10 oracles the first week the PoWO is deployed and 1 per week thereafter, the time target has to be greater than 1 minute, and the reward is capped at 25e18. 
+
+#### PoWO constraints 
+The PoWO main competitors are centralized oracle services that are able to charge low fees for API data retreival. However, PoWO token price needs to remain competitive but also provide a fair value to miners. An ecosystem that is driven on the ethos of decentralization can allow for a price difference that can provide a fair value to miners.
+
+#### PoWO token optimum
+Users and miners have inverse price targets. On the one hand, the miner would want the fair value reward(expenses < base tokens + number of expected reads x read fee). While the users want a price that provies decentralization but is competitive. A possible optimum would be where the demand growth rate minus supply growth rate is zero and where usd miner fair value reward price that most closely approaches USD cost per read. Data is currently being model to finalize an optimum. 
 
 #### The Oracle Mining Process <a name="mining-process"> </a>
-The current challenge, adjusted difficulty, count, and proof since last timestamp are all called during the 'proofOfWork' operation/function. The PoW, is basically guessing a nonce that produces a hash with a certain number of leading zeros. The PoW challenge is chosen at random from the three challenges included in the proofOfWork function.  Miners can submit the PoW and the off-chain value using the function proofOfwork in OracleToken.sol. 
+One of the main challenges for a mineable token or any process that relies on mining is that there are many ASICS currently available and if used on a small ecosystem these specialized systems can quickly monopolize it. Daxia's proof of work challenge is designed to be different that Bitcoin mining challenge. The challenge is chosen at random from three possible options for each submission. This setup requires miners to invest significant amount of time to update the mining algorithm and should disincentivize miners to become part of the ecosystem too early, allowing it to grow and mature before larger players join. 
 
+The PoW, is basically guessing a nonce that produces a hash with a certain number of leading zeros using the randmly selected hash function. The PoW challenge is chosen at random from the three challenges included in the proofOfWork function and the difficulty for the PoW is adjusted to target 10 minutes. However, the difficulty only increases if the prevous challenge is solved faster than 60% of the timetarget. If it was a hard cuttoff, it ran a higher risk of the next value failing submition if it takes longer than the time target to mine or be added to the Ethereum mainnet.   Miners can submit the PoW and the off-chain value using the function proofOfwork in OracleToken.sol. 
 
 The mining process is formally expressed as:
 
@@ -142,15 +171,15 @@ The mining process is formally expressed as:
     }
 ```
 
-An implementation of the miner is described in python in the 'miner' sub directory.  In 'miner.py', the script imports the web3 library, pandas, and various other dependencies to solve the keccak256 puzzle.  In submitter.js, the nonce value inputs are submitted to the smart contract on-chain.  To examine the mining script, navigate [here](./miner/).
+An implementation of the miner is described in python in the 'miner' sub directory.  In 'miner.py', the script imports the web3 library, pandas, and various other dependencies to solve the keccak256, sha256, and ripemd160 puzzle.  In submitter.js, the nonce value inputs are submitted to the smart contract on-chain.  To examine the mining script, navigate [here](./miner/).
 
 
 ## Example Usage Scenarios <a name="usage-scenarios"> </a>
 
-Within the context of Ethereum, oracles can be thought of as authoritative sources of off-chain data. These data points allow smart contracts to receive and condition executional instructions using extrinsic information.  This is highly useful for a wide-array of derivitive scenarios.
+Within the context of Ethereum, oracles can be thought of as authoritative sources of off-chain data. These data points allow smart contracts to receive and condition executional instructions using extrinsic information.  This is highly useful for a wide-array of derivative scenarios.
 
 As PoWO is a contract mechanism that allows oracle data to be derived in a comeptitive, decentralized manner - we envision a wide array of use cases for this product.  Namely:
-1. <b>Exchange-rate data:</b> interval based exchange-rate truthpoints may be used to create trustless financial derivatives
+1. <b>Exchange-rate data:</b> interval based exchange-rate values may be used to create trustless financial derivatives
 2. <b>Weather data logs:</b> for example, we may calculate insurance premium calculation based on a weather forecast
 3. <b>Static/pseudo-static data:</b> logging and indexing various identifiers, country codes, currency codes
 4. <b>Prediction Market Probability/Odds:</b> i.e. "What is the likelihood that X event will happen"

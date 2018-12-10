@@ -73,14 +73,14 @@ Step by step instructions on setting up a Mineable Oracle without truffle are av
 ## Overview <a name="overview"> </a>  
 Ethereum smart contracts cannot access off-chain data. If your smart contract relies on off-chain (e.g. internet) data to evaluate or execute a function, you either have to manually feed the data to your contract, incentivize users to do it, or rely on a centralized party to provide the data (Oraclize.it is generally the standard). 
 
-<b>Proof of Work Oracle (PoWO)</b> is a decentralized oracle. It provides a decentralized alternative for contracts to interact with and obtain data from offchain. 
+<b>Proof of Work Oracle (PoWO)</b> is a decentralized oracle. It provides a decentralized alternative for contracts to interact with and obtain data from off-chain. 
 
-The PoWO implements a mineable proof-of-work (PoW) where miners, along with the PoW solution also provide an offchain data point. The first five miners to provide the PoW and offchain data point are rewarded: the miner with the median value is given the highest reward since that is what is used as the 'offical' value and the four miners get a lower reward that decreases the further they are from the median. Once validated and processed the value is available for on-chain contracts to use.
+The PoWO implements a mineable proof-of-work (PoW) where miners, along with the PoW solution also provide an off-chain data point. The first five miners to provide the PoW and off-chain data point are rewarded: the miner with the median value is given the highest reward since that is what is used as the 'offical' value and the four miners get a lower reward that decreases the further they are from the median. Once validated and processed the value is available for on-chain contracts to use.
 
 We have implemented PoW because it is reliable, <b>now</b>. However, once Proof of Stake (PoS) is proven Daxia can decide to switch from PoW to Proof of Stake (PoS).
 
 <p align="center">
-<img src="./public/PowoFlow.png" width="600" height="500" alt = "How it works">
+<img src="./public/Powo.png" width="400" height="200" alt = "How it works">
 </p>
 
 A deep dive in methododology is available here: [In-Depth Overview](./InDepthOverview.md)
