@@ -134,6 +134,7 @@ contract('Mining Tests', function(accounts) {
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;      
         begbal_sender =await proofofworktoken.balanceOf(accounts[4]);
+        await oracletoken.requestData(res.c[0], {from:accounts[4]});
         data = await oracletoken.retrieveData(res.c[0], {from:accounts[4]});
         resValue = data.logs[0].args._value;
         resSender = data.logs[0].args._sender;
@@ -215,6 +216,7 @@ contract('Mining Tests', function(accounts) {
         val = logMineWatcher.args._value;      
         totalvp = await oracletoken.getValuePoolAt(res.c[0]);    
         for(i=0;i<22;i++){
+             await oracletoken.requestData(res.c[0], {from:accounts[9]});
              res2 = await oracletoken.retrieveData(res.c[0], {from:accounts[9]});
              totalvp2 = await oracletoken.getValuePoolAt(res.c[0]);
         }
@@ -276,6 +278,24 @@ contract('Mining Tests', function(accounts) {
         balance1 = await proofofworktoken.balanceOf(readcontract.address);
         assert(val - readc == 0, "The value read and the last value should be the same")
         assert(balance - balance1 == readFee, "readfee is charged")
+    }); 
+
+    it("Test read request data", async function(){
+        logMineWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
+        res = logMineWatcher.args._time;
+        val = logMineWatcher.args._value;      
+        begbal_sender =await proofofworktoken.balanceOf(accounts[4]);
+        await oracletoken.requestData(res.c[0], {from:accounts[4]});
+        info = oracletoken.
+        assert(balance - balance1 == readFee, "readfee is charged")
+    }); 
+    it("Test dev Share", async function(){
+        begbal = await proofofworktoken.balanceOf(accounts[0]);
+        logMineWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
+        endbal = await proofofworktoken.balanceOf(accounts[0]);
+        devshare = await oracletoken.devshare.call();
+        payout = await oracletoken.totalPayout.call();
+        assert(endbal - begbal = payout.toNumber() * devshare.toNumber(), "devShare")
     }); 
     
 });

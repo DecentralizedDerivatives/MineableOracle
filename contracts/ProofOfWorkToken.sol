@@ -22,6 +22,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     uint public firstDeployedTime;
     uint public firstWeekCount = 0;
     uint public lastDeployedTime;
+    uint public devShare;
     address public dud_Oracle;
     address public owner;
     OracleDetails[] public oracle_list;
@@ -42,9 +43,10 @@ contract ProofOfWorkToken is Token, CloneFactory {
     }
 
     /*Functions*/
-    constructor(address _dud_Oracle) public{
+    constructor(address _dud_Oracle, uint _devShare) public{
         owner = msg.sender;
         dud_Oracle = _dud_Oracle;
+        devShare = _devShare;
         firstDeployedTime = now - (now % 86400);
         lastDeployedTime = now - (now % 86400);
         oracle_list.push(OracleDetails({
@@ -88,7 +90,7 @@ contract ProofOfWorkToken is Token, CloneFactory {
     */
     function deployNewOracleHelper(string _api,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) internal returns(address){
         address new_oracle = createClone(dud_Oracle);
-        OracleToken(new_oracle).init(address(this),_readFee,_timeTarget,_payoutStructure);
+        OracleToken(new_oracle).init(address(this),_readFee,_timeTarget,_payoutStructure,devShare);
         oracle_index[new_oracle] = oracle_list.length;
         oracle_list.length++;
         OracleDetails storage _current = oracle_list[oracle_list.length-1]; 

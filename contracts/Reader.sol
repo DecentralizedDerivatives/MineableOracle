@@ -8,6 +8,7 @@ import './OracleToken.sol';
 contract Reader{
 
 	uint public value;
+	bool public ifRetrieve;
 
     /**
     @dev Getter function to get value for last mined _timestamp
@@ -15,6 +16,6 @@ contract Reader{
     */
 	function getLastValue(address _otoken) public {
 		OracleToken token = OracleToken(_otoken);
-		value = token.getLastQuery();
+		(value,ifRetrieve) = token.getLastQuery();
 	}
 }
