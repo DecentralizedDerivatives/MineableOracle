@@ -141,6 +141,19 @@ contract ProofOfWorkToken is Token, CloneFactory {
         return true;
     }
 
+        /**
+    * @dev Allows the OracleToken.RetreiveData to transfer tokens to the owner
+    * data back to this contract
+    * @param _to address to transfer to
+    * @param _amount to transfer
+    * @return true after transfer 
+    */
+    function devTransfer(address _to,uint _amount) public returns(bool){
+        require(oracle_index[msg.sender] > 0);
+        doTransfer(address(this),_to, _amount);
+        return true;
+    }
+
     /**
     * @dev Getter function that gets the oracle API
     * @param _oracle is the oracle address to look up

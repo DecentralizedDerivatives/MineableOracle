@@ -214,7 +214,7 @@ contract OracleToken{
         if(_party == address(0)){
             _party = msg.sender;
         }
-        request[_party][_timestamp] = now;
+        request[_party][_timestamp] = block.number;
         emit DataRequested(msg.sender,_party,_timestamp);
     }
     /**
@@ -223,7 +223,7 @@ contract OracleToken{
     * @return value for timestamp submitted
     */
     function retrieveData(uint _timestamp) public returns (uint) {
-        require(isData(_timestamp) && 0 < request[msg.sender][_timestamp] && request[msg.sender][_timestamp] < now);
+        require(isData(_timestamp) && 0 < request[msg.sender][_timestamp] && request[msg.sender][_timestamp] < block.number);
         payoutPool[_timestamp] = payoutPool[_timestamp] + readFee;
         emit DataRetrieved(msg.sender,values[_timestamp]);
         return values[_timestamp];
@@ -278,7 +278,7 @@ contract OracleToken{
     * @return value for timestamp of last proof of work submited
     */
     function getLastQuery() external returns(uint,bool){
-        if(request[msg.sender][timeOfLastProof] > 0){
+        if(request[msg.sender][timeOfLastProof] == 0){
             requestData(timeOfLastProof,msg.sender);
             return (0,false);
         }
@@ -335,7 +335,7 @@ contract OracleToken{
         }
         ProofOfWorkToken _master = ProofOfWorkToken(master);
         _master.batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
-        _master.callTransfer(_master.owner(),(payoutTotal * devShare / 100));
+        _master.devTransfer(_master.owner(),(payoutTotal * devShare / 100));
         values[_time] = a[2].value;
         minersbyvalue[_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
         emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);

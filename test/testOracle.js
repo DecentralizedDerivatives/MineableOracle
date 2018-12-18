@@ -65,14 +65,14 @@ contract('Mining Tests', function(accounts) {
 
     beforeEach('Setup contract for each test', async function () {
         readcontract = await reader.new();
-        oracletoken = await oracleToken.new(accounts[0],1e18,(86400/60)/6,[1e18,5e18,10e18,5e18,1e18]);
-        proofofworktoken = await proofOfWorkToken.new(oracletoken.address);
+        oracletoken = await oracleToken.new(accounts[0],1e18,(86400/60)/6,[1e18,5e18,10e18,5e18,1e18],5);
+        proofofworktoken = await proofOfWorkToken.new(oracletoken.address,5);
         balance0 = await (proofofworktoken.balanceOf(accounts[0],{from:accounts[0]}));
-        await proofofworktoken.transfer(accounts[4],2e18,{from:accounts[0]});
-        await proofofworktoken.transfer(accounts[5],2e18,{from:accounts[0]});
-        await proofofworktoken.transfer(accounts[6],2e18,{from:accounts[0]});
-        await proofofworktoken.transfer(accounts[7],2e18,{from:accounts[0]});
-        await proofofworktoken.transfer(accounts[8],2e18,{from:accounts[0]});
+        await proofofworktoken.transfer(accounts[4],10e18,{from:accounts[0]});
+        await proofofworktoken.transfer(accounts[5],10e18,{from:accounts[0]});
+        await proofofworktoken.transfer(accounts[6],10e18,{from:accounts[0]});
+        await proofofworktoken.transfer(accounts[7],10e18,{from:accounts[0]});
+        await proofofworktoken.transfer(accounts[8],10e18,{from:accounts[0]});
         let res = await proofofworktoken.deployNewOracle(api,readFee,timeframe,[pay1,pay2,pay3,pay2,pay1], {from:accounts[0]});
         res = res.logs[0].args._newOracle;
         oracletoken = await oracleToken.at(res);   
@@ -123,10 +123,11 @@ contract('Mining Tests', function(accounts) {
     it("Test Get Last Query", async function () {
         logMineWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
         res = logMineWatcher.args._time;
-        val = logMineWatcher.args._value;       
-        data = await oracletoken.getLastQuery.call();
-        console.log("data", data);
-        assert(data > 0, "Ensure data exist for the last mine value");
+        val = logMineWatcher.args._value;
+        await oracletoken.getLastQuery();       
+        res = await oracletoken.getLastQuery();
+        console.log("data", res.logs[0].args);
+        assert(res.logs[0].args._value > 0, "Ensure data exist for the last mine value");
     });
     
     it("Test Data Read", async function () {
@@ -134,7 +135,7 @@ contract('Mining Tests', function(accounts) {
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;      
         begbal_sender =await proofofworktoken.balanceOf(accounts[4]);
-        await oracletoken.requestData(res.c[0], {from:accounts[4]});
+        await oracletoken.requestData(res.c[0],accounts[4], {from:accounts[4]});
         data = await oracletoken.retrieveData(res.c[0], {from:accounts[4]});
         resValue = data.logs[0].args._value;
         resSender = data.logs[0].args._sender;
@@ -144,7 +145,7 @@ contract('Mining Tests', function(accounts) {
         assert(begbal_sender - endbal_sender == readFee, "Should be equal to readfee per read");
     });
 
-    it("Test Miner Payout", async function () {
+   it("Test Miner Payout", async function () {
         balances = []
         for(var i = 0;i<6;i++){
             balances[i] = await proofofworktoken.balanceOf(accounts[i]);
@@ -216,7 +217,7 @@ contract('Mining Tests', function(accounts) {
         val = logMineWatcher.args._value;      
         totalvp = await oracletoken.getValuePoolAt(res.c[0]);    
         for(i=0;i<22;i++){
-             await oracletoken.requestData(res.c[0], {from:accounts[9]});
+             await oracletoken.requestData(res.c[0],accounts[9], {from:accounts[9]});
              res2 = await oracletoken.retrieveData(res.c[0], {from:accounts[9]});
              totalvp2 = await oracletoken.getValuePoolAt(res.c[0]);
         }
@@ -265,37 +266,37 @@ contract('Mining Tests', function(accounts) {
         balance = await proofofworktoken.balanceOf(readcontract.address);
         await expectThrow(readcontract.getLastValue(oracletoken.address));
         balance1 = await proofofworktoken.balanceOf(readcontract.address);
-    }); 
-
+    });
     it("Test contract read with tokens", async function(){
         logMineWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;      
         await proofofworktoken.transfer(readcontract.address,2e18,{from:accounts[0]});
         balance = await proofofworktoken.balanceOf(readcontract.address);
-        await await readcontract.getLastValue(oracletoken.address);
-        readc = await readcontract.value.call();
+        await readcontract.getLastValue(oracletoken.address);
+        await readcontract.getLastValue(oracletoken.address);
+        res = await readcontract.value.call();
+        console.log(res);
         balance1 = await proofofworktoken.balanceOf(readcontract.address);
-        assert(val - readc == 0, "The value read and the last value should be the same")
+        assert(val - res.c[0] == 0, "The value read and the last value should be the same")
         assert(balance - balance1 == readFee, "readfee is charged")
     }); 
 
     it("Test read request data", async function(){
         logMineWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
-        res = logMineWatcher.args._time;
-        val = logMineWatcher.args._value;      
-        begbal_sender =await proofofworktoken.balanceOf(accounts[4]);
-        await oracletoken.requestData(res.c[0], {from:accounts[4]});
-        info = oracletoken.
-        assert(balance - balance1 == readFee, "readfee is charged")
+        res = logMineWatcher.args._time;  
+        await oracletoken.requestData(res.c[0],accounts[4], {from:accounts[4]});
+        info = await oracletoken.getRequest(res.c[0],accounts[4])
+        assert(info.toNumber() > 0, "request should work")
     }); 
     it("Test dev Share", async function(){
         begbal = await proofofworktoken.balanceOf(accounts[0]);
         logMineWatcher = await promisifyLogWatch(oracletoken.NewValue({ fromBlock: 'latest' }));//or Event Mine?
         endbal = await proofofworktoken.balanceOf(accounts[0]);
-        devshare = await oracletoken.devshare.call();
-        payout = await oracletoken.totalPayout.call();
-        assert(endbal - begbal = payout.toNumber() * devshare.toNumber(), "devShare")
+        devshare = await oracletoken.devShare.call();
+        payout = await oracletoken.payoutTotal.call();
+        console.log('payoutdev',(endbal - begbal),payout.toNumber(),devshare.toNumber())
+        assert((endbal - begbal)/1e18  - (payout.toNumber() * devshare.toNumber())/1e18 < .1, "devShare")
     }); 
     
 });
