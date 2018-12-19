@@ -14,6 +14,7 @@ contract OracleToken{
     using SafeMath for uint256;
     /*Variables*/
     bytes32 public currentChallenge; //current challenge to be solved
+    uint public devShare;//devShare of contracts
     uint public timeOfLastProof; // time of last challenge solved
     uint public timeTarget; //The time between blocks (mined Oracle values)
     uint public timeCreated;//Time the contract was created
@@ -28,6 +29,7 @@ contract OracleToken{
     mapping(uint => address[5]) minersbyvalue;//This maps the UNIX timestamp to the 5 miners who mined that value
     mapping(uint => uint) payoutPool;//This is the payout pool for a given timestamp.  
     mapping(bytes32 => mapping(address=>bool)) miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
+    mapping(address => mapping(uint => uint)) request;//You must request a timestamp.  The value will be the block timestamp requested
     Details[5] first_five;
     struct Details {
         uint value;
@@ -41,6 +43,7 @@ contract OracleToken{
     event ValueAddedToPool(address sender,uint _value,uint _time);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
     event MiningMultiplierChanged(uint _newMultiplier);//Each year, the mining reward decreases by 1/5 of the initial mining reward
     event DataRetrieved(address _sender, uint _value);//Emits when someone retireves data, this shows the msg.sender and the value retrieved
+    event DataRequested(address _sender, address _party,uint _timestamp);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
     event NonceSubmitted(address _miner, string _nonce, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
 
     /*Constructors*/
@@ -51,10 +54,11 @@ contract OracleToken{
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
     */
-    constructor(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) public{
+    constructor(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure, uint _devShare) public{
         require(_timeTarget > 60);
         timeOfLastProof = now - now  % _timeTarget;
         timeCreated = now;
+        devShare = _devShare;
         master = _master;
         readFee = _readFee;
         timeTarget = _timeTarget;
@@ -74,10 +78,11 @@ contract OracleToken{
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
     */
-    function init(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure) external {
+    function init(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure, uint _devShare) external {
         require (timeOfLastProof == 0 && _timeTarget > 60);
         timeOfLastProof = now - now  % _timeTarget;
         timeCreated = now;
+        devShare = _devShare;
         master = _master;
         readFee = _readFee;
         timeTarget = _timeTarget;
@@ -198,15 +203,27 @@ contract OracleToken{
         }
         return miningMultiplier;
     }
-
+    /**
+    * @dev Request to retreive value from oracle based on timestamp
+    * @param _timestamp to retreive data/value from
+    * @param _party who gets the tokens
+    */
+    function requestData(uint _timestamp, address _party) public{
+        ProofOfWorkToken _master = ProofOfWorkToken(master);
+        require(_master.callTransfer(msg.sender,readFee));
+        if(_party == address(0)){
+            _party = msg.sender;
+        }
+        request[_party][_timestamp] = block.number;
+        emit DataRequested(msg.sender,_party,_timestamp);
+    }
     /**
     * @dev Retreive value from oracle based on timestamp
     * @param _timestamp to retreive data/value from
     * @return value for timestamp submitted
     */
     function retrieveData(uint _timestamp) public returns (uint) {
-        ProofOfWorkToken _master = ProofOfWorkToken(master);
-        require(isData(_timestamp) && _master.callTransfer(msg.sender,readFee));
+        require(isData(_timestamp) && 0 < request[msg.sender][_timestamp] && request[msg.sender][_timestamp] < block.number);
         payoutPool[_timestamp] = payoutPool[_timestamp] + readFee;
         emit DataRetrieved(msg.sender,values[_timestamp]);
         return values[_timestamp];
@@ -219,6 +236,15 @@ contract OracleToken{
     function getMinersByValue(uint _timestamp) public view returns(address[5]){
         return minersbyvalue[_timestamp];
     }
+
+    /**
+    * @dev Gets the 5 miners who mined the value for the specified _timestamp 
+    * @param _timestamp is the timestampt to look up miners for
+    */
+    function getRequest(uint _timestamp, address _party) public view returns(uint){
+        return request[_party][_timestamp];
+    }
+
 
     /**
     * @dev This function tells you if a given challenge has been completed by a given miner
@@ -251,8 +277,14 @@ contract OracleToken{
     * @dev Gets the a value for the latest timestamp available
     * @return value for timestamp of last proof of work submited
     */
-    function getLastQuery() external returns(uint){
-        return retrieveData(timeOfLastProof);
+    function getLastQuery() external returns(uint,bool){
+        if(request[msg.sender][timeOfLastProof] == 0){
+            requestData(timeOfLastProof,msg.sender);
+            return (0,false);
+        }
+        else{
+            return (retrieveData(timeOfLastProof),true);
+        }
     }
 
     /**
@@ -301,7 +333,9 @@ contract OracleToken{
         for (i = 0;i <5;i++){
             _payout[i] = payoutStructure[i]*_payoutMultiplier*miningMultiplier/1e18;
         }
-        ProofOfWorkToken(master).batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
+        ProofOfWorkToken _master = ProofOfWorkToken(master);
+        _master.batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
+        _master.devTransfer(_master.owner(),(payoutTotal * devShare / 100));
         values[_time] = a[2].value;
         minersbyvalue[_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
         emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
