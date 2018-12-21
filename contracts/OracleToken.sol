@@ -53,6 +53,7 @@ contract OracleToken{
     * @param _readFee is the fee for reading oracle information
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
+    * @param _devShare for dev
     */
     constructor(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure, uint _devShare) public{
         require(_timeTarget > 60);
@@ -77,6 +78,7 @@ contract OracleToken{
     * @param _readFee is the fee for reading oracle information
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
+    * @param _devShare for dev
     */
     function init(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure, uint _devShare) external {
         require (timeOfLastProof == 0 && _timeTarget > 60);
@@ -238,8 +240,10 @@ contract OracleToken{
     }
 
     /**
-    * @dev Gets the 5 miners who mined the value for the specified _timestamp 
+    * @dev Checks if a requests has already been submitted for a party
     * @param _timestamp is the timestampt to look up miners for
+    * @param _party address used to check if a request has been made on their behalf 
+    * @return block number (uint) for request
     */
     function getRequest(uint _timestamp, address _party) public view returns(uint){
         return request[_party][_timestamp];

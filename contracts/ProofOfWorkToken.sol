@@ -141,9 +141,8 @@ contract ProofOfWorkToken is Token, CloneFactory {
         return true;
     }
 
-        /**
+    /**
     * @dev Allows the OracleToken.RetreiveData to transfer tokens to the owner
-    * data back to this contract
     * @param _to address to transfer to
     * @param _amount to transfer
     * @return true after transfer 
