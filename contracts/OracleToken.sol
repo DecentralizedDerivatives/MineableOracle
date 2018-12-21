@@ -240,7 +240,7 @@ contract OracleToken{
     }
 
     /**
-    * @dev Checks 
+    * @dev Checks if a requests has already been submitted for a party
     * @param _timestamp is the timestampt to look up miners for
     * @param _party address used to check if a request has been made on their behalf 
     * @return block number (uint) for request
