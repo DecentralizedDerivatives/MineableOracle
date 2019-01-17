@@ -58,7 +58,7 @@ contract OracleToken{
         uint value;
         address miner;
         string api;
-        bool validated[];//i guess I can't spefify array type
+        bool[] validated;//i still need an array to validate 
     }
 
     /*Events*/
@@ -389,7 +389,8 @@ contract OracleToken{
         ProofOfWorkToken _master = ProofOfWorkToken(master);
         _master.batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
         _master.devTransfer(_master.owner(),(payoutTotal * devShare / 100 * miningMultiplier/1e18));//adjust the devshare to same as mining which goes to zero in 5 years
-        values[_time] = a[2].value;
+        values[apiOnQ][_time] = a[2].value;
+        //maybe add to an array[10];
         minersbyvalue[_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
         emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
         emit NewValue(timeOfLastProof,apiOnQ,a[2].value);
