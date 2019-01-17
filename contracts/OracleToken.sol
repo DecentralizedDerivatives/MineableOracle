@@ -35,7 +35,7 @@ contract OracleToken{
 
     //mapping (API => mapping(timestamp => value)) mapping for api to value mined
     mapping(string => mapping(uint => uint) public values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
-  
+    uint[10] public values;//last 10 values array? how do limited arrays save data?
     //mapping (sender/requester address =>mapping(API => mapping(timestamp => blockTimestamp))
     mapping(address => mapping(string => mapping(uint => uint))) public request;//You must request an api and timestamp.  The value will be the block timestamp requested. DO i care who is the original requester??
 
