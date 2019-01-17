@@ -29,7 +29,6 @@ contract Token  {
         balances[address(this)]= (2**256) - 1 - total_supply;
     }
     
-
     /**
     * @dev Allows for a transfer of tokens to _to
     * @param _to The address to send tokens to
