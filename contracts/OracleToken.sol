@@ -19,49 +19,74 @@ contract OracleToken{
     uint public timeTarget; //The time between blocks (mined Oracle values)
     uint public timeCreated;//Time the contract was created
     uint public count;//Number of miners who have mined this value so far
-    uint public readFee;//Fee in PoWO tokens to read a value
+
+    uint public requestFee;// min fee in PoWO tokens to request a value to be mined. THe payoutPool must be greater than this minimum
     uint public payoutTotal;//Mining Reward in PoWo tokens given to all miners per value
     uint public miningMultiplier;//This times payout total is the mining reward (it goes down each year)
     uint256 public difficulty; // Difficulty of current block
     uint[5] public payoutStructure;//The structure of the payout (how much uncles vs winner recieve)
     address public master;//Address of master ProofOfWorkToken that created this contract
-    mapping(uint => uint) values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
-    mapping(uint => address[5]) minersbyvalue;//This maps the UNIX timestamp to the 5 miners who mined that value
-    mapping(uint => uint) payoutPool;//This is the payout pool for a given timestamp.  
-    mapping(bytes32 => mapping(address=>bool)) miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
-    mapping(address => mapping(uint => uint)) request;//You must request a timestamp.  The value will be the block timestamp requested
+    
+    //mapping(API => mapping(timestamp => 5miners)
+    mapping(string =>mapping(uint => address[5])) public minersbyvalue;//This maps the UNIX timestamp to the 5 miners who mined that value
+    //mapping (API => mapping(timestamp => payoutPool))
+    mapping(string => mapping(uint => uint)) public payoutPool;//This is the payout pool for a given API and timestamp.  
+    mapping(bytes32 => mapping(address=>bool)) public miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
+
+    //mapping (API => mapping(timestamp => value)) mapping for api to value mined
+    mapping(string => mapping(uint => uint) public values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
+  
+    //mapping (sender/requester address =>mapping(API => mapping(timestamp => blockTimestamp))
+    mapping(address => mapping(string => mapping(uint => uint))) public request;//You must request an api and timestamp.  The value will be the block timestamp requested. DO i care who is the original requester??
+
+    string[] public apisRequested;
+    mapping(string => uint) public apiRequestedIndex;
+    //mapping api to timestamps requested for that api
+    mapping(string => uint[]) public requestedAPItimestamps; //maybe order decending
+
+    //API on q info
+    string public apiOnQ;
+    uint public apiOnQPayout;
+    uint public timeOnQ;
+
+/*standard API's enum?*/
+
+
+   
     Details[5] first_five;
     struct Details {
         uint value;
         address miner;
+        string api;
+        bool validated[];//i guess I can't spefify array type
     }
 
     /*Events*/
     event Mine(address sender,address[5] _miners, uint[5] _values);//Emits upon a succesful value mine, indicates the msg.sender, 5 miners included in block, and the mined value
-    event NewValue(uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
-    event PoolPayout(address sender,uint _timestamp, address[5] _miners, uint[5] _values);//Emits when a pool is paid out, who is included and the amount(money collected from reads)
-    event ValueAddedToPool(address sender,uint _value,uint _time);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
+    event NewValue(string _api,uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
+    event PoolPayout(address sender, string _api, uint _timestamp, address[5] _miners, uint[5] _values);//Emits when a pool is paid out, who is included and the amount(money collected from reads)
+    event ValueAddedToPool(address sender,string _api, uint _value,uint _time);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
     event MiningMultiplierChanged(uint _newMultiplier);//Each year, the mining reward decreases by 1/5 of the initial mining reward
-    event DataRetrieved(address _sender, uint _value);//Emits when someone retireves data, this shows the msg.sender and the value retrieved
-    event DataRequested(address _sender, address _party,uint _timestamp);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
+    event DataRetrieved(address _sender, string _api, uint _value);//Emits when someone retireves data, this shows the msg.sender and the value retrieved
+    event DataRequested(address _sender, address _party, string _api, uint _timestamp);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
     event NonceSubmitted(address _miner, string _nonce, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
-
+    event NewAPIonQinfo(string _api, uint _time, uint _payoutPool); //Emits when a new API is moved to the top of the mining queue
     /*Constructors*/
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
     * @param _master is the master ProofOfWorkToken.address
-    * @param _readFee is the fee for reading oracle information
+    * @param _requestFee is the fee for reading oracle information
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
     * @param _devShare for dev
     */
-    constructor(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure, uint _devShare) public{
+    constructor(address _master,uint _requestFee,uint _timeTarget,uint[5] _payoutStructure, uint _devShare) public{
         require(_timeTarget > 60);
         timeOfLastProof = now - now  % _timeTarget;
         timeCreated = now;
         devShare = _devShare;
         master = _master;
-        readFee = _readFee;
+        requestFee = _requestFee;
         timeTarget = _timeTarget;
         miningMultiplier = 1e18;
         payoutStructure = _payoutStructure;
@@ -72,21 +97,22 @@ contract OracleToken{
         }
     }
 
+//since we are not going to be deploying oracles we could do witout the cloning part.
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
     * @param _master is the master ProofOfWorkToken.address
-    * @param _readFee is the fee for reading oracle information
+    * @param _requestFee is the fee for reading oracle information
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
     * @param _devShare for dev
     */
-    function init(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure, uint _devShare) external {
+    function init(address _master,uint _requestFee,uint _timeTarget,uint[5] _payoutStructure, uint _devShare) external {
         require (timeOfLastProof == 0 && _timeTarget > 60);
         timeOfLastProof = now - now  % _timeTarget;
         timeCreated = now;
         devShare = _devShare;
         master = _master;
-        readFee = _readFee;
+        requestFee = _requestFee;
         timeTarget = _timeTarget;
         miningMultiplier = 1e18;
         payoutStructure = _payoutStructure;
@@ -105,6 +131,8 @@ contract OracleToken{
     * @return count of values sumbitted so far and the time of the last successful mine
     */
     function proofOfWork(string nonce, uint value) external returns (uint256,uint256) {
+//add the api with largest payoutPool, timestamp, [values to valdidate]
+         
         bytes32 _solution = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
         uint _rem = uint(_solution) % 3;
         bytes32 n;
@@ -124,7 +152,7 @@ contract OracleToken{
         count++;
         miners[currentChallenge][msg.sender] = true;
         uint _payoutMultiplier = 1;
-        emit NonceSubmitted(msg.sender,nonce,value);
+        emit NonceSubmitted(msg.sender,nonce,apiOnQ,value,validated[10];///how does this work added the api and them havign to validate/true/false previous 10 values
         if(count == 5) { 
             if (now - timeOfLastProof < (timeTarget *60)/100){
                 difficulty++;
@@ -147,7 +175,7 @@ contract OracleToken{
             else{
                 payoutPool[timeOfLastProof] = valuePool;
             }
-            pushValue(timeOfLastProof,_payoutMultiplier);
+            pushValue(timeOfLastProof,apiOnQ,_payoutMultiplier);
             count = 0;
             currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
          }
@@ -161,7 +189,7 @@ contract OracleToken{
     * It should be the time stamp the user wants to ensure gets mined. They can do that 
     * by adding a _tip to insentivize the miners to submit a value for the time stamp. 
     */
-    function addToValuePool(uint _tip, uint _timestamp) public {
+    function addToValuePool(string _api, uint _tip, uint _timestamp) public {
         ProofOfWorkToken _master = ProofOfWorkToken(master);
         require(_master.callTransfer(msg.sender,_tip));
         uint _time;
@@ -171,21 +199,39 @@ contract OracleToken{
         else{
             _time = _timestamp - (_timestamp % timeTarget);
         }
-        payoutPool[_time] = payoutPool[_time].add(_tip);
-        emit ValueAddedToPool(msg.sender,_tip,_time);//_time instead of timestamp?
+        payoutPool[_api][_time] = payoutPool[_api][_time].add(_tip);
+        if (payoutPool[_api][_time] > apiMiningQPayout) {
+            miningAPI[api]
+        } 
+        emit ValueAddedToPool(msg.sender,_api,_tip,_time);
+        updateAPIonQ(_api,  _timestamp);
     }
 
-
+    /**
+    @dev use this function to update APIonQ via requestData or addToValuePool
+    @param _api being requested
+    @param _timestamp
+    */
+    function updateAPIonQ (string _api, uint _timestamp) internal {
+        _payout = getValuePoolAt(string _api,uint _timestamp);
+        if (_payout > apiOnQPayout ) {
+            //update apiOnQ, apiOnPayout, and TimeOnQ
+            apiOnQ = _api;
+            apiOnQPayout = _payout;
+            timeOnQ = _timestamp;
+            emit NewAPIonQinfo(apiOnQ, timeOnQ, apiOnQPayout)
+        }
+    }
     /**
     * @dev Retrieve payout from the data reads. It pays out the 5 miners.
     * @param _timestamp for which to retreive the payout from
     */
-    function retrievePayoutPool(uint _timestamp) public {
-        uint _payoutMultiplier = payoutPool[_timestamp] / payoutTotal;
-        require (_payoutMultiplier > 0 && values[_timestamp] > 0);
+    function retrievePayoutPool(string _api, uint _timestamp) public {
+        uint _payoutMultiplier = payoutPool[_api][_timestamp] / payoutTotal;
+        require (_payoutMultiplier > 0 && values[_api][_timestamp] > 0);
         uint[5] memory _payout = [payoutStructure[4]*_payoutMultiplier,payoutStructure[3]*_payoutMultiplier,payoutStructure[2]*_payoutMultiplier,payoutStructure[1]*_payoutMultiplier,payoutStructure[0]*_payoutMultiplier];
-        ProofOfWorkToken(master).batchTransfer(minersbyvalue[_timestamp], _payout,false);
-        emit PoolPayout(msg.sender,_timestamp,minersbyvalue[_timestamp], _payout);
+        ProofOfWorkToken(master).batchTransfer(minersbyvalue[_api][_timestamp], _payout,false);
+        emit PoolPayout(msg.sender,_api,_timestamp,minersbyvalue[_api][_timestamp], _payout);
     }
 
     /**
@@ -210,24 +256,26 @@ contract OracleToken{
     * @param _timestamp to retreive data/value from
     * @param _party who gets the tokens
     */
-    function requestData(uint _timestamp, address _party) public{
+    function requestData(string _api, uint _timestamp, address _party, uint _requestFee) public{
         ProofOfWorkToken _master = ProofOfWorkToken(master);
-        require(_master.callTransfer(msg.sender,readFee));
+        require(_requestFee>= requestFee && _master.callTransfer(msg.sender,_requestFee));
+        payoutPool[_api][_timestamp] = payoutPool[[_api][_timestamp] + _requestFee;
         if(_party == address(0)){
             _party = msg.sender;
         }
-        request[_party][_timestamp] = block.number;
-        emit DataRequested(msg.sender,_party,_timestamp);
+        request[_party][_api][_timestamp] = block.number;
+        emit DataRequested(msg.sender,_party,_api,_timestamp);
+        updateAPIonQ(_api,  _timestamp);
     }
+
     /**
     * @dev Retreive value from oracle based on timestamp
     * @param _timestamp to retreive data/value from
     * @return value for timestamp submitted
     */
-    function retrieveData(uint _timestamp) public returns (uint) {
-        require(isData(_timestamp) && 0 < request[msg.sender][_timestamp] && request[msg.sender][_timestamp] < block.number);
-        payoutPool[_timestamp] = payoutPool[_timestamp] + readFee;
-        emit DataRetrieved(msg.sender,values[_timestamp]);
+    function retrieveData(string _api, uint _timestamp) public returns (uint) {
+        require(isData(_timestamp));
+        emit DataRetrieved(msg.sender,values[_api][_timestamp]);
         return values[_timestamp];
     }
 
@@ -245,8 +293,8 @@ contract OracleToken{
     * @param _party address used to check if a request has been made on their behalf 
     * @return block number (uint) for request
     */
-    function getRequest(uint _timestamp, address _party) public view returns(uint){
-        return request[_party][_timestamp];
+    function getRequest(string _api, uint _timestamp, address _party) public view returns(uint){
+        return request[_party][_api][_timestamp];
     }
 
 
@@ -298,15 +346,16 @@ contract OracleToken{
     * @param _timestamp to look up the total payoutPool value 
     * @return the value of the total payoutPool
     */
-    function getValuePoolAt(uint _timestamp) external view returns(uint){
+    function getValuePoolAt(string _api,uint _timestamp) external view returns(uint){
         if(_timestamp == 0){
             uint _time = timeOfLastProof.add(timeTarget);
-            return payoutPool[_time];
+            return payoutPool[_api][_time];
         }
         else{
-            return payoutPool[_timestamp];
+            return payoutPool[_api][_timestamp];
         }
     }
+
 
     /**
     * @dev This function rewards the first five miners that submit a value
@@ -317,7 +366,7 @@ contract OracleToken{
     * @param _payoutMultiplier is calculated in the proofOfWork function to 
     * allocate the additional miner tip added via the addToValuePool function
     */
-    function pushValue(uint _time, uint _payoutMultiplier) internal {
+    function pushValue(uint _time, string apiOnQ, uint _payoutMultiplier) internal {
         Details[5] memory a = first_five;
         uint[5] memory _payout;
         for (uint i = 1;i <5;i++){
@@ -339,10 +388,10 @@ contract OracleToken{
         }
         ProofOfWorkToken _master = ProofOfWorkToken(master);
         _master.batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
-        _master.devTransfer(_master.owner(),(payoutTotal * devShare / 100));
+        _master.devTransfer(_master.owner(),(payoutTotal * devShare / 100 * miningMultiplier/1e18));//adjust the devshare to same as mining which goes to zero in 5 years
         values[_time] = a[2].value;
         minersbyvalue[_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
         emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
-        emit NewValue(timeOfLastProof,a[2].value);
+        emit NewValue(timeOfLastProof,apiOnQ,a[2].value);
     }
 }
