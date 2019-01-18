@@ -3,7 +3,8 @@ pragma solidity ^0.4.24;
 import "./libraries/SafeMath.sol";
 /**
 * @title Token
-* This contracts contains the ERC20 token functions
+* This contracts contains the ERC20 token functions that support
+* OracleToken.sol.
 */
 contract Token  {
 

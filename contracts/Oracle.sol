@@ -16,16 +16,14 @@ contract Oracle{
     bytes32 public currentChallenge; //current challenge to be solved
     uint public devShare;//devShare of contracts
     uint public timeOfLastProof; // time of last challenge solved
-    uint public timeTarget; //The time between blocks (mined Oracle values)
-    uint public timeCreated;//Time the contract was created
     uint public count;//Number of miners who have mined this value so far
-
-    uint public requestFee;// min fee in PoWO tokens to request a value to be mined. THe payoutPool must be greater than this minimum
-    uint public payoutTotal;//Mining Reward in PoWo tokens given to all miners per value
-    uint public miningMultiplier;//This times payout total is the mining reward (it goes down each year)
     uint256 public difficulty; // Difficulty of current block
-    uint[5] public payoutStructure;//The structure of the payout (how much uncles vs winner recieve)
-    address public master;//Address of master ProofOfWorkToken that created this contract
+
+// hardcode this in    uint public requestFee;// min fee in PoWO tokens to request a value to be mined. THe payoutPool must be greater than this minimum
+// hardcode this in    uint public payoutTotal;//Mining Reward in PoWo tokens given to all miners per value
+// no more    uint public miningMultiplier;//This times payout total is the mining reward (it goes down each year)    
+// hardcode this in    uint[5] public payoutStructure;//The structure of the payout (how much uncles vs winner recieve)
+
     
     //mapping(API => mapping(timestamp => 5miners)
     mapping(string =>mapping(uint => address[5])) public minersbyvalue;//This maps the UNIX timestamp to the 5 miners who mined that value
@@ -33,12 +31,12 @@ contract Oracle{
     mapping(string => mapping(uint => uint)) public payoutPool;//This is the payout pool for a given API and timestamp.  
     mapping(bytes32 => mapping(address=>bool)) public miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
 
-    //mapping (API => mapping(timestamp => value)) mapping for api to value mined
-    mapping(string => mapping(uint => uint) public values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
-    uint[10] public values;//last 10 values array? how do limited arrays save data?
+//*********************SAVING requested Information***************************/
     //mapping (sender/requester address =>mapping(API => mapping(timestamp => blockTimestamp))
-    mapping(address => mapping(string => mapping(uint => uint))) public request;//You must request an api and timestamp.  The value will be the block timestamp requested. DO i care who is the original requester??
-
+    //mapping(address => mapping(string => mapping(uint => uint))) public request;//You must request an api and timestamp.  The value will be the block timestamp requested. DO i care who is the original requester??
+    
+    //mapping(API => mapping(timestamp => blockTimestamp)
+    mapping(string => mapping(uint => uint))) public request;
     string[] public apisRequested;
     mapping(string => uint) public apiRequestedIndex;
     //mapping api to timestamps requested for that api
@@ -48,9 +46,34 @@ contract Oracle{
     string public apiOnQ;
     uint public apiOnQPayout;
     uint public timeOnQ;
+//*********************SAVING requested Information***************************/
 
-/*standard API's enum?*/
+//*********************SAVING MINED Information***************************/
+//Save the data for the apis that have been mined. The
+//struct Api can be our timeseries for that api
+//and replace the mapping values--no values allows to retreive one value without looping
+// through an array...//
 
+string[] public ApisCollected;
+mappping(string => uint) public ApisCollectedIndex;
+    //mapping (API => mapping(timestamp => value)) mapping for api to value mined
+    //mapping(string => mapping(uint => uint) public values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
+    uint[10] public valuesToValidate;//last 10 values array? how do limited arrays save data?
+//*********************SAVING MINED Information***************************/
+
+//blocktimestamp to 10 values submitted for validation
+mapping(uint =>uint[10]) public minerValidation;
+//how to map the array here 
+/* [1,3,4,5,6,7,8,9,100]
+[t,t,t,t,t,t,t,t,F]
+index 10 what was the api and timestmap */
+
+
+    //if validated array contains a false send to proof of stake voting
+    //miners and anyone can stake their tokens to mine and 
+    //vote on another contract. so Validated[any one false value] triggers
+    //PoS. Hence, the index for the false value has to map to the api and timestamp
+    //and that has to be included on the miner challenge info
 
    
     Details[5] first_five;
@@ -61,6 +84,21 @@ contract Oracle{
         bool[10] validated;//i still need an array to validate 
     }
 
+    struct requestInfo {
+        uint timestampMined;
+        uint timestampRequested;
+        uint value;
+        uint payoutPool;
+        string api;
+        mapping()
+
+    }
+
+    mapping(bytes32=>requestInfo) public idToDetails;
+
+
+
+
     /*Events*/
     event Mine(address sender,address[5] _miners, uint[5] _values);//Emits upon a succesful value mine, indicates the msg.sender, 5 miners included in block, and the mined value
     event NewValue(string _api,uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
@@ -68,9 +106,10 @@ contract Oracle{
     event ValueAddedToPool(address sender,string _api, uint _value,uint _time);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
     event MiningMultiplierChanged(uint _newMultiplier);//Each year, the mining reward decreases by 1/5 of the initial mining reward
     event DataRetrieved(address _sender, string _api, uint _value);//Emits when someone retireves data, this shows the msg.sender and the value retrieved
-    event DataRequested(address _sender, address _party, string _api, uint _timestamp);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
+    event DataRequested(address _sender, string _api, uint _timestamp, uint _payoutPool);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
     event NonceSubmitted(address _miner, string _nonce, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
     event NewAPIonQinfo(string _api, uint _time, uint _payoutPool); //Emits when a new API is moved to the top of the mining queue
+    
     /*Constructors*/
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
@@ -121,7 +160,7 @@ contract Oracle{
             n = keccak256(abi.encodePacked(ripemd160(abi.encodePacked(_solution))));
         }
 
-        require(uint(n) % difficulty == 0 && value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a valueS  
+        require(uint(n) % difficulty == 0 && value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a value  
         first_five[count].value = value;
         first_five[count].miner = msg.sender;
         count++;
@@ -194,9 +233,42 @@ contract Oracle{
             apiOnQ = _api;
             apiOnQPayout = _payout;
             timeOnQ = _timestamp;
-            emit NewAPIonQinfo(apiOnQ, timeOnQ, apiOnQPayout)
+            emit NewAPIonQinfo(apiOnQ, timeOnQ, apiOnQPayout);
+        } else {
+            emit APIonQinfo(apiOnQ, timeOnQ, apiOnQPayout);
         }
     }
+
+//I need this for the miners
+    /**
+    @dev Getter function for the information of the API on queue for mining 
+    @return api, timestamp, and payout
+    */
+    function getAPIonQinfo() public returns(string, uint, uint){
+        return(apiOnQ, timeOnQ, apiOnQPayout); 
+    }
+
+///Do I want to loop through an array 
+//or set up an event for requested and mined
+//capture the events in two tables for the front end?
+    /**
+    @dev Getter function for the information of all the API's on queue for mining 
+    @return api, timestamp, and payout
+    */
+    function getAllrequestedAPIsinfo() public returns(string, uint, uint){
+
+        return(apiOnQ, timeOnQ, apiOnQPayout); 
+    }
+
+    /**
+    @dev Getter function for mined api and values
+    @return api, timestamp, and payout, value
+    */
+    function getAllMinedAPIsinfo() public returns(string _api, uint _time, uint _value, uint _payout){
+
+        return(_api, _time, _value, _payout); 
+    }
+
     /**
     * @dev Retrieve payout from the data reads. It pays out the 5 miners.
     * @param _timestamp for which to retreive the payout from
@@ -228,18 +300,19 @@ contract Oracle{
     }
     /**
     * @dev Request to retreive value from oracle based on timestamp
+    * @param _api the api being requested for mining
     * @param _timestamp to retreive data/value from
     * @param _party who gets the tokens
+    * @param _requestFee the minimum required fee to request data to be mined
     */
     function requestData(string _api, uint _timestamp, address _party, uint _requestFee) public{
         ProofOfWorkToken _master = ProofOfWorkToken(master);
         require(_requestFee>= requestFee && _master.callTransfer(msg.sender,_requestFee));
         payoutPool[_api][_timestamp] = payoutPool[[_api][_timestamp] + _requestFee;
-        if(_party == address(0)){
-            _party = msg.sender;
-        }
-        request[_party][_api][_timestamp] = block.number;
-        emit DataRequested(msg.sender,_party,_api,_timestamp);
+        //request[msg.sender][_api][_timestamp] = block.number;  //Don't care about msg.sender or block number...
+        
+
+        emit DataRequested(msg.sender,_api,_timestamp, payoutPool[_api][_timestamp]);
         updateAPIonQ(_api,  _timestamp);
     }
 
@@ -251,15 +324,15 @@ contract Oracle{
     function retrieveData(string _api, uint _timestamp) public returns (uint) {
         require(isData(_timestamp));
         emit DataRetrieved(msg.sender,values[_api][_timestamp]);
-        return values[_timestamp];
+        return values[_api][_timestamp];
     }
 
     /**
     * @dev Gets the 5 miners who mined the value for the specified _timestamp 
-    * @param _timestamp is the timestampt to look up miners for
+    * @param _timestamp is the timestamp to look up miners for
     */
-    function getMinersByValue(uint _timestamp) public view returns(address[5]){
-        return minersbyvalue[_timestamp];
+    function getMinersByValue(string _api, uint _timestamp) public view returns(address[5]){
+        return minersbyvalue[_api][_timestamp];
     }
 
     /**
@@ -288,8 +361,8 @@ contract Oracle{
     * @param _timestamp to retreive data/value from
     * @return true if the value exists/is greater than zero
     */
-    function isData(uint _timestamp) public view returns(bool){
-        return (values[_timestamp] > 0);
+    function isData(string _api, uint _timestamp) public view returns(bool){
+        return (values[_api][_timestamp] > 0);
     }
 
     /**
@@ -310,7 +383,7 @@ contract Oracle{
             return (0,false);
         }
         else{
-            return (retrieveData(timeOfLastProof),true);
+            return (retrieveData(timeOfLastProof),true);//get last api????????????????
         }
     }
 
@@ -368,6 +441,6 @@ contract Oracle{
         //maybe add to an array[10];
         minersbyvalue[_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
         emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
-        emit NewValue(timeOfLastProof,apiOnQ,a[2].value);
+        emit NewValue(apiOnQ,timeOfLastProof,a[2].value);
     }
 }
