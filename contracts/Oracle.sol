@@ -24,38 +24,40 @@ contract Oracle{
 // no more    uint public miningMultiplier;//This times payout total is the mining reward (it goes down each year)    
 // hardcode this in    uint[5] public payoutStructure;//The structure of the payout (how much uncles vs winner recieve)
 
-    
-    //mapping(API => mapping(timestamp => 5miners)
-    mapping(string =>mapping(uint => address[5])) public minersbyvalue;//This maps the UNIX timestamp to the 5 miners who mined that value
-    //mapping (API => mapping(timestamp => payoutPool))
-    mapping(string => mapping(uint => uint)) public payoutPool;//This is the payout pool for a given API and timestamp.  
     mapping(bytes32 => mapping(address=>bool)) public miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
 
 //*********************SAVING requested Information***************************/
-    //mapping (sender/requester address =>mapping(API => mapping(timestamp => blockTimestamp))
-    //mapping(address => mapping(string => mapping(uint => uint))) public request;//You must request an api and timestamp.  The value will be the block timestamp requested. DO i care who is the original requester??
-    
-    //mapping(API => mapping(timestamp => blockTimestamp)
-    mapping(string => mapping(uint => uint))) public request;
-    string[] public apisRequested;
-    mapping(string => uint) public apiRequestedIndex;
-    //mapping api to timestamps requested for that api
-    mapping(string => uint[]) public requestedAPItimestamps; //maybe order decending
-
     //API on q info
     string public apiOnQ;
     uint public apiOnQPayout;
     uint public timeOnQ;
+
+    struct requestInfo {   
+        uint timestampRequested;//why do we need this?
+        uint timestampMined;//blocktimestamp
+        uint value;
+        uint payoutPool;
+        address sender;
+        string api;
+        address[5]) minersbyvalue;
+
+    }
+    //mapping requestID to requestInfo struct 
+    mapping(bytes32=>requestInfo) public requestsDetails;
+    bytes32[] public RequestsID;
+    mapping(bytes32 => uint) public RequestsIDIndex;
+
+    Details[5] first_five;
+    struct Details {
+        uint value;
+        address miner;
+        string api;
+        bool[10] validated;//i still need an array to validate 
+    }
+
 //*********************SAVING requested Information***************************/
 
-//*********************SAVING MINED Information***************************/
-//Save the data for the apis that have been mined. The
-//struct Api can be our timeseries for that api
-//and replace the mapping values--no values allows to retreive one value without looping
-// through an array...//
 
-string[] public ApisCollected;
-mappping(string => uint) public ApisCollectedIndex;
     //mapping (API => mapping(timestamp => value)) mapping for api to value mined
     //mapping(string => mapping(uint => uint) public values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
     uint[10] public valuesToValidate;//last 10 values array? how do limited arrays save data?
@@ -67,8 +69,6 @@ mapping(uint =>uint[10]) public minerValidation;
 /* [1,3,4,5,6,7,8,9,100]
 [t,t,t,t,t,t,t,t,F]
 index 10 what was the api and timestmap */
-
-
     //if validated array contains a false send to proof of stake voting
     //miners and anyone can stake their tokens to mine and 
     //vote on another contract. so Validated[any one false value] triggers
@@ -76,26 +76,6 @@ index 10 what was the api and timestmap */
     //and that has to be included on the miner challenge info
 
    
-    Details[5] first_five;
-    struct Details {
-        uint value;
-        address miner;
-        string api;
-        bool[10] validated;//i still need an array to validate 
-    }
-
-    struct requestInfo {
-        uint timestampMined;
-        uint timestampRequested;
-        uint value;
-        uint payoutPool;
-        string api;
-        mapping()
-
-    }
-
-    mapping(bytes32=>requestInfo) public idToDetails;
-
 
 
 
