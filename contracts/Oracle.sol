@@ -21,7 +21,6 @@ contract Oracle{
 
 // hardcode this in    uint public requestFee;// min fee in PoWO tokens to request a value to be mined. THe payoutPool must be greater than this minimum
 // hardcode this in    uint public payoutTotal;//Mining Reward in PoWo tokens given to all miners per value
-// no more    uint public miningMultiplier;//This times payout total is the mining reward (it goes down each year)    
 // hardcode this in    uint[5] public payoutStructure;//The structure of the payout (how much uncles vs winner recieve)
 
     mapping(bytes32 => mapping(address=>bool)) public miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
@@ -54,29 +53,19 @@ contract Oracle{
         string api;
         bool[10] validated;//i still need an array to validate 
     }
-
-//*********************SAVING requested Information***************************/
-
-
-    //mapping (API => mapping(timestamp => value)) mapping for api to value mined
-    //mapping(string => mapping(uint => uint) public values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
-    uint[10] public valuesToValidate;//last 10 values array? how do limited arrays save data?
-//*********************SAVING MINED Information***************************/
-
-//blocktimestamp to 10 values submitted for validation
-mapping(uint =>uint[10]) public minerValidation;
-//how to map the array here 
-/* [1,3,4,5,6,7,8,9,100]
-[t,t,t,t,t,t,t,t,F]
-index 10 what was the api and timestmap */
     //if validated array contains a false send to proof of stake voting
     //miners and anyone can stake their tokens to mine and 
     //vote on another contract. so Validated[any one false value] triggers
     //PoS. Hence, the index for the false value has to map to the api and timestamp
     //and that has to be included on the miner challenge info
 
-   
-
+   uint[10] public valuesToValidate;//last 10 values array? how do limited arrays save data?
+//blocktimestamp to 10 values submitted for validation
+mapping(uint =>uint[10]) public minerValidation;
+//how to map the array here 
+/* [1,3,4,5,6,7,8,9,100]
+[t,t,t,t,t,t,t,t,F]
+index 10 what was the api and timestmap */
 
 
     /*Events*/
@@ -84,7 +73,6 @@ index 10 what was the api and timestmap */
     event NewValue(string _api,uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
     event PoolPayout(address sender, string _api, uint _timestamp, address[5] _miners, uint[5] _values);//Emits when a pool is paid out, who is included and the amount(money collected from reads)
     event ValueAddedToPool(address sender,string _api, uint _value,uint _time);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
-    event MiningMultiplierChanged(uint _newMultiplier);//Each year, the mining reward decreases by 1/5 of the initial mining reward
     event DataRetrieved(address _sender, string _api, uint _value);//Emits when someone retireves data, this shows the msg.sender and the value retrieved
     event DataRequested(address _sender, string _api, uint _timestamp, uint _payoutPool);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
     event NonceSubmitted(address _miner, string _nonce, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
@@ -94,20 +82,20 @@ index 10 what was the api and timestmap */
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
     * @param _master is the master ProofOfWorkToken.address
-    * @param _requestFee is the fee for reading oracle information
+
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
     * @param _devShare for dev
     */
-    constructor(address _master,uint _requestFee,uint _timeTarget,uint[5] _payoutStructure, uint _devShare) public{
+    constructor(address _master,uint _timeTarget,uint[5] _payoutStructure, uint _devShare) public{
         require(_timeTarget > 60);
         timeOfLastProof = now - now  % _timeTarget;
         timeCreated = now;
         devShare = _devShare;
         master = _master;
-        requestFee = _requestFee;
+        requestFee = 1;
         timeTarget = _timeTarget;
-        miningMultiplier = 1e18;
+        
         payoutStructure = _payoutStructure;
         currentChallenge = keccak256(abi.encodePacked(timeOfLastProof,currentChallenge, blockhash(block.number - 1)));
         difficulty = 1;
@@ -261,23 +249,7 @@ index 10 what was the api and timestmap */
         emit PoolPayout(msg.sender,_api,_timestamp,minersbyvalue[_api][_timestamp], _payout);
     }
 
-    /**
-    * @dev Changes the base miner payout by decreasiung by 1/5 for 5 years.
-    * After 5 years all miners rewards come from data reads.
-    * @return _newTotal after the payout is decreased
-    */
-    function updatePayoutTotal() public returns(uint _newTotal){
-        uint yearsSince = (now - timeCreated) / (86400 * 365);
-        if(yearsSince >=5){
-            miningMultiplier = 0;
-            emit MiningMultiplierChanged(miningMultiplier);
-        }
-        else if (yearsSince >=1){
-            miningMultiplier = 1e18 * (5 - yearsSince)/5;
-            emit MiningMultiplierChanged(miningMultiplier);
-        }
-        return miningMultiplier;
-    }
+
     /**
     * @dev Request to retreive value from oracle based on timestamp
     * @param _api the api being requested for mining
@@ -286,8 +258,8 @@ index 10 what was the api and timestmap */
     * @param _requestFee the minimum required fee to request data to be mined
     */
     function requestData(string _api, uint _timestamp, address _party, uint _requestFee) public{
-        ProofOfWorkToken _master = ProofOfWorkToken(master);
-        require(_requestFee>= requestFee && _master.callTransfer(msg.sender,_requestFee));
+        OracleToken _master = OracleToken(master);///////////////Delete if oracle becomes part of oracleToken
+        require(_requestFee>= 1 && _master.callTransfer(msg.sender,_requestFee));
         payoutPool[_api][_timestamp] = payoutPool[[_api][_timestamp] + _requestFee;
         //request[msg.sender][_api][_timestamp] = block.number;  //Don't care about msg.sender or block number...
         
@@ -412,11 +384,11 @@ index 10 what was the api and timestmap */
             }
         }
         for (i = 0;i <5;i++){
-            _payout[i] = payoutStructure[i]*_payoutMultiplier*miningMultiplier/1e18;
+            _payout[i] = payoutStructure[i]*_payoutMultiplier;
         }
         ProofOfWorkToken _master = ProofOfWorkToken(master);
         _master.batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
-        _master.devTransfer(_master.owner(),(payoutTotal * devShare / 100 * miningMultiplier/1e18));//adjust the devshare to same as mining which goes to zero in 5 years
+        _master.devTransfer(_master.owner(),(payoutTotal * devShare / 100 ));
         values[apiOnQ][_time] = a[2].value;
         //maybe add to an array[10];
         minersbyvalue[_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
