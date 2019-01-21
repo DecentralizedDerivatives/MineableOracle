@@ -1,8 +1,6 @@
 pragma solidity ^0.4.24;
 
 import "./libraries/SafeMath.sol";
-import "./ProofOfWorkToken.sol";
-//Instead of valuePool, can we balances of this address?
 
 /**
  * @title Oracle 
@@ -18,53 +16,70 @@ contract Oracle{
     uint public timeOfLastProof; // time of last challenge solved
     uint public count;//Number of miners who have mined this value so far
     uint256 public difficulty; // Difficulty of current block
-
-// hardcode this in    uint public requestFee;// min fee in PoWO tokens to request a value to be mined. THe payoutPool must be greater than this minimum
-// hardcode this in    uint public payoutTotal;//Mining Reward in PoWo tokens given to all miners per value
-// hardcode this in    uint[5] public payoutStructure;//The structure of the payout (how much uncles vs winner recieve)
-
+    uint public timeTarget; //The time between blocks (mined Oracle values)
+    uint[5] public payoutStructure;//The structure of the payout (how much uncles vs winner recieve)
+    //does miners need to be mapped to the request id?
     mapping(bytes32 => mapping(address=>bool)) public miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
 
-//*********************SAVING requested Information***************************/
     //API on q info
     string public apiOnQ;
     uint public apiOnQPayout;
     uint public timeOnQ;
+//*********************SAVING requested Information***************************/
+
+    //mapping api to requestID
+    mapping(string => bytes32) public apiRequest;
+    string[] public apiRequests;
 
     struct requestInfo {   
-        uint timestampRequested;//why do we need this?
         uint timestampMined;//blocktimestamp
         uint value;
-        uint payoutPool;
+        uint payoutPool;//Mining Reward in PoWo tokens given to all miners per value + tips for this specific request
         address sender;
-        string api;
-        address[5]) minersbyvalue;
-
     }
-    //mapping requestID to requestInfo struct 
-    mapping(bytes32=>requestInfo) public requestsDetails;
-    bytes32[] public RequestsID;
-    mapping(bytes32 => uint) public RequestsIDIndex;
+    //mapping requestID to timestamp to requestInfo struct(why was the timestamp mapped to the block number on the original contract?)
+    mapping(bytes32 => mapping(uint=>requestInfo)) public requestDetails; //timestamp requested in unix time will be that which corresponds to the block timestamp requested
+    bytes32[] public requestsID;//used to iterate through requestDetails along with timestampRequested
+    mapping(bytes32 => uint) public requestsIDIndex;
+    uint[] public timestampRequested;//used to iterate through requestsDetails
+
+ 
+    //id to timestamp to block.number = request why block number?
+    //mapping(bytes32 => mapping(uint => uint)) public request;//You must request a timestamp. The value will be the block timestamp requested
+//would something like this work:
+string[] public standardAPIs;
+mapping(bytes32 => standardAPIInfo) public standardAPI;
+    struct standardAPIInfo {
+        uint[] timestamp;
+        uint[] values;
+        mapping(uint => uint) timestampIndex;//timestamp to index
+    }
+
+
+//*********************SAVING requested Information***************************/    
 
     Details[5] first_five;
     struct Details {
         uint value;
         address miner;
-        string api;
-        bool[10] validated;//i still need an array to validate 
+        bool[10] validated;//i still need an array to validate, if False is received(use index to exclude or remove data)
     }
+    mapping(bytes32 => address[5]) minersbyvalue;//This maps the requestID to the 5 miners who mined that value
     //if validated array contains a false send to proof of stake voting
     //miners and anyone can stake their tokens to mine and 
     //vote on another contract. so Validated[any one false value] triggers
     //PoS. Hence, the index for the false value has to map to the api and timestamp
     //and that has to be included on the miner challenge info
 
-   uint[10] public valuesToValidate;//last 10 values array? how do limited arrays save data?
-//blocktimestamp to 10 values submitted for validation
-mapping(uint =>uint[10]) public minerValidation;
+uint[10] public valuesToValidate;//last 10 values array? how do limited arrays save data? 
+//how do I fill this array? (start= requestIDIndex.count-10?)
+//requestDetails[requestsID[requestIDIndex[count-10]]requestInfo.value, requestDetails[requestsID[requestIDIndex[count-9]]requestInfo.value...?
+//requestID to 10 values array sent for validation
+mapping(bytes32 =>valuesToValidate) public sentForValidation;
 //how to map the array here 
-/* [1,3,4,5,6,7,8,9,100]
-[t,t,t,t,t,t,t,t,F]
+/* [1,3,4,5,6,7,8,9,100]--array with last 10 values
+/*index of the array mapped to the requestID(bytes32)?
+[t,t,t,t,t,t,t,t,F]--array received from miners
 index 10 what was the api and timestmap */
 
 
@@ -74,7 +89,7 @@ index 10 what was the api and timestmap */
     event PoolPayout(address sender, string _api, uint _timestamp, address[5] _miners, uint[5] _values);//Emits when a pool is paid out, who is included and the amount(money collected from reads)
     event ValueAddedToPool(address sender,string _api, uint _value,uint _time);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
     event DataRetrieved(address _sender, string _api, uint _value);//Emits when someone retireves data, this shows the msg.sender and the value retrieved
-    event DataRequested(address _sender, string _api, uint _timestamp, uint _payoutPool);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
+    event DataRequested(address _sender, string _api, bytes32 _requestID, uint _timestamp, uint _payoutPool);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
     event NonceSubmitted(address _miner, string _nonce, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
     event NewAPIonQinfo(string _api, uint _time, uint _payoutPool); //Emits when a new API is moved to the top of the mining queue
     
@@ -82,7 +97,6 @@ index 10 what was the api and timestmap */
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
     * @param _master is the master ProofOfWorkToken.address
-
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
     * @param _devShare for dev
@@ -92,10 +106,7 @@ index 10 what was the api and timestmap */
         timeOfLastProof = now - now  % _timeTarget;
         timeCreated = now;
         devShare = _devShare;
-        master = _master;
-        requestFee = 1;
-        timeTarget = _timeTarget;
-        
+        timeTarget = _timeTarget;     
         payoutStructure = _payoutStructure;
         currentChallenge = keccak256(abi.encodePacked(timeOfLastProof,currentChallenge, blockhash(block.number - 1)));
         difficulty = 1;
@@ -172,8 +183,7 @@ index 10 what was the api and timestmap */
     * by adding a _tip to insentivize the miners to submit a value for the time stamp. 
     */
     function addToValuePool(string _api, uint _tip, uint _timestamp) public {
-        ProofOfWorkToken _master = ProofOfWorkToken(master);
-        require(_master.callTransfer(msg.sender,_tip));
+        require(callTransfer(msg.sender,_tip));
         uint _time;
         if(_timestamp == 0){
             _time = timeOfLastProof + timeTarget;
@@ -181,6 +191,7 @@ index 10 what was the api and timestmap */
         else{
             _time = _timestamp - (_timestamp % timeTarget);
         }
+        requestInfo storage request = requestDetails[]
         payoutPool[_api][_time] = payoutPool[_api][_time].add(_tip);
         if (payoutPool[_api][_time] > apiMiningQPayout) {
             miningAPI[api]
@@ -216,26 +227,6 @@ index 10 what was the api and timestmap */
         return(apiOnQ, timeOnQ, apiOnQPayout); 
     }
 
-///Do I want to loop through an array 
-//or set up an event for requested and mined
-//capture the events in two tables for the front end?
-    /**
-    @dev Getter function for the information of all the API's on queue for mining 
-    @return api, timestamp, and payout
-    */
-    function getAllrequestedAPIsinfo() public returns(string, uint, uint){
-
-        return(apiOnQ, timeOnQ, apiOnQPayout); 
-    }
-
-    /**
-    @dev Getter function for mined api and values
-    @return api, timestamp, and payout, value
-    */
-    function getAllMinedAPIsinfo() public returns(string _api, uint _time, uint _value, uint _payout){
-
-        return(_api, _time, _value, _payout); 
-    }
 
     /**
     * @dev Retrieve payout from the data reads. It pays out the 5 miners.
@@ -245,7 +236,7 @@ index 10 what was the api and timestmap */
         uint _payoutMultiplier = payoutPool[_api][_timestamp] / payoutTotal;
         require (_payoutMultiplier > 0 && values[_api][_timestamp] > 0);
         uint[5] memory _payout = [payoutStructure[4]*_payoutMultiplier,payoutStructure[3]*_payoutMultiplier,payoutStructure[2]*_payoutMultiplier,payoutStructure[1]*_payoutMultiplier,payoutStructure[0]*_payoutMultiplier];
-        ProofOfWorkToken(master).batchTransfer(minersbyvalue[_api][_timestamp], _payout,false);
+        batchTransfer(minersbyvalue[_api][_timestamp], _payout,false);
         emit PoolPayout(msg.sender,_api,_timestamp,minersbyvalue[_api][_timestamp], _payout);
     }
 
@@ -255,17 +246,20 @@ index 10 what was the api and timestmap */
     * @param _api the api being requested for mining
     * @param _timestamp to retreive data/value from
     * @param _party who gets the tokens
-    * @param _requestFee the minimum required fee to request data to be mined
+    * @param _requestGas the minimum required fee to request data to be mined
     */
-    function requestData(string _api, uint _timestamp, address _party, uint _requestFee) public{
-        OracleToken _master = OracleToken(master);///////////////Delete if oracle becomes part of oracleToken
-        require(_requestFee>= 1 && _master.callTransfer(msg.sender,_requestFee));
-        payoutPool[_api][_timestamp] = payoutPool[[_api][_timestamp] + _requestFee;
+    function requestData(string _api, uint _timestamp, address _party, uint _requestGas) public{
+        require(_requestGas>= 1 && callTransfer(msg.sender,_requestGas));
+        uint _requestID=apiRequests.length;
+        apiRequest[_api]=_requestID;
+        apiRequests.push(_api);
+        requestInfo storage request = requestsDetails[_requestID][_timestamp];
+        request.payoutPool = request.payoutPool + _requestGas;
+        //payoutPool[_api][_timestamp] = payoutPool[[_api][_timestamp] + _requestGas;
         //request[msg.sender][_api][_timestamp] = block.number;  //Don't care about msg.sender or block number...
         
-
-        emit DataRequested(msg.sender,_api,_timestamp, payoutPool[_api][_timestamp]);
-        updateAPIonQ(_api,  _timestamp);
+        emit DataRequested(msg.sender,_api,_requestID,_timestamp, request.payoutPool);
+        updateAPIonQ(_requestID,  _timestamp);
     }
 
     /**
@@ -386,9 +380,9 @@ index 10 what was the api and timestmap */
         for (i = 0;i <5;i++){
             _payout[i] = payoutStructure[i]*_payoutMultiplier;
         }
-        ProofOfWorkToken _master = ProofOfWorkToken(master);
-        _master.batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
-        _master.devTransfer(_master.owner(),(payoutTotal * devShare / 100 ));
+        
+        batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
+        devTransfer(owner(),(payoutTotal * devShare / 100 ));
         values[apiOnQ][_time] = a[2].value;
         //maybe add to an array[10];
         minersbyvalue[_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];

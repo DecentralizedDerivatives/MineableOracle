@@ -3,8 +3,7 @@ pragma solidity ^0.4.24;
 import "./libraries/SafeMath.sol";
 /**
 * @title Token
-* This contracts contains the ERC20 token functions that support
-* OracleToken.sol.
+* This contracts contains the ERC20 token functions
 */
 contract Token  {
 
@@ -30,6 +29,7 @@ contract Token  {
         balances[address(this)]= (2**256) - 1 - total_supply;
     }
     
+
     /**
     * @dev Allows for a transfer of tokens to _to
     * @param _to The address to send tokens to
@@ -107,4 +107,3 @@ contract Token  {
         return total_supply;
     }
 }
-

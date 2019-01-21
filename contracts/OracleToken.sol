@@ -9,7 +9,7 @@ import "./Token.sol";
 * and miners are paid from
 */
 
-contract OracleToken is Token {
+contract OracleToken is Token, Oracle {
 
     using SafeMath for uint256;
 
