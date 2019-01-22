@@ -19,61 +19,56 @@ contract Oracle{
     uint public timeTarget; //The time between blocks (mined Oracle values)
     uint[5] public payoutStructure;//The structure of the payout (how much uncles vs winner recieve)
     //does miners need to be mapped to the request id?
-    mapping(bytes32 => mapping(address=>bool)) public miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
+    mapping(bytes32 => mapping(address=>bool)) miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
 
     //API on q info
     string public apiOnQ;
     uint public apiOnQPayout;
     uint public timeOnQ;
-//*********************SAVING requested Information***************************/
 
-    //mapping api to requestID
-    mapping(string => bytes32) public apiRequest;
-    string[] public apiRequests;
+//*********************SAVING Unique requests Information***************************/
+    //api to id- user sends in string api and the api gets an id
+    mapping(string => bytes32) as apiId;// api string gets an id = to count of requests array so apiID[string] = requestsID.length
+    //id to string api
+    mapping(bytes32 => string) as api;//get the api string by looping through the bytes32(standardAPIIds) array so api[1] = 'btc/usd'
+    bytes32[] public apiIds;
+    mapping(bytes32 => uint) public apiIdsIndex;
 
-    struct requestInfo {   
-        uint timestampMined;//blocktimestamp
-        uint value;
-        uint payoutPool;//Mining Reward in PoWo tokens given to all miners per value + tips for this specific request
-        address sender;
-    }
-    //mapping requestID to timestamp to requestInfo struct(why was the timestamp mapped to the block number on the original contract?)
-    mapping(bytes32 => mapping(uint=>requestInfo)) public requestDetails; //timestamp requested in unix time will be that which corresponds to the block timestamp requested
-    bytes32[] public requestsID;//used to iterate through requestDetails along with timestampRequested
-    mapping(bytes32 => uint) public requestsIDIndex;
-    uint[] public timestampRequested;//used to iterate through requestsDetails
 
- 
-    //id to timestamp to block.number = request why block number?
-    //mapping(bytes32 => mapping(uint => uint)) public request;//You must request a timestamp. The value will be the block timestamp requested
-//would something like this work:
-string[] public standardAPIs;
-mapping(bytes32 => standardAPIInfo) public standardAPI;
-    struct standardAPIInfo {
+    //********** save each API's info in it's own struct as a timeseries*************/
+    //*************payout pool only at API level*************************************/
+    //**************will not work with sorting for median************************/
+    //apiId to info for the api
+/*    mapping(bytes32 => APIReqInfo) public APItimeseries;
+    struct APIReqInfo {
         uint[] timestamp;
         uint[] values;
         mapping(uint => uint) timestampIndex;//timestamp to index
     }
-
-
-//*********************SAVING requested Information***************************/    
-
-    Details[5] first_five;
-    struct Details {
+    //apiID to add to payoutpool
+    mapping(bytes32 => uint) public APIpayoutPool;
+    mapping(address => bytes32) public sender;
+*/
+    //mapping apiId(one) to requestID(many)
+    mapping(bytes32 => bytes32) public request; 
+    bytes32[] public requestsID;//use requestsID length to loop through apiRequest and get string
+    mapping(bytes32 => uint) public requestsIDIndex; 
+    mapping(bytes32 => uint) public requestTimestamp;
+    uint[] public timestampRequested;//used to iterate through requestsDetails
+    mapping(bytes32 => uint) public timestampReqIndex;
+    //mapping requestID to timestamp to requestInfo struct(why was the timestamp mapped to the block number on the original contract?)
+    mapping(bytes32 => RequestInfo)) public requestDetails; //timestamp requested in unix time will be that which corresponds to the block timestamp requested
+    
+    struct RequestInfo {   
+        uint payoutPool;//Mining Reward in PoWo tokens given to all miners per value + tips for this specific request
+        uint timestampMined;//blocktimestamp
         uint value;
-        address miner;
-        bool[10] validated;//i still need an array to validate, if False is received(use index to exclude or remove data)
+        address sender;
     }
-    mapping(bytes32 => address[5]) minersbyvalue;//This maps the requestID to the 5 miners who mined that value
-    //if validated array contains a false send to proof of stake voting
-    //miners and anyone can stake their tokens to mine and 
-    //vote on another contract. so Validated[any one false value] triggers
-    //PoS. Hence, the index for the false value has to map to the api and timestamp
-    //and that has to be included on the miner challenge info
-
+//*********************SAVING requested Information***************************/    
 uint[10] public valuesToValidate;//last 10 values array? how do limited arrays save data? 
-//how do I fill this array? (start= requestIDIndex.count-10?)
 //requestDetails[requestsID[requestIDIndex[count-10]]requestInfo.value, requestDetails[requestsID[requestIDIndex[count-9]]requestInfo.value...?
+
 //requestID to 10 values array sent for validation
 mapping(bytes32 =>valuesToValidate) public sentForValidation;
 //how to map the array here 
@@ -81,6 +76,23 @@ mapping(bytes32 =>valuesToValidate) public sentForValidation;
 /*index of the array mapped to the requestID(bytes32)?
 [t,t,t,t,t,t,t,t,F]--array received from miners
 index 10 what was the api and timestmap */
+    Details[5] first_five;
+    struct Details {
+        uint value;
+        address miner;
+        bool[10] validated;//i still need an array to validate, if False is received(use index to exclude or remove data)
+    }
+    //requestID to miners
+    mapping(bytes32 => address[5]) minersbyvalue;//This maps the requestID to the 5 miners who mined that value
+    //apiID=>timestampIndex=> minersby value????????????
+    mapping(bytes32 => mapping(uint=> address[5])) minersbyvalue;
+    //if validated array contains a false send to proof of stake voting
+    //miners and anyone can stake their tokens to mine and 
+    //vote on another contract. so Validated[any one false value] triggers
+    //PoS. Hence, the index for the false value has to map to the api and timestamp
+    //and that has to be included on the miner challenge info
+
+
 
 
     /*Events*/
@@ -191,6 +203,7 @@ index 10 what was the api and timestmap */
         else{
             _time = _timestamp - (_timestamp % timeTarget);
         }
+        requestInfo memory requestDetails[requestID];
         requestInfo storage request = requestDetails[]
         payoutPool[_api][_time] = payoutPool[_api][_time].add(_tip);
         if (payoutPool[_api][_time] > apiMiningQPayout) {

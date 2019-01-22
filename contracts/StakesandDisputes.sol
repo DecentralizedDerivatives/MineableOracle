@@ -64,6 +64,7 @@ contract StakesandDisputes is StakeToken {
     event ChangeDisputeFee(uint newDisputelFee);
     event NewStake(address _sender, uint _value);
     event StakeWithdrawn(address _sender, uint _value);
+    event StakeExtended(address _sender, uint _startdate, uint _stakeAmt)
   
     /*Modifiers*/
     modifier onlyOwner() {
@@ -133,7 +134,7 @@ contract StakesandDisputes is StakeToken {
         return disputeId;
         emit NewDispute();
     }
-
+/*******************Need to send _apiRequestID and timestamp from Oracle.POW***********/
   /**
     * @dev Allows token holders to vote
     * @param _disputelId is the dispute id
