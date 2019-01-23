@@ -6,6 +6,8 @@ import "./libraries/SafeMath.sol";
 * @title Oracle token
 * This where the oracle tokens are minted from  
 * and miners are paid from
+* TODO: get balance from oracletoken for voting
+* add function to report false value and put up for voting on validity
 */
 
 contract StakesandDisputes is StakeToken {
@@ -35,7 +37,7 @@ contract StakesandDisputes is StakeToken {
     struct Dispute {
         address reportedMiner; //miner who alledgedly submitted the 'bad value' will get disputeFee if dispute vote fails
         address reportingMiner;//miner reporting the 'bad value'-pay disputeFee will get reportedMiner's stake if dispute vote passes
-        bytes32 apiRequestID;
+        bytes32 apiId;
         uint timestamp;
         uint value; //the value being disputed
         uint minExecutionDate; 
@@ -112,17 +114,17 @@ contract StakesandDisputes is StakeToken {
         stakes.startDate = now - (now % 86400);
         emit StakeExtended(msg.sender, stakes.startDate, stakes.stakeAmt);
     }
-/*******************Need to send _apiRequestID and timestamp from Oracle.POW***********/
+/*******************Need to send _apiId and timestamp from Oracle.POW***********/
     /**
     * @dev Helps initialize a dispute by assigning it a disputeId 
     * when a miner returns a false on the validate array(in oracle.ProofOfWork) it sends the 
     * invalidated value information to POS voting
-    * @param _apiRequestID correspond to the POW the miner is submtting
+    * @param _apiId correspond to the POW the miner is submtting
     * @param _timestamp is the timestamp for the value being disputed???????should i make this the index in the validate[]???
     * @return the dispute Id
     */
-    function initDispute(bytes32 _apiRequestID, uint _timestamp) external returns(uint){
-        require(transfer(address(this), disputeFee));
+    function initDispute(uint _apiId, uint _timestamp) external returns(uint){
+        require(transfer(address(this), disputeFee));//anyone owning tokens can report bad values, would this transfer from OracleToken to Stake token?
         uint disputeId = disputesIds.length + 1;
         Dispute storage disp = disputes[disputeId];//how long can my mapping be? why is timestamp blue?
         disputesIds.push(disputeId);
@@ -134,7 +136,7 @@ contract StakesandDisputes is StakeToken {
         return disputeId;
         emit NewDispute();
     }
-/*******************Need to send _apiRequestID and timestamp from Oracle.POW***********/
+/*******************Need to send _apiId and timestamp from Oracle.POW***********/
   /**
     * @dev Allows token holders to vote
     * @param _disputelId is the dispute id
@@ -211,7 +213,7 @@ contract StakesandDisputes is StakeToken {
     *@param _propId to pull propType and prop passed
     */
     function getDisputeInfo(uint _disputeId) view public returns(bytes32, uint, uint,bool) {
-        return(Disputes[_disputeId].apiRequestID, Disputes[_disputeId].timestamp, Disputes[_disputeId].value, disputes[_disputeId].disputeVotePassed);
+        return(Disputes[_disputeId].apiId, Disputes[_disputeId].timestamp, Disputes[_disputeId].value, disputes[_disputeId].disputeVotePassed);
     }
 
     /**
