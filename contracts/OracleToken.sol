@@ -2,6 +2,7 @@ pragma solidity ^0.4.24;
 
 import "./libraries/SafeMath.sol";
 import "./Token.sol";
+import "./Oracle.sol";
 import "./StakesandDisputes.sol";
 
 /**
@@ -10,7 +11,7 @@ import "./StakesandDisputes.sol";
 * and miners are paid from
 */
 
-contract OracleToken is Token, Oracle {
+contract OracleToken is Token, Oracle, StakesandDisputes {
 
     using SafeMath for uint256;
 
