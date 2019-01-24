@@ -147,18 +147,23 @@ contract StakesandDisputes {
         return disputeId;
         emit NewDispute();
     }
-/*******************Need to send _apiId and timestamp from Oracle.POW***********/
-  /**
+
+    /**
     * @dev Allows token holders to vote
     * @param _disputelId is the dispute id
     * @param _supportsDispute is the vote (true=the dispute has basis false = vote against dispute)
     */
     function vote(uint _disputeId, bool _supportsDispute) external returns (uint voteId) {
         Dispute storage disp = disputes[disputeId];
-        require(disp.voted[msg.sender] != true && balanceOfAt(msg.sender,disp.blockNumber)>0);
+        require(disp.voted[msg.sender] != true && balanceOf(msg.sender)>0);
+        /*******freeze voters********************************/
+        StakeInfo memory stakes = staker[msg.sender];
+        stakes.current_state = 1;
+        stakes.stakeAmt= balanceOf(msg.sender);
+        /*******freeze voters********************************/
         disp.voted[msg.sender] = true;
         disp.numberOfVotes += 1;
-        uint voteWeight = balanceOfAt(msg.sender,disp.blockNumber);
+        uint voteWeight = balanceOf(msg.sender);
         disp.quorum +=  voteWeight;
         if (_supportsDispute) {
             disp.tally = disp.tally + int(voteWeight);
@@ -168,7 +173,16 @@ contract StakesandDisputes {
         emit Voted(_distputeId,_supportsDispute,msg.sender);
         return voteId;
     }
-    
+
+    function voteUnfreeze(uint _disputeId) external {
+        Dispute storage disp = disputes[disputeId];
+        require(disp.voted[msg.sender] == true && disp.executed == true);
+        /*******Un-freeze voters********************************/
+        StakeInfo memory stakes = staker[msg.sender];
+        stakes.current_state = 2;
+        stakes.stakeAmt= 0;
+        /*******freeze voters********************************/
+    } 
     /**
     * @dev tallies the votes and executes if minimum quorum is met or exceeded.
     * @param _disputeId is the dispute id
@@ -190,6 +204,7 @@ contract StakesandDisputes {
             emit StakeLost(reportedMiner, stakes.stakeAmt);
             stakes.stakeAmt = 0;
             disp.disputeVotePassed = true;
+            values[disp.apiId][disp.timestamp] = 0;
         } 
         else {
             disp.executed = true;
