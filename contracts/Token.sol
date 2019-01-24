@@ -66,7 +66,7 @@ contract Token  {
     function doTransfer(address _from, address _to, uint _amount) internal {
         require(_amount > 0 && _to != 0);
         _stakeAmt = getStakeAmt(_from);
-        require(balances[_from]-_stakeAmt >= _amount);//lock the stake amt so it can't be moved until unstaked?
+        require(balances[_from]-_stakeAmt >= _amount);//lock the stake amt so it can't be moved until unstaked
         balances[_from] = balances[_from].sub(_amount);
         balances[_to] = balances[_to].add(_amount);
         emit Transfer(_from, _to, _amount);
@@ -80,7 +80,7 @@ contract Token  {
     */
     function approve(address _spender, uint _amount) public returns (bool) {
         _stakeAmt = getStakeAmt(_from);
-        require(balances[msg.sender]-_stakeAmt >= _amount);//lock the stake amt so it can't be moved until unstaked?
+        require(balances[msg.sender]-_stakeAmt >= _amount);//lock the stake amt so it can't be moved until unstaked
         allowed[msg.sender][_spender] = _amount;
         emit Approval(msg.sender, _spender, _amount);
         return true;

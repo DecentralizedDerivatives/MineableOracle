@@ -18,7 +18,8 @@ contract StakesandDisputes {
     enum StakeState {
         notStaked,
         started,
-        ended
+        ended,
+        onDispute
     }
     uint public disputeFee;
     uint public minimumQuorum;
@@ -28,7 +29,6 @@ contract StakesandDisputes {
     uint[] public disputesIds;
     mapping(uint => Dispute) public disputes;//disputeId=> Disputes
     mapping (uint => uint) public disputesIdsIndex;
-    address public oracleToken;//oracle token address
     
     struct Dispute {
         address reportedMiner; //miner who alledgedly submitted the 'bad value' will get disputeFee if dispute vote fails
@@ -75,13 +75,12 @@ contract StakesandDisputes {
     }
 
     /*Functions*/
-    constructor(address _oracleToken, uint _disputeFee, uint _minimumQuorum, uint _voteDuration, uint minimumStake, uint _minimuStatkeTime) public{
+    constructor(uint _disputeFee, uint _minimumQuorum, uint _voteDuration, uint minimumStake, uint _minimuStatkeTime) public{
        disputeFee = _disputeFee;
        minimumQuorum = _minimumQuorum;
        voteDuration = _voteDuration;
        minimumStake = _minimumStake;
        minimumStakeTime = _minimumStakeTime;
-       oracleToken = _oracleToken;
     }
 
     function depositStake(uint _deposit) public {
@@ -116,7 +115,7 @@ contract StakesandDisputes {
         StakeInfo memory stakes = staker[_sender];
         return stakes.stakeAmt;
     }
-/*******************Need to send _apiId and timestamp from Oracle.POW***********/
+
     /**
     * @dev Helps initialize a dispute by assigning it a disputeId 
     * when a miner returns a false on the validate array(in oracle.ProofOfWork) it sends the 
@@ -126,23 +125,25 @@ contract StakesandDisputes {
     * @return the dispute Id
     */
     function initDispute(uint _apiId, uint _timestamp) external returns(uint){
-        OracleToken _oracle = OracleToken(oracleToken);
         //get blocknumber for this value and check blocknumber - value.blocknumber < x number of blocks 10 or 144?
-        _minedblock = _oracle.getMinedBlockNum(uint _apiId, uint _timestamp);
-        require(block.number- _minedblock >144 && _oracle.isData(_apiId, _timestamp) && _oracle.transfer(address(this), disputeFee));//anyone owning tokens can report bad values, would this transfer from OracleToken to Stake token?
+        _minedblock = getMinedBlockNum(uint _apiId, uint _timestamp);
+        require(block.number- _minedblock >144 && isData(_apiId, _timestamp) && transfer(address(this), disputeFee));//anyone owning tokens can report bad values, would this transfer from OracleToken to Stake token?
         uint disputeId = disputesIds.length + 1;
+        _reportedMiner = getMedianMinerbyApiIdTimestamp(_apiId, _timestamp);
         Dispute storage disp = disputes[disputeId];//how long can my mapping be? why is timestamp blue?
         disputesIds.push(disputeId);
-        disp.reportedMiner = _oracle.getMedianMinerbyApiIdTimestamp(_apiId, _timestamp); 
+        disp.reportedMiner = _reportedMiner; 
         disp.reportingParty = msg.sender;
         disp.apiId = _apiId;
         disp.timestamp = _timestamp;
-        disp.value = _oracle.retrieveData(_apiId,_timestamp);  
+        disp.value = retrieveData(_apiId,_timestamp);  
         disp.minExecutionDate = now + voteDuration * 1 days; 
         disp.numberOfVotes = 0;
         disp.executed = false;
         disp.disputeVotePassed = false;
         disp.blockNumber = block.number;
+        StakeInfo memory stakes = staker[_reportedMiner];
+        stakes.current_state = 3;
         return disputeId;
         emit NewDispute();
     }
@@ -178,7 +179,6 @@ contract StakesandDisputes {
         require(now > disp.minExecutionDate && !disp.executed); //Uncomment for production-commented out for testing 
         uint minQuorum = minimumQuorum;
          require(disp.quorum >= minQuorum); 
-         OracleToken _oracle = OracleToken(oracleToken);
           if (disp.tally > 0 ) {
              //if vote is >0 (meaning the value reported was a "bad value"), tranfer the stake value to 
              //the first miner that reported the inconsistency.      
@@ -186,7 +186,7 @@ contract StakesandDisputes {
             stakes.current_state = 2;
             balanceOf[reportedMiner] -= stakes.stakeAmt;
             total_supply = total_supply.sub(stakes.stakeAmt);
-            _oracle.transfer(reportingParty, stakes.stakeAmt);
+            transfer(reportingParty, stakes.stakeAmt);
             emit StakeLost(reportedMiner, stakes.stakeAmt);
             stakes.stakeAmt = 0;
             disp.disputeVotePassed = true;
@@ -194,7 +194,7 @@ contract StakesandDisputes {
         else {
             disp.executed = true;
             disp.disputeVotePassed = false;
-            _oracle.transfer(reportedMiner, disputeFee);
+            transfer(reportedMiner, disputeFee);
             emit DisputeLost(reportingParty, disputeFee);
         }
         emit DisputeVoteTallied(_disputeId,prop.tally, disp.quorum, disp.disputeVotePassed); 
@@ -248,14 +248,6 @@ contract StakesandDisputes {
     */
     function getDisputesIds() view public returns (uint[]){
         return disputesIds;
-    }
-
-    /**
-    *@dev Allows the owner to set a new owner address
-    *@param _new_owner the new owner address
-    */
-    function setOwner(address _new_owner) public onlyOwner() { 
-        owner = _new_owner; 
     }
 
 
