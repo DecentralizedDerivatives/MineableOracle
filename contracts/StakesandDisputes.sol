@@ -1,6 +1,7 @@
 pragma solidity ^0.4.24;
 
 import "./libraries/SafeMath.sol";
+import "./OracleToken.sol";
 
 /**
 * @title Oracle token
@@ -32,6 +33,7 @@ contract StakesandDisputes is StakeToken {
     uint[] public disputesIds;
     mapping(uint => Dispute) public disputes;//disputeId=> Disputes
     mapping (uint => uint) public disputesIdsIndex;
+    address public oracleToken;//oracle token address
 
     
     struct Dispute {
@@ -75,16 +77,18 @@ contract StakesandDisputes is StakeToken {
     }
 
     /*Functions*/
-    constructor(uint _disputeFee, uint _minimumQuorum, uint _voteDuration, uint minimumStake, uint _minimuStatkeTime) public{
+    constructor(address _oracleToken, uint _disputeFee, uint _minimumQuorum, uint _voteDuration, uint minimumStake, uint _minimuStatkeTime) public{
        disputeFee = _disputeFee;
        minimumQuorum = _minimumQuorum;
        voteDuration = _voteDuration;
        minimumStake = _minimumStake;
        minimumStakeTime = _minimumStakeTime;
+       oracleToken = _oracleToken;
     }
 
     function depositStake(uint _deposit) public payable {
-        require(_deposit >= minimumStake && transfer(address(this), _deposit));
+        OracleToken _oracle = OracleToken(oracleToken);
+        require(_deposit >= minimumStake && _oracle.stakeTransfer(msg.sender, address(this), _deposit));
         total_supply = total_supply.add(_deposit);
         stakers.push(msg.sender);
         stakersIndex[msg.sender] = stakers.length;
@@ -92,17 +96,19 @@ contract StakesandDisputes is StakeToken {
         stakes.current_state = 1;
         stakes.startDate = now - (now % 86400);
         stakes.stakeAmt= _deposit;
+        tranfer(address(this), _deposit);
         emit NewStake(msg.sender, msg.value);
     }
 
     function withdrawStake() public {
+        OracleToken _oracle = OracleToken(oracleToken);
         StakeInfo memory stakes = staker[msg.sender];
         _today = now - (now % 86400);
         require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state = 1 && balanceOf[msg.sender] >= stakes.stakeAmt);
         stakes.current_state = 2;
         balanceOf[msg.sender] -= stakes.stakeAmt;
         total_supply = total_supply.sub(stakes.stakeAmt);
-        msg.sender.transfer(stakes.stakeAmt);
+        oracle.transfer(msg.sender, stakes.stakeAmt);
         emit StakeWithdrawn(msg.sender, stakes.stakeAmt);
         stakes.stakeAmt = 0;
     }
@@ -124,7 +130,8 @@ contract StakesandDisputes is StakeToken {
     * @return the dispute Id
     */
     function initDispute(uint _apiId, uint _timestamp) external returns(uint){
-        require(transfer(address(this), disputeFee));//anyone owning tokens can report bad values, would this transfer from OracleToken to Stake token?
+        OracleToken _oracle = OracleToken(oracleToken);
+        require(_oracle.transfer(address(this), disputeFee));//anyone owning tokens can report bad values, would this transfer from OracleToken to Stake token?
         uint disputeId = disputesIds.length + 1;
         Dispute storage disp = disputes[disputeId];//how long can my mapping be? why is timestamp blue?
         disputesIds.push(disputeId);

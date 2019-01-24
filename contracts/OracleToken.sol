@@ -2,6 +2,7 @@ pragma solidity ^0.4.24;
 
 import "./libraries/SafeMath.sol";
 import "./Token.sol";
+import "./StakesandDisputes.sol";
 
 /**
 * @title Oracle token
@@ -18,7 +19,7 @@ contract OracleToken is Token, Oracle {
     string public constant symbol = "POWO";
     uint8 public constant decimals = 18;
     uint public devShare;
-    address public oracle;
+    address public stakes;
     address public owner;
 
     /*Events*/
@@ -31,9 +32,9 @@ contract OracleToken is Token, Oracle {
     }
 
     /*Functions*/
-    constructor(address _oracle, uint _devShare) public{
+    constructor(address _stakes, uint _devShare) public{
         owner = msg.sender;
-        oracle = _oracle;
+        stakes = _stakes;
         devShare = _devShare;
       
     }
@@ -49,7 +50,7 @@ contract OracleToken is Token, Oracle {
     * @param _isMine is true if the timestamp has been mined and miners have been paid out
     */
     function batchTransfer(address[5] _miners, uint256[5] _amount, bool _isMine) external{
-        require(oracle == msg.sender);
+        require(address(this) == msg.sender);
         uint _paid;
         for (uint i = 0; i < _miners.length; i++) {
             if (balanceOf(address(this)) >= _amount[i]
@@ -57,7 +58,6 @@ contract OracleToken is Token, Oracle {
             && balanceOf(_miners[i]).add(_amount[i]) > balanceOf(_miners[i])) {
                 doTransfer(address(this),_miners[i],_amount[i]);
                 _paid += _amount[i];
-
             }
         }
         if(_isMine){
@@ -73,8 +73,20 @@ contract OracleToken is Token, Oracle {
     * @return true after transfer 
     */
     function callTransfer(address _from,uint _amount) public returns(bool){
-        require(oracle == msg.sender);
+        require(address(this) == msg.sender);
         doTransfer(_from,address(this), _amount);
+        return true;
+    }
+
+    /**
+    * @dev Allows the stakesandDisputes.deposit to transfer the stake 
+    * @param _from address to transfer from
+    * @param _amount to transfer
+    * @return true after transfer 
+    */
+    function stakeTransfer(address _from,uint _amount) public returns(bool){
+        require(stakes == msg.sender);
+        doTransfer(_from,stakes, _amount);
         return true;
     }
 
@@ -85,7 +97,7 @@ contract OracleToken is Token, Oracle {
     * @return true after transfer 
     */
     function devTransfer(address _to,uint _amount) public returns(bool){
-        require(oracle == msg.sender);
+        require(address(this) == msg.sender);
         doTransfer(address(this),_to, _amount);
         return true;
     }
