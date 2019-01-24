@@ -1,7 +1,6 @@
 pragma solidity ^0.4.24;
 
 import "./libraries/SafeMath.sol";
-import "./OracleToken.sol";
 
 /**
 * @title Oracle token
@@ -11,7 +10,7 @@ import "./OracleToken.sol";
 * add function to report false value and put up for voting on validity
 */
 
-contract StakesandDisputes is StakeToken {
+contract StakesandDisputes {
 
     using SafeMath for uint256;
 
@@ -26,15 +25,10 @@ contract StakesandDisputes is StakeToken {
     uint public voteDuration;//3days the same as voting period
     uint public minimumStake;//stake required to become a miner and/or vote on disputes in oracle tokens
     uint public minimumStakeTime;
-    address public owner;
-    address[] public stakers;
-    mapping(address => uint) public stakersIndex;
-    mapping(address => StakeInfo) public staker; 
     uint[] public disputesIds;
     mapping(uint => Dispute) public disputes;//disputeId=> Disputes
     mapping (uint => uint) public disputesIdsIndex;
     address public oracleToken;//oracle token address
-
     
     struct Dispute {
         address reportedMiner; //miner who alledgedly submitted the 'bad value' will get disputeFee if dispute vote fails
@@ -52,12 +46,16 @@ contract StakesandDisputes is StakeToken {
         mapping (address => bool) voted;
     }
 
+    address[] public stakers;
+    mapping(address => uint) public stakersIndex;
+    mapping(address => StakeInfo) public staker;
     struct StakeInfo {
         //Enum state of the stake
         StakeState current_state;
         uint startDate; //stake start date
         uint stakeAmt;
     }
+     
 
     /*Events*/
     event NewDispute(bytes32 _DisputeID, string _api, uint _timestamp);
@@ -87,28 +85,21 @@ contract StakesandDisputes is StakeToken {
     }
 
     function depositStake(uint _deposit) public {
-        OracleToken _oracle = OracleToken(oracleToken);
-        require(_deposit >= minimumStake && _oracle.stakeTransfer(msg.sender, address(this), _deposit));
-        total_supply = total_supply.add(_deposit);
+        require(_deposit >= minimumStake && balanceOf[msg.sender] >= _deposit);
         stakers.push(msg.sender);
-        stakersIndex[msg.sender] = stakers.length;
+        stakersIndex[msg.sender] = stakers.length-1;
         StakeInfo memory stakes = staker[msg.sender];
         stakes.current_state = 1;
         stakes.startDate = now - (now % 86400);
         stakes.stakeAmt= _deposit;
-        tranfer(address(this), _deposit);
         emit NewStake(msg.sender, msg.value);
     }
 
     function withdrawStake() public {
-        OracleToken _oracle = OracleToken(oracleToken);
         StakeInfo memory stakes = staker[msg.sender];
         _today = now - (now % 86400);
         require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state = 1 && balanceOf[msg.sender] >= stakes.stakeAmt);
         stakes.current_state = 2;
-        balanceOf[msg.sender] -= stakes.stakeAmt;
-        total_supply = total_supply.sub(stakes.stakeAmt);
-        _oracle.transfer(msg.sender, stakes.stakeAmt);
         emit StakeWithdrawn(msg.sender, stakes.stakeAmt);
         stakes.stakeAmt = 0;
     }
@@ -119,6 +110,11 @@ contract StakesandDisputes is StakeToken {
         require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state = 1 && balanceOf[msg.sender] >= stakes.stakeAmt);
         stakes.startDate = now - (now % 86400);
         emit StakeExtended(msg.sender, stakes.startDate, stakes.stakeAmt);
+    }
+
+    function getStakeAmt(address _sender) public view returns(uint){
+        StakeInfo memory stakes = staker[_sender];
+        return stakes.stakeAmt;
     }
 /*******************Need to send _apiId and timestamp from Oracle.POW***********/
     /**

@@ -49,8 +49,7 @@ contract OracleToken is Token, Oracle {
     * @param _amount The amount of tokens to send to each address
     * @param _isMine is true if the timestamp has been mined and miners have been paid out
     */
-    function batchTransfer(address[5] _miners, uint256[5] _amount, bool _isMine) public{
-        require(address(this) == msg.sender);
+    function batchTransfer(address[5] _miners, uint256[5] _amount, bool _isMine) internal {
         uint _paid;
         for (uint i = 0; i < _miners.length; i++) {
             if (balanceOf(address(this)) >= _amount[i]
@@ -72,23 +71,11 @@ contract OracleToken is Token, Oracle {
     * @param _amount to transfer
     * @return true after transfer 
     */
-    function callTransfer(address _from,uint _amount) public returns(bool){
-        require(address(this) == msg.sender);
+    function callTransfer(address _from,uint _amount) internal returns(bool){
         doTransfer(_from,address(this), _amount);
         return true;
     }
 
-    /**
-    * @dev Allows the stakesandDisputes.deposit to transfer the stake 
-    * @param _from address to transfer from
-    * @param _amount to transfer
-    * @return true after transfer 
-    */
-    function stakeTransfer(address _from,uint _amount) external returns(bool){
-        require(stakes == msg.sender);
-        doTransfer(_from,stakes, _amount);
-        return true;
-    }
 
     /**
     * @dev Allows the Oracle.RetreiveData to transfer tokens to the owner
@@ -96,8 +83,7 @@ contract OracleToken is Token, Oracle {
     * @param _amount to transfer
     * @return true after transfer 
     */
-    function devTransfer(address _to,uint _amount) public returns(bool){
-        require(address(this) == msg.sender);
+    function devTransfer(address _to,uint _amount) internal returns(bool){
         doTransfer(address(this),_to, _amount);
         return true;
     }
