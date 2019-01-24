@@ -26,6 +26,11 @@ contract StakeToken  {
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
 
+    /*Modifiers*/
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
     /*Functions*/
     /**
     * @dev Constructor that sets the passed value as the token to be mineable.
@@ -49,7 +54,7 @@ contract StakeToken  {
     * @param _amount The amount of tokens to send
     * @return true if transfer is successful
     */
-     function transfer(address _to, uint256 _amount) public returns (bool success) {
+     function transfer(address _to, uint256 _amount) public returns (bool success) onlyOwner() {
         doTransfer(msg.sender, _to, _amount);
         return true;
     }
@@ -62,7 +67,7 @@ contract StakeToken  {
     * @param _amount The amount of tokens to be transferred
     * @return True if the transfer was successful
     */
-    function transferFrom(address _from, address _to, uint256 _amount) public returns (bool success) {
+    function transferFrom(address _from, address _to, uint256 _amount) public returns (bool success) onlyOwner(){
         require(allowed[_from][msg.sender] >= _amount);
         allowed[_from][msg.sender] -= _amount;
         doTransfer(_from, _to, _amount);

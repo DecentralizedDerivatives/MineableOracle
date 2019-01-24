@@ -44,7 +44,8 @@ contract Oracle {
     //apiId to minedTimestamp to value--get timestamp from request timestamp
     mapping(uint => mapping(uint => uint)) values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value    
     //minedTimestamp to apiId
-    mapping(uint => uint) public timeToApi;
+    mapping(uint => uint) public timeToApiId;
+    uint[] public timestamps;
     //apiId to minedTimestamp to 5 miners
     mapping(uint => mapping(uint => address[5]) minersbyvalue;//This maps the UNIX timestamp to the 5 miners who mined that value
     //challenge to miner address to yes/no--where yes if they completed the channlenge
@@ -147,7 +148,8 @@ contract Oracle {
             pushValue(apiId, timeOfLastProof,_payoutMultiplier);
             minedBlockNum[apiId][timeOfLastProof] = block.number;
             miningApiId = api[_apiOnQ]; 
-            timeToApi[timeOfLastProof] = apiId;
+            timeToApiId[timeOfLastProof] = apiId;
+            timestamps.push(timeOfLastProof);
             count = 0;
             currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
          }
@@ -261,15 +263,6 @@ contract Oracle {
     }
 
     /**
-    * @dev Gets the ApiId for the specified Api
-    * @param _timestamp to retreive data/value from
-    * @return true if the value exists/is greater than zero
-    */
-    function isData(uint _apiId, uint _timestamp) public view returns(bool){
-        return (values[_apiId][_timestamp] > 0);
-    }
-
-    /**
     * @dev Getter function for currentChallenge difficulty
     * @return current challenge and level of difficulty
     */
@@ -282,7 +275,7 @@ contract Oracle {
     * @return value for timestamp of last proof of work submited
     */
     function getLastQuery() external returns(uint,bool){
-        uint _apiId = timeToApi[timeOfLastProof];
+        uint _apiId = timeToApiId[timeOfLastProof];
         return (retrieveData(_apiId, timeOfLastProof),true);
     }
 
@@ -291,7 +284,7 @@ contract Oracle {
     * @return current challenge and level of difficulty
     */
     function getApiForTime(uint _timestamp) external view returns(uint){    
-        return timeToApi[_timestamp];
+        return timeToApiId[_timestamp];
     }
 
     /**
@@ -371,5 +364,11 @@ contract Oracle {
         minersbyvalue[_apiId][_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
         emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
         emit NewValue(_api,timeOfLastProof,a[2].value);
+    }
+
+    function getMedianMinerbyApiIdTimestamp(uint apiId, uint timestamp) public returns(address) {
+        address[5] _miners = minersbyvalue[_apiId][_time];
+        address _miner = miners[2];
+        return _miner;
     }
 }
