@@ -242,6 +242,13 @@ contract Oracle {
         return minersbyvalue[_apiId][_timestamp];
     }
 
+    /**
+    * @dev Gets blocknumber for mined timestamp 
+    * @param _timestamp is the timestamp to look up blocknumber
+    */
+    function getMinedBlockNum(uint _apiId, uint _timestamp) public view returns(uint){
+        return minedBlockNum[_apiId][_timestamp];
+    }
 
     /**
     * @dev This function tells you if a given challenge has been completed by a given miner

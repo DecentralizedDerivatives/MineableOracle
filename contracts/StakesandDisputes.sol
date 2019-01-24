@@ -132,7 +132,8 @@ contract StakesandDisputes is StakeToken {
     function initDispute(uint _apiId, uint _timestamp) external returns(uint){
         OracleToken _oracle = OracleToken(oracleToken);
         //get blocknumber for this value and check blocknumber - value.blocknumber < x number of blocks 10 or 144?
-        require(_oracle.isData(_apiId, _timestamp) && _oracle.transfer(address(this), disputeFee));//anyone owning tokens can report bad values, would this transfer from OracleToken to Stake token?
+        _minedblock = _oracle.getMinedBlockNum(uint _apiId, uint _timestamp);
+        require(block.number- _minedblock >144 && _oracle.isData(_apiId, _timestamp) && _oracle.transfer(address(this), disputeFee));//anyone owning tokens can report bad values, would this transfer from OracleToken to Stake token?
         uint disputeId = disputesIds.length + 1;
         Dispute storage disp = disputes[disputeId];//how long can my mapping be? why is timestamp blue?
         disputesIds.push(disputeId);
