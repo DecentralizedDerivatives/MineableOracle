@@ -49,7 +49,7 @@ contract OracleToken is Token, Oracle {
     * @param _amount The amount of tokens to send to each address
     * @param _isMine is true if the timestamp has been mined and miners have been paid out
     */
-    function batchTransfer(address[5] _miners, uint256[5] _amount, bool _isMine) external{
+    function batchTransfer(address[5] _miners, uint256[5] _amount, bool _isMine) public{
         require(address(this) == msg.sender);
         uint _paid;
         for (uint i = 0; i < _miners.length; i++) {
@@ -84,7 +84,7 @@ contract OracleToken is Token, Oracle {
     * @param _amount to transfer
     * @return true after transfer 
     */
-    function stakeTransfer(address _from,uint _amount) public returns(bool){
+    function stakeTransfer(address _from,uint _amount) external returns(bool){
         require(stakes == msg.sender);
         doTransfer(_from,stakes, _amount);
         return true;
