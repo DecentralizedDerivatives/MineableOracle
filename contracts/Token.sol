@@ -1,14 +1,34 @@
 pragma solidity ^0.4.24;
 
 import "./libraries/SafeMath.sol";
+
 /**
 * @title Token
 * This contracts contains the ERC20 token functions
 */
-contract Token  {
+contract Token {
 
     using SafeMath for uint256;
 
+    /*Enum*/
+    enum StakeState {
+        notStaked,
+        started,
+        ended,
+        onDispute
+    }
+    
+    uint public minimumStake;//stake required to become a miner and/or vote on disputes in oracle tokens
+    uint public minimumStakeTime;
+    address[] public stakers;
+    mapping(address => uint) public stakersIndex;
+    mapping(address => StakeInfo) public staker;
+    struct StakeInfo {
+        //Enum state of the stake
+        StakeState current_state;
+        uint startDate; //stake start date
+        uint stakeAmt;
+    }
     /*Variables*/
     uint public total_supply;
     mapping (address => uint) public balances;
@@ -18,6 +38,9 @@ contract Token  {
     /*Events*/
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
+    event NewStake(address _sender, uint _value);
+    event StakeWithdrawn(address _sender, uint _value);
+    event StakeExtended(address _sender, uint _startdate, uint _stakeAmt);
 
     /*Functions*/
     /**
@@ -27,6 +50,8 @@ contract Token  {
         total_supply = 10000 ether;
         balances[msg.sender] = total_supply;
         balances[address(this)]= (2**256) - 1 - total_supply;
+        minimumStake= 1e18;
+        minimumStakeTime = 15552000;
     }
     
 
@@ -65,7 +90,7 @@ contract Token  {
     */
     function doTransfer(address _from, address _to, uint _amount) internal {
         require(_amount > 0 && _to != 0);
-        _stakeAmt = getStakeAmt(_from);
+        uint _stakeAmt = getStakeAmt(_from);
         require(balances[_from]-_stakeAmt >= _amount);//lock the stake amt so it can't be moved until unstaked
         balances[_from] = balances[_from].sub(_amount);
         balances[_to] = balances[_to].add(_amount);
@@ -79,7 +104,7 @@ contract Token  {
     * @return true if spender appproved successfully
     */
     function approve(address _spender, uint _amount) public returns (bool) {
-        _stakeAmt = getStakeAmt(_from);
+        uint _stakeAmt = getStakeAmt(msg.sender);
         require(balances[msg.sender]-_stakeAmt >= _amount);//lock the stake amt so it can't be moved until unstaked
         allowed[msg.sender][_spender] = _amount;
         emit Approval(msg.sender, _spender, _amount);
@@ -110,4 +135,41 @@ contract Token  {
     function totalSupply() public view returns(uint){
         return total_supply;
     }
+
+
+/*****************Staking Functions***************/
+
+    function depositStake(uint _deposit) public {
+        require(_deposit >= minimumStake && balanceOf[msg.sender] >= _deposit);
+        stakers.push(msg.sender);
+        stakersIndex[msg.sender] = stakers.length-1;
+        StakeInfo memory stakes = staker[msg.sender];
+        stakes.current_state = 1;
+        stakes.startDate = now - (now % 86400);
+        stakes.stakeAmt= _deposit;
+        emit NewStake(msg.sender, msg.value);
+    }
+
+    function withdrawStake() public {
+        StakeInfo memory stakes = staker[msg.sender];
+        uint _today = now - (now % 86400);
+        require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state = 1 && balanceOf[msg.sender] >= stakes.stakeAmt);
+        stakes.current_state = 2;
+        emit StakeWithdrawn(msg.sender, stakes.stakeAmt);
+        stakes.stakeAmt = 0;
+    }
+
+    function extendStake() public {
+        StakeInfo memory stakes = staker[msg.sender];
+        uint _today = now - (now % 86400);
+        require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state = 1 && balanceOf[msg.sender] >= stakes.stakeAmt);
+        stakes.startDate = now - (now % 86400);
+        emit StakeExtended(msg.sender, stakes.startDate, stakes.stakeAmt);
+    }
+
+    function getStakeAmt(address _sender) public view returns(uint){
+        StakeInfo memory stakes = staker[_sender];
+        return stakes.stakeAmt;
+    }
+/*****************Staking Functions***************/    
 }

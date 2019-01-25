@@ -1,6 +1,8 @@
 pragma solidity ^0.4.24;
 
 import "./libraries/SafeMath.sol";
+import "./OracleToken.sol";
+
 
 /**
  * @title Oracle Token
@@ -11,8 +13,9 @@ import "./libraries/SafeMath.sol";
 contract Oracle {
     using SafeMath for uint256;
     /*Variables*/
+    address owner;
+    address oracleTokenAddress;
     bytes32 public currentChallenge; //current challenge to be solved
-    uint public devShare;//devShare of contracts
     uint public timeOfLastProof; // time of last challenge solved
     uint public timeTarget; //The time between blocks (mined Oracle values)
     uint public count;//Number of miners who have mined this value so far
@@ -29,9 +32,9 @@ contract Oracle {
     uint public miningApiId; //API being mined--updates with the ApiOnQ Id 
     
     //api to id- user sends in string api and the api gets an id
-    mapping(bytes32 => uint) as apiId;// api string gets an id = to count of requests array so apiID[string] = requestsID.length
+    mapping(bytes32 => uint) apiId;// api string gets an id = to count of requests array
     //id to string api
-    mapping(uint => bytes32) as api;//get the api string by looping through the apiIds
+    mapping(uint => bytes32) api;//get the api string by looping through the apiIds
     uint[] public apiIds;
     mapping(uint => uint) public apiIdsIndex;
     
@@ -47,10 +50,10 @@ contract Oracle {
     mapping(uint => uint) public timeToApiId;
     uint[] public timestamps;
     //apiId to minedTimestamp to 5 miners
-    mapping(uint => mapping(uint => address[5]) minersbyvalue;//This maps the UNIX timestamp to the 5 miners who mined that value
+    mapping(uint => mapping(uint => address[5])) minersbyvalue;//This maps the UNIX timestamp to the 5 miners who mined that value
     //challenge to miner address to yes/no--where yes if they completed the channlenge
     mapping(bytes32 => mapping(address=>bool)) miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
-    
+    uint public requestFee;
     Details[5] first_five;
     struct Details {
         uint value;
@@ -68,6 +71,12 @@ contract Oracle {
     event NonceSubmitted(address _miner, string _nonce, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
     event NewAPIonQinfo(bytes32 _apiOnQ, uint _timeOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
 
+    /*Modifiers*/
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
+
     /*Constructor*/
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
@@ -77,19 +86,18 @@ contract Oracle {
     * @param _payoutStructure for miners
     * @param _devShare for dev
     */
-    constructor(address _master,uint _readFee,uint _timeTarget,uint[5] _payoutStructure, uint _devShare) public{
-        require(_timeTarget > 60);
+    constructor(address _oracleTokenAddress) public{
         timeOfLastProof = now - now  % _timeTarget;
-        devShare = _devShare;
-        requestFee = _requestFee;
-        timeTarget = _timeTarget;
+        requestFee = 1;
+        timeTarget = 600;
         miningMultiplier = 1e18;
-        payoutStructure = _payoutStructure;
+        payoutStructure = [1e18,5e18,10e18,5e18,1e18];
         currentChallenge = keccak256(abi.encodePacked(timeOfLastProof,currentChallenge, blockhash(block.number - 1)));
         difficulty = 1;
         for(uint i = 0;i<5;i++){
             payoutTotal += _payoutStructure[i];
         }
+        oracleTokenAddress=_oracleTokenAddress;
     }
 
 
@@ -100,7 +108,7 @@ contract Oracle {
     * @param value of api query
     * @return count of values sumbitted so far and the time of the last successful mine
     */
-    function proofOfWork(string nonce, uint apiId, uint value) external returns (uint256,uint256) {
+    function proofOfWork(string nonce, uint _apiId, uint value) external returns (uint256,uint256) {
         bytes32 _solution = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
         uint _rem = uint(_solution) % 3;
         bytes32 n;
@@ -120,11 +128,11 @@ contract Oracle {
         count++;
         miners[currentChallenge][msg.sender] = true;
         uint _payoutMultiplier = 1;
-        emit NonceSubmitted(msg.sender,nonce,apiId,value);
+        emit NonceSubmitted(msg.sender,nonce,_apiId,value);
         if(count == 5) { 
         uint _timediff = now - timeOfLastProof;
         if(count == 5) { 
-            if (_timediff < (timeTarget){
+            if (_timediff < timeTarget){
                 difficulty = difficulty + _timediff/60;
             }
             else if (_timediff > timeTarget && difficulty > 1){
@@ -147,13 +155,14 @@ contract Oracle {
             }
             pushValue(apiId, timeOfLastProof,_payoutMultiplier);
             minedBlockNum[apiId][timeOfLastProof] = block.number;
-            miningApiId = api[_apiOnQ]; 
+            miningApiId = api[apiOnQ]; 
             timeToApiId[timeOfLastProof] = apiId;
             timestamps.push(timeOfLastProof);
             count = 0;
             currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
          }
      return (count,timeOfLastProof); 
+    }
     }
 
     /**
@@ -163,8 +172,9 @@ contract Oracle {
     * It should be the time stamp the user wants to ensure gets mined. They can do that 
     * by adding a _tip to insentivize the miners to submit a value for the time stamp. 
     */
-    function addToValuePool(uint _apiId, uint _timestamp, uint _tip) public {       
-        require(callTransfer(msg.sender,_tip));
+    function addToValuePool (uint _apiId, uint _timestamp, uint _tip) public {  
+        OracleToken oracleToken = OracleToken(oracleTokenAddress);     
+        require(oracleToken.callTransfer(msg.sender,_tip));
         uint _time;
         if(_timestamp == 0){
             _time = timeOfLastProof + timeTarget;
@@ -183,7 +193,7 @@ contract Oracle {
     @param _timestamp
     */
     function updateAPIonQ (uint _apiId, uint _timestamp) internal {
-        _payout = getValuePoolAt(_apiId, _timestamp);
+        uint _payout = getValuePoolAt(_apiId, _timestamp);
         if (_payout > apiOnQPayout ) {
             //update apiOnQ, apiOnPayout, and TimeOnQ
             apiOnQ = api[_apiId];
@@ -201,7 +211,7 @@ contract Oracle {
         uint _payoutMultiplier = payoutPool[_apiId][_timestamp] / payoutTotal;
         require (_payoutMultiplier > 0 && values[_apiId][_timestamp] > 0);
         uint[5] memory _payout = [payoutStructure[4]*_payoutMultiplier,payoutStructure[3]*_payoutMultiplier,payoutStructure[2]*_payoutMultiplier,payoutStructure[1]*_payoutMultiplier,payoutStructure[0]*_payoutMultiplier];
-        batchTransfer(minersbyvalue[_apiId][_timestamp], _payout,false);
+        OracleToken(oracleTokenAddress).batchTransfer(minersbyvalue[_apiId][_timestamp], _payout,false);
         emit PoolPayout(msg.sender, _apiId, _timestamp,minersbyvalue[_apiId][_timestamp], _payout);
     }
 
@@ -365,16 +375,17 @@ contract Oracle {
             _payout[i] = payoutStructure[i]*_payoutMultiplier;
         }
         
-        batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
-        devTransfer(owner(),(payoutTotal * devShare / 100));
+        OracleToken oracleToken = OracleToken(oracleTokenAddress);
+        oracleToken.batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
+        oracleToken.devTransfer(owner(),(payoutTotal * devShare / 100));
         values[_apiId][_time] = a[2].value;
         minersbyvalue[_apiId][_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
         emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
-        emit NewValue(_api,timeOfLastProof,a[2].value);
+        emit NewValue(_apiId,timeOfLastProof,a[2].value);
     }
 
-    function getMedianMinerbyApiIdTimestamp(uint apiId, uint timestamp) public returns(address) {
-        address[5] _miners = minersbyvalue[_apiId][_time];
+    function getMedianMinerbyApiIdTimestamp(uint _apiId, uint _timestamp) public returns(address) {
+        address[5] memory _miners = minersbyvalue[_apiId][_timestamp];
         address _miner = miners[2];
         return _miner;
     }
