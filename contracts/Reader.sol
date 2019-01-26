@@ -12,7 +12,7 @@ contract Reader{
 
     /**
     @dev Getter function to get value for last mined _timestamp
-    @param _otoken OracleToken Address
+    @param _oracle_add OracleToken Address
     */
 	function getLastValue(address _oracle_add) public {
 		Oracle doracle = Oracle(_oracle_add);
