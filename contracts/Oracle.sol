@@ -68,7 +68,7 @@ contract Oracle {
     event MiningMultiplierChanged(uint _newMultiplier);//Each year, the mining reward decreases by 1/5 of the initial mining reward
     event DataRetrieved(address _sender, uint _apiId, uint _timestamp, uint _value);//Emits when someone retireves data, this shows the msg.sender and the value retrieved
     event DataRequested(address _sender, bytes32 _api, uint _apiId, uint _timestamp);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
-    event NonceSubmitted(address _miner, string _nonce, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
+    event NonceSubmitted(address _miner, string _nonce, uint _apiId, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
     event NewAPIonQinfo(bytes32 _apiOnQ, uint _timeOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
 
     /*Modifiers*/
@@ -86,12 +86,12 @@ contract Oracle {
     * @param _payoutStructure for miners
     * @param _devShare for dev
     */
-    constructor(address _oracleTokenAddress) public{
+    constructor(address _oracleTokenAddress, uint _timeTarget, uint[5] _payoutStructure) public{
         timeOfLastProof = now - now  % _timeTarget;
         requestFee = 1;
-        timeTarget = 600;
+        timeTarget = _timeTarget;
         miningMultiplier = 1e18;
-        payoutStructure = [1e18,5e18,10e18,5e18,1e18];
+        payoutStructure = _payoutStructure;
         currentChallenge = keccak256(abi.encodePacked(timeOfLastProof,currentChallenge, blockhash(block.number - 1)));
         difficulty = 1;
         for(uint i = 0;i<5;i++){
@@ -122,7 +122,7 @@ contract Oracle {
             n = keccak256(abi.encodePacked(ripemd160(abi.encodePacked(_solution))));
         }
 
-        require(uint(n) % difficulty == 0 && apiId == miningApiId && value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a valueS  
+        require(uint(n) % difficulty == 0 && _apiId == miningApiId && value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a valueS  
         first_five[count].value = value;
         first_five[count].miner = msg.sender;
         count++;
@@ -143,20 +143,20 @@ contract Oracle {
             timeOfLastProof = now - (now % timeTarget);
             uint valuePool;
             while(i > 0){
-                valuePool += payoutPool[apiId][timeOfLastProof - (i - 1) * timeTarget];
+                valuePool += payoutPool[_apiId][timeOfLastProof - (i - 1) * timeTarget];
                 i = i - 1;
             }
             if(valuePool >= payoutTotal) {
                 _payoutMultiplier = (valuePool + payoutTotal) / payoutTotal; //solidity should always round down
-                payoutPool[apiId][timeOfLastProof] = valuePool % payoutTotal;
+                payoutPool[_apiId][timeOfLastProof] = valuePool % payoutTotal;
             }
             else{
-                payoutPool[apiId][timeOfLastProof] = valuePool;
+                payoutPool[_apiId][timeOfLastProof] = valuePool;
             }
-            pushValue(apiId, timeOfLastProof,_payoutMultiplier);
-            minedBlockNum[apiId][timeOfLastProof] = block.number;
-            miningApiId = api[apiOnQ]; 
-            timeToApiId[timeOfLastProof] = apiId;
+            pushValue(_apiId, timeOfLastProof,_payoutMultiplier);
+            minedBlockNum[_apiId][timeOfLastProof] = block.number;
+            miningApiId = apiId[apiOnQ]; 
+            timeToApiId[timeOfLastProof] = _apiId;
             timestamps.push(timeOfLastProof);
             count = 0;
             currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
@@ -193,7 +193,7 @@ contract Oracle {
     @param _timestamp
     */
     function updateAPIonQ (uint _apiId, uint _timestamp) internal {
-        uint _payout = getValuePoolAt(_apiId, _timestamp);
+        uint _payout = payoutPool[_apiId][_timestamp];
         if (_payout > apiOnQPayout ) {
             //update apiOnQ, apiOnPayout, and TimeOnQ
             apiOnQ = api[_apiId];
@@ -201,6 +201,18 @@ contract Oracle {
             timeOnQ = _timestamp;
             emit NewAPIonQinfo(apiOnQ, timeOnQ, apiOnQPayout);
         } 
+    }
+
+
+    /**
+    @dev The OracleToken cotract uses this function to "clear" a disputed value 
+    that was found to be a "bad value"
+    @param _apiId that was diputed
+    @param _timestamp that was disputed
+    */
+    function updateDisputeValue(uint _apiId, uint _timestamp) public {
+        require(msg.sender == oracleTokenAddress);
+        values[_apiId][_timestamp] =0;
     }
 
     /**
@@ -221,13 +233,14 @@ contract Oracle {
     * @param _party who gets the tokens
     */
     function requestData(bytes32 _api, uint _timestamp, uint _requestGas) public{
-        require(apiId[_api] == 0 && _requestGas>= requestFee && callTransfer(msg.sender,_requestGas));
+        OracleToken oracleToken = OracleToken(oracleTokenAddress);
+        require(apiId[_api] == 0 && _requestGas>= requestFee && oracleToken.callTransfer(msg.sender,_requestGas));
         uint _apiId=apiIds.length+1;
         apiIdsIndex[_apiId] = apiIds.length;
         apiIds.push(_apiId);
         apiId[_api] = _apiId;
         api[_apiId] = _api;
-        _time = _timestamp - (_timestamp % timeTarget);
+        uint _time = _timestamp - (_timestamp % timeTarget);
         payoutPool[_apiId][_time] = payoutPool[_apiId][_time].add(_requestGas);
         updateAPIonQ (_apiId, _timestamp);
         emit DataRequested(msg.sender,_api,_apiId,_timestamp);
@@ -377,7 +390,7 @@ contract Oracle {
         
         OracleToken oracleToken = OracleToken(oracleTokenAddress);
         oracleToken.batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
-        oracleToken.devTransfer(owner(),(payoutTotal * devShare / 100));
+        oracleToken.devTransfer(oracleTokenAddress,(payoutTotal * oracleToken.devShare / 100));
         values[_apiId][_time] = a[2].value;
         minersbyvalue[_apiId][_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
         emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
@@ -386,7 +399,15 @@ contract Oracle {
 
     function getMedianMinerbyApiIdTimestamp(uint _apiId, uint _timestamp) public returns(address) {
         address[5] memory _miners = minersbyvalue[_apiId][_timestamp];
-        address _miner = miners[2];
+        address _miner = _miners[2];
         return _miner;
+    }
+
+    /**
+    *@dev Allows the owner to set a new owner address
+    *@param _new_owner the new owner address
+    */
+    function setOwner(address _new_owner) public onlyOwner() { 
+        owner = _new_owner; 
     }
 }

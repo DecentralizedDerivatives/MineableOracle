@@ -32,7 +32,7 @@ contract OracleToken is Token{
     struct Dispute {
         address reportedMiner; //miner who alledgedly submitted the 'bad value' will get disputeFee if dispute vote fails
         address reportingParty;//miner reporting the 'bad value'-pay disputeFee will get reportedMiner's stake if dispute vote passes
-        bytes32 apiId;
+        uint apiId;
         uint timestamp;
         uint value; //the value being disputed
         uint minExecutionDate; 
@@ -46,7 +46,7 @@ contract OracleToken is Token{
     }  
 
     /*Events*/
-    event NewDispute(bytes32 _DisputeID, string _api, uint _timestamp);
+    event NewDispute(uint _DisputeID, uint _apiId, uint _timestamp);
     event Voted(uint _disputeID, bool _position, address _voter);
     event DisputeVoteTallied(uint _disputeID, int _result, uint _quorum, bool _active);
     event ChangeMinQuorum(uint _newMinimumQuorum);
@@ -127,6 +127,7 @@ contract OracleToken is Token{
     }
 
 
+
 /*****************Disputes and Voting Functions***************/
     /**
     * @dev Helps initialize a dispute by assigning it a disputeId 
@@ -158,7 +159,7 @@ contract OracleToken is Token{
         StakeInfo memory stakes = staker[_reportedMiner];
         stakes.current_state = 3;
         return disputeId;
-        emit NewDispute();
+        emit NewDispute(disputeId,_apiId,_timestamp );
     }
 
     /**
@@ -188,7 +189,7 @@ contract OracleToken is Token{
     }
 
     function voteUnfreeze(uint _disputeId) external {
-        Dispute memory disp = disputes[_disputeId];
+        Dispute storage disp = disputes[_disputeId];
         require(disp.voted[msg.sender] == true && disp.executed == true);
         /*******Un-freeze voters********************************/
         StakeInfo memory stakes = staker[msg.sender];
@@ -211,13 +212,13 @@ contract OracleToken is Token{
              //the first miner that reported the inconsistency.      
             StakeInfo memory stakes = staker[disp.reportedMiner];        
             stakes.current_state = 2;
-            balanceOf[disp.reportedMiner] -= stakes.stakeAmt;
-            total_supply = total_supply.sub(stakes.stakeAmt);
-            transfer(disp.reportingParty, stakes.stakeAmt);
-            emit StakeLost(disp.reportedMiner, stakes.stakeAmt);
+            uint stakeAmt = stakes.stakeAmt;
             stakes.stakeAmt = 0;
+            disputeTransfer(disp.reportedMiner,disp.reportingParty, stakeAmt);
+            emit StakeLost(disp.reportedMiner, stakeAmt);
+            
             disp.disputeVotePassed = true;
-            Oracle(oracleAddress).values[disp.apiId][disp.timestamp] = 0;
+            Oracle(oracleAddress). updateDisputeValue(disp.apiId, disp.timestamp);
         } 
         else {
             disp.executed = true;

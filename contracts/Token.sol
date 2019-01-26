@@ -11,12 +11,12 @@ contract Token {
     using SafeMath for uint256;
 
     /*Enum*/
-    enum StakeState {
+/*    enum StakeState {
         notStaked,
         started,
         ended,
         onDispute
-    }
+    }*/
     
     uint public minimumStake;//stake required to become a miner and/or vote on disputes in oracle tokens
     uint public minimumStakeTime;
@@ -25,7 +25,8 @@ contract Token {
     mapping(address => StakeInfo) public staker;
     struct StakeInfo {
         //Enum state of the stake
-        StakeState current_state;
+        //StakeState current_state;
+        uint current_state;//1=started, 2 = ended, 3= OnDispute
         uint startDate; //stake start date
         uint stakeAmt;
     }
@@ -97,6 +98,20 @@ contract Token {
         emit Transfer(_from, _to, _amount);
     }
 
+    /** 
+    * @dev Completes dispute transfer by updating the balances
+    * @param _from address to transfer from
+    * @param _to addres to transfer to
+    * @param _amount to transfer 
+    */
+    function disputeTransfer(address _from, address _to, uint _amount) internal {
+        StakeInfo memory stakes = staker[_from];
+        require(_amount > 0 && _to != 0);
+        require(stakes.current_state == 3);//lock the stake amt so it can't be moved until unstaked
+        balances[_from] = balances[_from].sub(_amount);
+        balances[_to] = balances[_to].add(_amount);
+        emit Transfer(_from, _to, _amount);
+    }
     /**
     * @dev This function approves a _spender an _amount of tokens to use
     * @param _spender address
@@ -140,7 +155,7 @@ contract Token {
 /*****************Staking Functions***************/
 
     function depositStake(uint _deposit) public {
-        require(_deposit >= minimumStake && balanceOf[msg.sender] >= _deposit);
+        require(_deposit >= minimumStake && balanceOf(msg.sender) >= _deposit);
         stakers.push(msg.sender);
         stakersIndex[msg.sender] = stakers.length-1;
         StakeInfo memory stakes = staker[msg.sender];
@@ -153,7 +168,7 @@ contract Token {
     function withdrawStake() public {
         StakeInfo memory stakes = staker[msg.sender];
         uint _today = now - (now % 86400);
-        require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state = 1 && balanceOf[msg.sender] >= stakes.stakeAmt);
+        require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state == 1 && balanceOf(msg.sender) >= stakes.stakeAmt);
         stakes.current_state = 2;
         emit StakeWithdrawn(msg.sender, stakes.stakeAmt);
         stakes.stakeAmt = 0;
@@ -162,7 +177,7 @@ contract Token {
     function extendStake() public {
         StakeInfo memory stakes = staker[msg.sender];
         uint _today = now - (now % 86400);
-        require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state = 1 && balanceOf[msg.sender] >= stakes.stakeAmt);
+        require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state == 2 && balanceOf(msg.sender) >= stakes.stakeAmt);
         stakes.startDate = now - (now % 86400);
         emit StakeExtended(msg.sender, stakes.startDate, stakes.stakeAmt);
     }
@@ -171,5 +186,7 @@ contract Token {
         StakeInfo memory stakes = staker[_sender];
         return stakes.stakeAmt;
     }
+
+
 /*****************Staking Functions***************/    
 }
