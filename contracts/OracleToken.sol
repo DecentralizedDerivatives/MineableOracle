@@ -71,9 +71,14 @@ contract OracleToken is Token{
 
     }
 
+    /**
+    @dev use this to set the _oracleAddress
+    @param _oracleAddress is the oracle contract address
+    */
     function setOracleAddress(address _oracleAddress) public onlyOwner{
         oracleAddress = _oracleAddress;
     }
+
     /**
     * @dev Allows for a transfer of tokens to the first 5 _miners that solve the challenge and 
     * updates the total_supply of the token(total_supply is saved in token.sol)
@@ -164,10 +169,10 @@ contract OracleToken is Token{
 
     /**
     * @dev Allows token holders to vote
-    * @param _disputelId is the dispute id
+    * @param _disputeId is the dispute id
     * @param _supportsDispute is the vote (true=the dispute has basis false = vote against dispute)
     */
-    function vote(uint _disputeId, bool _supportsDispute) external returns (uint voteId) {
+    function vote(uint _disputeId, bool _supportsDispute) public returns (uint voteId) {
         Dispute storage disp = disputes[_disputeId];
         require(disp.voted[msg.sender] != true && balanceOf(msg.sender)>0);
         /*******freeze voters********************************/
@@ -188,7 +193,11 @@ contract OracleToken is Token{
         return voteId;
     }
 
-    function voteUnfreeze(uint _disputeId) external {
+    /**
+    * @dev Allows token holders to unfreeze their funds after tally is ran
+    * @param _disputeId is the dispute id
+    */
+    function voteUnfreeze(uint _disputeId) public {
         Dispute storage disp = disputes[_disputeId];
         require(disp.voted[msg.sender] == true && disp.executed == true);
         /*******Un-freeze voters********************************/
@@ -201,7 +210,7 @@ contract OracleToken is Token{
     * @dev tallies the votes and executes if minimum quorum is met or exceeded.
     * @param _disputeId is the dispute id
     */
-    function tallyVotes(uint _disputeId) external{
+    function tallyVotes(uint _disputeId) public {
         Dispute memory disp = disputes[_disputeId];
         require(disp.executed == false);
         require(now > disp.minExecutionDate && !disp.executed); //Uncomment for production-commented out for testing 
@@ -231,7 +240,7 @@ contract OracleToken is Token{
 
 
     /**
-    * @dev Propose updates to minimum quorum 
+    * @dev  updates to minimum quorum 
     * @param _minimumQuorum for passing vote and executing disputeFee or stake transfer
     */
     function setMinimumQuorum(uint _minimumQuorum) public onlyOwner()  {
@@ -259,7 +268,7 @@ contract OracleToken is Token{
 /*****************Disputes and Voting Functions***************/
     /**
     *@dev Get Dispute information
-    *@param _propId to pull propType and prop passed
+    *@param _disputeId is the dispute id to check the outcome of
     */
     function getDisputeInfo(uint _disputeId) view public returns(uint, uint, uint,bool) {
         Dispute memory disp = disputes[_disputeId];

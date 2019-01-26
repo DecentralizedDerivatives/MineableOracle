@@ -80,11 +80,9 @@ contract Oracle {
     /*Constructor*/
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
-    * @param _master is the master ProofOfWorkToken.address
-    * @param _readFee is the fee for reading oracle information
+    * @param _oracleTokenAddress is the oracleTokenAddress.address
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
-    * @param _devShare for dev
     */
     constructor(address _oracleTokenAddress, uint _timeTarget, uint[5] _payoutStructure) public{
         timeOfLastProof = now - now  % _timeTarget;
@@ -105,6 +103,7 @@ contract Oracle {
     /**
     * @dev Proof of work is called by the miner when they submit the solution (proof of work and value)
     * @param nonce uint submitted by miner
+    * @param _apiId the apiId being mined
     * @param value of api query
     * @return count of values sumbitted so far and the time of the last successful mine
     */
@@ -167,8 +166,9 @@ contract Oracle {
 
     /**
     * @dev Adds the _tip to the valuePool that pays the miners
-    * @param _tip amount to add to value pool
+    * @param _apiId the api Id the user want to add to the value pool
     * @param _timestamp is the timestamp that will be given the _tip once it is mined.
+    * @param _tip amount to add to value pool
     * It should be the time stamp the user wants to ensure gets mined. They can do that 
     * by adding a _tip to insentivize the miners to submit a value for the time stamp. 
     */
@@ -188,9 +188,9 @@ contract Oracle {
     }
     
     /**
-    @dev use this function to update APIonQ via requestData or addToValuePool
+    @dev This contract uses this function to update APIonQ when requestData or addToValuePool are ran
     @param _apiId being requested
-    @param _timestamp
+    @param _timestamp being requested
     */
     function updateAPIonQ (uint _apiId, uint _timestamp) internal {
         uint _payout = payoutPool[_apiId][_timestamp];
@@ -205,7 +205,7 @@ contract Oracle {
 
 
     /**
-    @dev The OracleToken cotract uses this function to "clear" a disputed value 
+    @dev The OracleToken cotract uses this function to "clear"(set to 0) a disputed value 
     that was found to be a "bad value"
     @param _apiId that was diputed
     @param _timestamp that was disputed
@@ -217,6 +217,7 @@ contract Oracle {
 
     /**
     * @dev Retrieve payout from the data reads. It pays out the 5 miners.
+    * @param _apiId to get the payout pool from
     * @param _timestamp for which to retreive the payout from
     */
     function retrievePayoutPool(uint _apiId, uint _timestamp) public {
@@ -229,8 +230,10 @@ contract Oracle {
 
     /**
     * @dev Request to retreive value from oracle based on timestamp
-    * @param _timestamp to retreive data/value from
-    * @param _party who gets the tokens
+    * @param _api being requested be mined
+    * @param _timestamp reqeusted to be mined
+    * @param _requestGas amount the requester is willing to pay to be get on queue. Miners
+    * mine the apiOnQ, or the api with the highest payout pool
     */
     function requestData(bytes32 _api, uint _timestamp, uint _requestGas) public{
         OracleToken oracleToken = OracleToken(oracleTokenAddress);
@@ -248,17 +251,19 @@ contract Oracle {
 
     /**
     * @dev Retreive value from oracle based on timestamp
+    * @param _apiId being requested
     * @param _timestamp to retreive data/value from
     * @return value for timestamp submitted
     */
     function retrieveData(uint _apiId, uint _timestamp) public returns (uint) {
         require(isData(_apiId, _timestamp));
-        emit DataRetrieved(msg.sender,values[_apiId][_timestamp]);
+        emit DataRetrieved(msg.sender, _apiId, _timestamp, values[_apiId][_timestamp]);
         return values[_apiId][_timestamp];
     }
 
     /**
-    * @dev Gets the 5 miners who mined the value for the specified _timestamp 
+    * @dev Gets the 5 miners who mined the value for the specified apiId/_timestamp 
+    * @param _apiId to look up
     * @param _timestamp is the timestampt to look up miners for
     */
     function getMinersByValue(uint _apiId, uint _timestamp) public view returns(address[5]){
@@ -267,6 +272,7 @@ contract Oracle {
 
     /**
     * @dev Gets blocknumber for mined timestamp 
+    * @param _apiId to look up
     * @param _timestamp is the timestamp to look up blocknumber
     */
     function getMinedBlockNum(uint _apiId, uint _timestamp) public view returns(uint){
@@ -285,7 +291,8 @@ contract Oracle {
     
     /**
     * @dev Checks if a value exists for the timestamp provided
-    * @param _timestamp to retreive data/value from
+    * @param _apiId to look up/check
+    * @param _timestamp to look up/check
     * @return true if the value exists/is greater than zero
     */
     function isData(uint _apiId, uint _timestamp) public view returns(bool){
@@ -294,7 +301,7 @@ contract Oracle {
 
     /**
     * @dev Getter function for currentChallenge difficulty
-    * @return current challenge and level of difficulty
+    * @return current challenge, MiningApiID, level of difficulty
     */
     function getVariables() external view returns(bytes32, uint, uint){    
         return (currentChallenge,miningApiId,difficulty);
@@ -310,8 +317,10 @@ contract Oracle {
     }
 
     /**
-    * @dev Getter function for api based on apiID
-    * @return current challenge and level of difficulty
+    * @dev Getter function for apiId based on timestamp. Only one value is mined per
+    * timestamp and each timestamp can correspond to a different API. 
+    * @param _timestamp to check APIId
+    * @return apiId
     */
     function getApiForTime(uint _timestamp) external view returns(uint){    
         return timeToApiId[_timestamp];
@@ -319,15 +328,17 @@ contract Oracle {
 
     /**
     * @dev Getter function for api based on apiID
-    * @return current challenge and level of difficulty
+    * @param _apiId the apiId to look up the api string
+    * @return api string/bytes32
     */
     function getApi(uint _apiId) external view returns(bytes32){    
-        return api[apiId];
+        return api[_apiId];
     }
 
     /**
     * @dev Getter function for apiId based on api
-    * @return current challenge and level of difficulty
+    * @param _api string to check if it already has an apiId
+    * @return uint apiId
     */
     function getApiId(bytes32 _api) external view returns(uint){    
         return apiId[_api];
@@ -335,16 +346,17 @@ contract Oracle {
 
     /**
     * @dev Getter function for all apiId's 
-    * @return current challenge and level of difficulty
+    * @return array of apiIds
     */
     function getAllApiIds() external view returns(uint[]){    
         return apiIds;
     }
 
     /**
-    * @dev Getter function for the payoutPool total for the specified _timestamp
+    * @dev Getter function for the payoutPool total for the specified _apiId and _timestamp
     * If the _timestamp is not specified(_timestamp=0) it will return the total payoutPool
     * for the _timestamp being mined
+    * @param _apiId to look up the total payoutPool value
     * @param _timestamp to look up the total payoutPool value 
     * @return the value of the total payoutPool
     */
@@ -354,7 +366,7 @@ contract Oracle {
             return payoutPool[_apiId][_time];
         }
         else{
-            return payoutPool[apiId][_timestamp];
+            return payoutPool[_apiId][_timestamp];
         }
     }
 
@@ -363,6 +375,7 @@ contract Oracle {
     * through the proofOfWork function and sorts the value as it is received 
     * so that the median value is 
     * given the highest reward
+    * @param _apiId for the value being provided by the miners
     * @param _time is the time/date for the value being provided by the miner
     * @param _payoutMultiplier is calculated in the proofOfWork function to 
     * allocate the additional miner tip added via the addToValuePool function
@@ -390,13 +403,18 @@ contract Oracle {
         
         OracleToken oracleToken = OracleToken(oracleTokenAddress);
         oracleToken.batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
-        oracleToken.devTransfer(oracleTokenAddress,(payoutTotal * oracleToken.devShare / 100));
+        oracleToken.devTransfer(oracleTokenAddress,(payoutTotal * oracleToken.devShare() / 100));
         values[_apiId][_time] = a[2].value;
         minersbyvalue[_apiId][_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
         emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
         emit NewValue(_apiId,timeOfLastProof,a[2].value);
     }
 
+    /**
+    * @dev This function gets the median value miner's address
+    * @param _apiId for the value being looked up
+    * @param _timestamp is the time/date for the value being looked up
+    */
     function getMedianMinerbyApiIdTimestamp(uint _apiId, uint _timestamp) public returns(address) {
         address[5] memory _miners = minersbyvalue[_apiId][_timestamp];
         address _miner = _miners[2];

@@ -9,33 +9,22 @@ import "./libraries/SafeMath.sol";
 contract Token {
 
     using SafeMath for uint256;
-
-    /*Enum*/
-/*    enum StakeState {
-        notStaked,
-        started,
-        ended,
-        onDispute
-    }*/
-    
+  
+    /*Variables*/
     uint public minimumStake;//stake required to become a miner and/or vote on disputes in oracle tokens
     uint public minimumStakeTime;
+    uint public total_supply;
     address[] public stakers;
+    mapping (address => uint) public balances;
+    mapping(address => mapping (address => uint)) internal allowed;
     mapping(address => uint) public stakersIndex;
     mapping(address => StakeInfo) public staker;
     struct StakeInfo {
-        //Enum state of the stake
-        //StakeState current_state;
         uint current_state;//1=started, 2 = ended, 3= OnDispute
         uint startDate; //stake start date
         uint stakeAmt;
     }
-    /*Variables*/
-    uint public total_supply;
-    mapping (address => uint) public balances;
-    mapping(address => mapping (address => uint)) internal allowed;
-
-      
+       
     /*Events*/
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
@@ -154,6 +143,10 @@ contract Token {
 
 /*****************Staking Functions***************/
 
+/**
+* @dev This function allows users to stake 
+* @param _deposit amout to stake
+*/
     function depositStake(uint _deposit) public {
         require(_deposit >= minimumStake && balanceOf(msg.sender) >= _deposit);
         stakers.push(msg.sender);
