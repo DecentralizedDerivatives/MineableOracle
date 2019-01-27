@@ -155,7 +155,7 @@ contract Token {
         stakes.current_state = 1;
         stakes.startDate = now - (now % 86400);
         stakes.stakeAmt= _deposit;
-        emit NewStake(msg.sender, msg.value);
+        emit NewStake(msg.sender, _deposit);
     }
 
     function withdrawStake() public {

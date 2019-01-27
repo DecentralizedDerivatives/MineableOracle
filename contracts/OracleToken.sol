@@ -62,7 +62,7 @@ contract OracleToken is Token{
     }
 
     /*Functions*/
-    constructor(address _stakes, uint _devShare, uint _disputeFee, uint _minimumQuorum, uint _voteDuration, uint _minimumStake, uint _minimuStatkeTime) public{
+    constructor(uint _devShare, uint _disputeFee, uint _minimumQuorum, uint _voteDuration) public{
         owner = msg.sender;
         devShare = _devShare;
         disputeFee = _disputeFee;
@@ -174,15 +174,20 @@ contract OracleToken is Token{
     */
     function vote(uint _disputeId, bool _supportsDispute) public returns (uint voteId) {
         Dispute storage disp = disputes[_disputeId];
-        require(disp.voted[msg.sender] != true && balanceOf(msg.sender)>0);
-        /*******freeze voters********************************/
+        uint bal = balanceOf(msg.sender);
+        require(disp.voted[msg.sender] != true && bal>0 && stakes.current_state != 3);
         StakeInfo memory stakes = staker[msg.sender];
-        stakes.current_state = 1;
-        stakes.stakeAmt= balanceOf(msg.sender);
-        /*******freeze voters********************************/
+        if (stakes.current_state == 0) {
+            stakes.current_state = 4;
+            stakes.stakeAmt= bal;
+        } else if (stakes.current_state == 1) {
+            stakes.current_state = 5;
+        } else if (stakes.current_state == 2){
+            stakes.current_state = 6;
+        } 
         disp.voted[msg.sender] = true;
         disp.numberOfVotes += 1;
-        uint voteWeight = balanceOf(msg.sender);
+        uint voteWeight = bal;
         disp.quorum +=  voteWeight;
         if (_supportsDispute) {
             disp.tally = disp.tally + int(voteWeight);
@@ -199,12 +204,16 @@ contract OracleToken is Token{
     */
     function voteUnfreeze(uint _disputeId) public {
         Dispute storage disp = disputes[_disputeId];
-        require(disp.voted[msg.sender] == true && disp.executed == true);
-        /*******Un-freeze voters********************************/
+        require(disp.voted[msg.sender] == true && disp.executed == true && stakes.current_state != 3);
         StakeInfo memory stakes = staker[msg.sender];
-        stakes.current_state = 2;
-        stakes.stakeAmt= 0;
-        /*******Un-freeze voters********************************/
+        if (stakes.current_state == 4) {
+            stakes.current_state = 0;
+            stakes.stakeAmt= 0;
+        } else if (stakes.current_state == 5) {
+            stakes.current_state = 1;
+        } else if (stakes.current_state == 6){
+            stakes.current_state = 2;
+        } 
     } 
     /**
     * @dev tallies the votes and executes if minimum quorum is met or exceeded.

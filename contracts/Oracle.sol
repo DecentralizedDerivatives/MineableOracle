@@ -415,7 +415,7 @@ contract Oracle {
     * @param _apiId for the value being looked up
     * @param _timestamp is the time/date for the value being looked up
     */
-    function getMedianMinerbyApiIdTimestamp(uint _apiId, uint _timestamp) public returns(address) {
+    function getMedianMinerbyApiIdTimestamp(uint _apiId, uint _timestamp) public view returns(address) {
         address[5] memory _miners = minersbyvalue[_apiId][_timestamp];
         address _miner = _miners[2];
         return _miner;
