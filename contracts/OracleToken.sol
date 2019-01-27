@@ -174,9 +174,9 @@ contract OracleToken is Token{
     */
     function vote(uint _disputeId, bool _supportsDispute) public returns (uint voteId) {
         Dispute storage disp = disputes[_disputeId];
-        uint bal = balanceOf(msg.sender);
-        require(disp.voted[msg.sender] != true && bal>0 && stakes.current_state != 3);
         StakeInfo memory stakes = staker[msg.sender];
+        uint bal = balanceOf(msg.sender);
+        require(disp.voted[msg.sender] != true && bal > 0 && stakes.current_state != 3);
         if (stakes.current_state == 0) {
             stakes.current_state = 4;
             stakes.stakeAmt= bal;
@@ -204,8 +204,8 @@ contract OracleToken is Token{
     */
     function voteUnfreeze(uint _disputeId) public {
         Dispute storage disp = disputes[_disputeId];
-        require(disp.voted[msg.sender] == true && disp.executed == true && stakes.current_state != 3);
         StakeInfo memory stakes = staker[msg.sender];
+        require(disp.voted[msg.sender] == true && disp.executed == true && stakes.current_state != 3);
         if (stakes.current_state == 4) {
             stakes.current_state = 0;
             stakes.stakeAmt= 0;
