@@ -47,13 +47,6 @@ contract OracleToken is Token{
 
     }
 
-    /**
-    @dev use this to set the _oracleAddress
-    @param _oracleAddress is the oracle contract address
-    */
-/*    function setOracleAddress(address _oracleAddress) public onlyOwner{
-        oracleAddress = _oracleAddress;
-    }*/
 
     /**
     * @dev Allows for a transfer of tokens to the first 5 _miners that solve the challenge and 
@@ -94,7 +87,6 @@ contract OracleToken is Token{
         return true;
     }
 
-
     /**
     * @dev Allows the Oracle.RetreiveData to transfer tokens to the owner
     * @param _to address to transfer to
@@ -106,10 +98,6 @@ contract OracleToken is Token{
         doTransfer(address(this),_to, _amount);
         return true;
     }
-
-
-
-
 
     /**
     * @dev  updates to minimum quorum 

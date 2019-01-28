@@ -9,6 +9,7 @@ import "./OracleToken.sol";
  * @dev Oracle contract where miners can submit the proof of work along with the value.
  * Includes functions for users to read data from, tip the miners and for miners to submit
  * values and get paid out from the master ProofOfWorkToken contract
+ * TODO: Check miners are staked when submitting POW and add tipping at API level. 
  */
 contract Oracle is OracleToken{
     using SafeMath for uint256;
@@ -60,18 +61,6 @@ contract Oracle is OracleToken{
         address miner;
     }
 
-    /*Events*/
-    event Mine(address sender,address[5] _miners, uint[5] _values);//Emits upon a succesful value mine, indicates the msg.sender, 5 miners included in block, and the mined value
-    event NewValue(uint _apiId, uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
-    event PoolPayout(address sender, uint _apiId, uint _timestamp, address[5] _miners, uint[5] _values);//Emits when a pool is paid out, who is included and the amount(money collected from reads)
-    event ValueAddedToPool(address sender, uint _apiId, uint _value,uint _time);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
-    event MiningMultiplierChanged(uint _newMultiplier);//Each year, the mining reward decreases by 1/5 of the initial mining reward
-    event DataRetrieved(address _sender, uint _apiId, uint _timestamp, uint _value);//Emits when someone retireves data, this shows the msg.sender and the value retrieved
-    event DataRequested(address _sender, bytes32 _api, uint _apiId, uint _timestamp);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
-    event NonceSubmitted(address _miner, string _nonce, uint _apiId, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
-    event NewAPIonQinfo(bytes32 _apiOnQ, uint _timeOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
-
-/********************/
     uint[] public disputesIds;
     mapping(uint => Dispute) public disputes;//disputeId=> Disputes
     mapping (uint => uint) public disputesIdsIndex;
@@ -90,9 +79,19 @@ contract Oracle is OracleToken{
         bool executed;
         bool disputeVotePassed;       
         mapping (address => bool) voted;
-    }  
+    } 
+
 
     /*Events*/
+    event Mine(address sender,address[5] _miners, uint[5] _values);//Emits upon a succesful value mine, indicates the msg.sender, 5 miners included in block, and the mined value
+    event NewValue(uint _apiId, uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
+    event PoolPayout(address sender, uint _apiId, uint _timestamp, address[5] _miners, uint[5] _values);//Emits when a pool is paid out, who is included and the amount(money collected from reads)
+    event ValueAddedToPool(address sender, uint _apiId, uint _value,uint _time);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
+    event MiningMultiplierChanged(uint _newMultiplier);//Each year, the mining reward decreases by 1/5 of the initial mining reward
+    event DataRetrieved(address _sender, uint _apiId, uint _timestamp, uint _value);//Emits when someone retireves data, this shows the msg.sender and the value retrieved
+    event DataRequested(address _sender, bytes32 _api, uint _apiId, uint _timestamp);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
+    event NonceSubmitted(address _miner, string _nonce, uint _apiId, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
+    event NewAPIonQinfo(bytes32 _apiOnQ, uint _timeOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
     event NewDispute(uint _DisputeID, uint _apiId, uint _timestamp);
     event Voted(uint _disputeID, bool _position, address _voter);
     event DisputeVoteTallied(uint _disputeID, int _result, uint _quorum, bool _active);
@@ -100,151 +99,7 @@ contract Oracle is OracleToken{
     event StakeLost(address _reportedMiner,uint);
 
 
-/*****************Disputes and Voting Functions***************/
-    /**
-    * @dev Helps initialize a dispute by assigning it a disputeId 
-    * when a miner returns a false on the validate array(in oracle.ProofOfWork) it sends the 
-    * invalidated value information to POS voting
-    * @param _apiId being disputed
-    * @param _timestamp being disputed
-    * @return the dispute Id
-    */
-    function initDispute(uint _apiId, uint _timestamp) external returns(uint){
-        //Oracle oracle = Oracle(oracleAddress);
-        //get blocknumber for this value and check blocknumber - value.blocknumber < x number of blocks 10 or 144?
-        uint _minedblock = getMinedBlockNum(_apiId, _timestamp);
-        require(block.number- _minedblock <= 144 && isData(_apiId, _timestamp) && transfer(address(this), disputeFee));//anyone owning tokens can report bad values, would this transfer from OracleToken to Stake token?
-        uint disputeId = disputesIds.length + 1;
-        address _reportedMiner = getMedianMinerbyApiIdTimestamp(_apiId, _timestamp);
-        //Dispute storage disp = disputes[disputeId];//how long can my mapping be? why is timestamp blue?
-        disputes[disputeId] = Dispute({
-            reportedMiner: _reportedMiner, 
-            reportingParty: msg.sender,
-            apiId: _apiId,
-            timestamp: _timestamp,
-            value: retrieveData(_apiId,_timestamp),  
-            minExecutionDate: now + voteDuration * 1 days, 
-            numberOfVotes: 0,
-            executed: false,
-            disputeVotePassed: false,
-            blockNumber: block.number,
-            quorum: 0,
-            tally: 0
-            });
-        disputesIds.push(disputeId);
-        StakeInfo memory stakes = staker[_reportedMiner];
-        stakes.current_state = 3;
-        return disputeId;
-        emit NewDispute(disputeId,_apiId,_timestamp );
-    }
 
-    /**
-    * @dev Allows token holders to vote
-    * @param _disputeId is the dispute id
-    * @param _supportsDispute is the vote (true=the dispute has basis false = vote against dispute)
-    */
-    function vote(uint _disputeId, bool _supportsDispute) public returns (uint voteId) {
-        Dispute storage disp = disputes[_disputeId];
-        StakeInfo memory stakes = staker[msg.sender];
-        uint bal = balanceOf(msg.sender);
-        require(disp.voted[msg.sender] != true && bal > 0 && stakes.current_state != 3);
-        if (stakes.current_state == 0) {
-            stakes.current_state = 4;
-            stakes.stakeAmt= bal;
-        } else if (stakes.current_state == 1) {
-            stakes.current_state = 5;
-        } else if (stakes.current_state == 2){
-            stakes.current_state = 6;
-        } 
-        disp.voted[msg.sender] = true;
-        disp.numberOfVotes += 1;
-        uint voteWeight = bal;
-        disp.quorum +=  voteWeight;
-        if (_supportsDispute) {
-            disp.tally = disp.tally + int(voteWeight);
-        } else {
-            disp.tally = disp.tally - int(voteWeight);
-        }
-        emit Voted(_disputeId,_supportsDispute,msg.sender);
-        return voteId;
-    }
-
-    /**
-    * @dev Allows token holders to unfreeze their funds after tally is ran
-    * @param _disputeId is the dispute id
-    */
-    function voteUnfreeze(uint _disputeId) public {
-        Dispute storage disp = disputes[_disputeId];
-        StakeInfo memory stakes = staker[msg.sender];
-        require(disp.voted[msg.sender] == true && disp.executed == true && stakes.current_state > 3);
-        if (stakes.current_state == 4) {
-            stakes.current_state = 0;
-            stakes.stakeAmt= 0;
-        } else if (stakes.current_state == 5) {
-            stakes.current_state = 1;
-        } else if (stakes.current_state == 6){
-            stakes.current_state = 2;
-        } 
-    } 
-    /**
-    * @dev tallies the votes and executes if minimum quorum is met or exceeded.
-    * @param _disputeId is the dispute id
-    */
-    function tallyVotes(uint _disputeId) public {
-        Dispute memory disp = disputes[_disputeId];
-        require(disp.executed == false);
-        require(now > disp.minExecutionDate && !disp.executed); //Uncomment for production-commented out for testing 
-        uint minQuorum = minimumQuorum;
-         require(disp.quorum >= minQuorum); 
-          if (disp.tally > 0 ) {
-             //if vote is >0 (meaning the value reported was a "bad value"), tranfer the stake value to 
-             //the first miner that reported the inconsistency.      
-            StakeInfo memory stakes = staker[disp.reportedMiner];        
-            stakes.current_state = 2;
-            uint stakeAmt = stakes.stakeAmt;
-            stakes.stakeAmt = 0;
-            disputeTransfer(disp.reportedMiner,disp.reportingParty, stakeAmt);
-            emit StakeLost(disp.reportedMiner, stakeAmt);
-            
-            disp.disputeVotePassed = true;
-            updateDisputeValue(disp.apiId, disp.timestamp);
-        } 
-        else {
-            disp.executed = true;
-            disp.disputeVotePassed = false;
-            transfer(disp.reportedMiner, disputeFee);
-            emit DisputeLost(disp.reportingParty, disputeFee);
-        }
-        emit DisputeVoteTallied(_disputeId,disp.tally, disp.quorum, disp.disputeVotePassed); 
-    }
-
-
-
-
-    /**
-    *@dev Get Dispute information
-    *@param _disputeId is the dispute id to check the outcome of
-    */
-    function getDisputeInfo(uint _disputeId) view public returns(uint, uint, uint,bool) {
-        Dispute memory disp = disputes[_disputeId];
-        return(disp.apiId, disp.timestamp, disp.value, disp.disputeVotePassed);
-    }
-
-    /**
-    * @dev Gets length of array containing all disputeIds
-    */
-    function countDisputes() view public returns(uint) {
-        return disputesIds.length;
-    }
-
-    /**
-    * @dev getter function to get all disputessIds
-    */
-    function getDisputesIds() view public returns (uint[]){
-        return disputesIds;
-    }
-
-/********************************/
     /*Modifiers*/
     modifier onlyOwner() {
         require(msg.sender == owner);
@@ -581,6 +436,150 @@ contract Oracle is OracleToken{
         address _miner = _miners[2];
         return _miner;
     }
+
+/*****************Disputes and Voting Functions***************/
+    /**
+    * @dev Helps initialize a dispute by assigning it a disputeId 
+    * when a miner returns a false on the validate array(in oracle.ProofOfWork) it sends the 
+    * invalidated value information to POS voting
+    * @param _apiId being disputed
+    * @param _timestamp being disputed
+    * @return the dispute Id
+    */
+    function initDispute(uint _apiId, uint _timestamp) external returns(uint){
+        //Oracle oracle = Oracle(oracleAddress);
+        //get blocknumber for this value and check blocknumber - value.blocknumber < x number of blocks 10 or 144?
+        uint _minedblock = getMinedBlockNum(_apiId, _timestamp);
+        require(block.number- _minedblock <= 144 && isData(_apiId, _timestamp) && transfer(address(this), disputeFee));//anyone owning tokens can report bad values, would this transfer from OracleToken to Stake token?
+        uint disputeId = disputesIds.length + 1;
+        address _reportedMiner = getMedianMinerbyApiIdTimestamp(_apiId, _timestamp);
+        //Dispute storage disp = disputes[disputeId];//how long can my mapping be? why is timestamp blue?
+        disputes[disputeId] = Dispute({
+            reportedMiner: _reportedMiner, 
+            reportingParty: msg.sender,
+            apiId: _apiId,
+            timestamp: _timestamp,
+            value: retrieveData(_apiId,_timestamp),  
+            minExecutionDate: now + voteDuration * 1 days, 
+            numberOfVotes: 0,
+            executed: false,
+            disputeVotePassed: false,
+            blockNumber: block.number,
+            quorum: 0,
+            tally: 0
+            });
+        disputesIds.push(disputeId);
+        StakeInfo memory stakes = staker[_reportedMiner];
+        stakes.current_state = 3;
+        return disputeId;
+        emit NewDispute(disputeId,_apiId,_timestamp );
+    }
+
+    /**
+    * @dev Allows token holders to vote
+    * @param _disputeId is the dispute id
+    * @param _supportsDispute is the vote (true=the dispute has basis false = vote against dispute)
+    */
+    function vote(uint _disputeId, bool _supportsDispute) public returns (uint voteId) {
+        Dispute storage disp = disputes[_disputeId];
+        StakeInfo memory stakes = staker[msg.sender];
+        uint bal = balanceOf(msg.sender);
+        require(disp.voted[msg.sender] != true && bal > 0 && stakes.current_state != 3);
+        if (stakes.current_state == 0) {
+            stakes.current_state = 4;
+            stakes.stakeAmt= bal;
+        } else if (stakes.current_state == 1) {
+            stakes.current_state = 5;
+        } else if (stakes.current_state == 2){
+            stakes.current_state = 6;
+        } 
+        disp.voted[msg.sender] = true;
+        disp.numberOfVotes += 1;
+        uint voteWeight = bal;
+        disp.quorum +=  voteWeight;
+        if (_supportsDispute) {
+            disp.tally = disp.tally + int(voteWeight);
+        } else {
+            disp.tally = disp.tally - int(voteWeight);
+        }
+        emit Voted(_disputeId,_supportsDispute,msg.sender);
+        return voteId;
+    }
+
+    /**
+    * @dev Allows token holders to unfreeze their funds after tally is ran
+    * @param _disputeId is the dispute id
+    */
+    function voteUnfreeze(uint _disputeId) public {
+        Dispute storage disp = disputes[_disputeId];
+        StakeInfo memory stakes = staker[msg.sender];
+        require(disp.voted[msg.sender] == true && disp.executed == true && stakes.current_state > 3);
+        if (stakes.current_state == 4) {
+            stakes.current_state = 0;
+            stakes.stakeAmt= 0;
+        } else if (stakes.current_state == 5) {
+            stakes.current_state = 1;
+        } else if (stakes.current_state == 6){
+            stakes.current_state = 2;
+        } 
+    } 
+    /**
+    * @dev tallies the votes and executes if minimum quorum is met or exceeded.
+    * @param _disputeId is the dispute id
+    */
+    function tallyVotes(uint _disputeId) public {
+        Dispute memory disp = disputes[_disputeId];
+        require(disp.executed == false);
+        require(now > disp.minExecutionDate && !disp.executed); //Uncomment for production-commented out for testing 
+        uint minQuorum = minimumQuorum;
+         require(disp.quorum >= minQuorum); 
+          if (disp.tally > 0 ) {
+             //if vote is >0 (meaning the value reported was a "bad value"), tranfer the stake value to 
+             //the first miner that reported the inconsistency.      
+            StakeInfo memory stakes = staker[disp.reportedMiner];        
+            stakes.current_state = 2;
+            uint stakeAmt = stakes.stakeAmt;
+            stakes.stakeAmt = 0;
+            disputeTransfer(disp.reportedMiner,disp.reportingParty, stakeAmt);
+            emit StakeLost(disp.reportedMiner, stakeAmt);
+            
+            disp.disputeVotePassed = true;
+            updateDisputeValue(disp.apiId, disp.timestamp);
+        } 
+        else {
+            disp.executed = true;
+            disp.disputeVotePassed = false;
+            transfer(disp.reportedMiner, disputeFee);
+            emit DisputeLost(disp.reportingParty, disputeFee);
+        }
+        emit DisputeVoteTallied(_disputeId,disp.tally, disp.quorum, disp.disputeVotePassed); 
+    }
+
+    /**
+    *@dev Get Dispute information
+    *@param _disputeId is the dispute id to check the outcome of
+    */
+    function getDisputeInfo(uint _disputeId) view public returns(uint, uint, uint,bool) {
+        Dispute memory disp = disputes[_disputeId];
+        return(disp.apiId, disp.timestamp, disp.value, disp.disputeVotePassed);
+    }
+
+    /**
+    * @dev Gets length of array containing all disputeIds
+    */
+    function countDisputes() view public returns(uint) {
+        return disputesIds.length;
+    }
+
+    /**
+    * @dev getter function to get all disputessIds
+    */
+    function getDisputesIds() view public returns (uint[]){
+        return disputesIds;
+    }
+
+/********************************/
+
 
     /**
     *@dev Allows the owner to set a new owner address
