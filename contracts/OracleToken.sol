@@ -146,21 +146,25 @@ contract OracleToken is Token{
         Oracle oracle = Oracle(oracleAddress);
         //get blocknumber for this value and check blocknumber - value.blocknumber < x number of blocks 10 or 144?
         uint _minedblock = oracle.getMinedBlockNum(_apiId, _timestamp);
-        require(block.number- _minedblock >144 && oracle.isData(_apiId, _timestamp) && transfer(address(this), disputeFee));//anyone owning tokens can report bad values, would this transfer from OracleToken to Stake token?
+        require(block.number- _minedblock <= 144 && oracle.isData(_apiId, _timestamp) && transfer(address(this), disputeFee));//anyone owning tokens can report bad values, would this transfer from OracleToken to Stake token?
         uint disputeId = disputesIds.length + 1;
         address _reportedMiner = oracle.getMedianMinerbyApiIdTimestamp(_apiId, _timestamp);
-        Dispute storage disp = disputes[disputeId];//how long can my mapping be? why is timestamp blue?
+        //Dispute storage disp = disputes[disputeId];//how long can my mapping be? why is timestamp blue?
+        disputes[disputeId] = Dispute({
+            reportedMiner: _reportedMiner, 
+            reportingParty: msg.sender,
+            apiId: _apiId,
+            timestamp: _timestamp,
+            value: oracle.retrieveData(_apiId,_timestamp),  
+            minExecutionDate: now + voteDuration * 1 days, 
+            numberOfVotes: 0,
+            executed: false,
+            disputeVotePassed: false,
+            blockNumber: block.number,
+            quorum: 0,
+            tally: 0
+            });
         disputesIds.push(disputeId);
-        disp.reportedMiner = _reportedMiner; 
-        disp.reportingParty = msg.sender;
-        disp.apiId = _apiId;
-        disp.timestamp = _timestamp;
-        disp.value = oracle.retrieveData(_apiId,_timestamp);  
-        disp.minExecutionDate = now + voteDuration * 1 days; 
-        disp.numberOfVotes = 0;
-        disp.executed = false;
-        disp.disputeVotePassed = false;
-        disp.blockNumber = block.number;
         StakeInfo memory stakes = staker[_reportedMiner];
         stakes.current_state = 3;
         return disputeId;
@@ -205,7 +209,7 @@ contract OracleToken is Token{
     function voteUnfreeze(uint _disputeId) public {
         Dispute storage disp = disputes[_disputeId];
         StakeInfo memory stakes = staker[msg.sender];
-        require(disp.voted[msg.sender] == true && disp.executed == true && stakes.current_state != 3);
+        require(disp.voted[msg.sender] == true && disp.executed == true && stakes.current_state > 3);
         if (stakes.current_state == 4) {
             stakes.current_state = 0;
             stakes.stakeAmt= 0;

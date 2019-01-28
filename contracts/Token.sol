@@ -151,10 +151,11 @@ contract Token {
         require(_deposit >= minimumStake && balanceOf(msg.sender) >= _deposit);
         stakers.push(msg.sender);
         stakersIndex[msg.sender] = stakers.length-1;
-        StakeInfo memory stakes = staker[msg.sender];
-        stakes.current_state = 1;
-        stakes.startDate = now - (now % 86400);
-        stakes.stakeAmt= _deposit;
+        staker[msg.sender] = StakeInfo({
+            current_state: 1,
+            startDate: now - (now % 86400),
+            stakeAmt: _deposit
+            });
         emit NewStake(msg.sender, _deposit);
     }
 

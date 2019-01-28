@@ -71,6 +71,17 @@ contract Oracle {
     event NonceSubmitted(address _miner, string _nonce, uint _apiId, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
     event NewAPIonQinfo(bytes32 _apiOnQ, uint _timeOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
 
+/********************/
+
+
+
+
+
+
+
+
+
+/********************************/
     /*Modifiers*/
     modifier onlyOwner() {
         require(msg.sender == owner);
