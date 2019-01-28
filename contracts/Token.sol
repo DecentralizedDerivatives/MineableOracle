@@ -1,21 +1,20 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./libraries/SafeMath.sol";
-
 /**
 * @title Token
 * This contracts contains the ERC20 token functions
 */
-contract Token {
+contract Token  {
 
     using SafeMath for uint256;
-  
+
     /*Variables*/
     uint public minimumStake;//stake required to become a miner and/or vote on disputes in oracle tokens
     uint public minimumStakeTime;
-    uint public total_supply;
     address[] public stakers;
-    mapping (address => uint) public balances;
+    uint public total_supply;
+    mapping (address => Checkpoint[]) balances;
     mapping(address => mapping (address => uint)) internal allowed;
     mapping(address => uint) public stakersIndex;
     mapping(address => StakeInfo) public staker;
@@ -24,7 +23,13 @@ contract Token {
         uint startDate; //stake start date
         uint stakeAmt;
     }
-       
+    struct  Checkpoint {
+        // fromBlock is the block number that the value was generated from
+        uint128 fromBlock;
+        // value is the amount of tokens at a specific block number
+        uint128 value;
+    }
+      
     /*Events*/
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
@@ -37,13 +42,20 @@ contract Token {
     * @dev Constructor that sets the passed value as the token to be mineable.
     */
     constructor() public{
-        total_supply = 10000 ether;
-        balances[msg.sender] = total_supply;
-        balances[address(this)]= (2**256) - 1 - total_supply;
+        total_supply = 2**256-1;
+        updateValueAtNow(balances[address(this)], total_supply);
         minimumStake= 1e18;
         minimumStakeTime = 15552000;
     }
     
+    /**
+    * @dev Gets balance of owner specified
+    * @param _owner is the owner address used to look up the balance
+    * @return Returns the balance associated with the passed in _owner
+    */
+    function balanceOf(address _owner) public view returns (uint bal) { 
+        return balanceOfAt(_owner, block.number); 
+    }
 
     /**
     * @dev Allows for a transfer of tokens to _to
@@ -71,19 +83,79 @@ contract Token {
         return true;
     }
 
+    /**
+    * @dev Queries the balance of _owner at a specific _blockNumber
+    * @param _owner The address from which the balance will be retrieved
+    * @param _blockNumber The block number when the balance is queried
+    * @return The balance at _blockNumber
+    */
+    function balanceOfAt(address _owner, uint _blockNumber) public constant returns (uint) {
+        if ((balances[_owner].length == 0) || (balances[_owner][0].fromBlock > _blockNumber)) {
+                return 0;
+        }
+     else {
+        return getValueAt(balances[_owner], _blockNumber);
+     }
+    }
 
+    /**
+    * @dev Getter for balance for owner on the specified _block number
+    * @param checkpoints gets the mapping for the balances[owner]
+    * @param _block is the block number to search the balance on
+    */
+    function getValueAt(Checkpoint[] storage checkpoints, uint _block) constant internal returns (uint) {
+        if (checkpoints.length == 0) return 0;
+        // Shortcut for the actual value
+        if (_block >= checkpoints[checkpoints.length-1].fromBlock)
+            return checkpoints[checkpoints.length-1].value;
+        if (_block < checkpoints[0].fromBlock) return 0;
+
+        // Binary search of the value in the array
+        uint min = 0;
+        uint max = checkpoints.length-1;
+        while (max > min) {
+            uint mid = (max + min + 1)/ 2;
+            if (checkpoints[mid].fromBlock<=_block) {
+                min = mid;
+            } else {
+                max = mid-1;
+            }
+        }
+        return checkpoints[min].value;
+    }
+
+    /**
+    * @dev Updates balance for from and to on the current block number via doTransfer
+    * @param checkpoints gets the mapping for the balances[owner]
+    * @param _value is the new balance
+    */
+    function updateValueAtNow(Checkpoint[] storage checkpoints, uint _value) internal  {
+        if ((checkpoints.length == 0)
+        || (checkpoints[checkpoints.length -1].fromBlock < block.number)) {
+               Checkpoint storage newCheckPoint = checkpoints[ checkpoints.length++ ];
+               newCheckPoint.fromBlock =  uint128(block.number);
+               newCheckPoint.value = uint128(_value);
+        } else {
+               Checkpoint storage oldCheckPoint = checkpoints[checkpoints.length-1];
+               oldCheckPoint.value = uint128(_value);
+        }
+    }
+    
     /** 
-    * @dev Completes POWO transfers by updating the balances
+    * @dev Completes POWO transfers by updating the balances on the current block number
     * @param _from address to transfer from
     * @param _to addres to transfer to
     * @param _amount to transfer 
     */
     function doTransfer(address _from, address _to, uint _amount) internal {
         require(_amount > 0 && _to != 0);
-        uint _stakeAmt = getStakeAmt(_from);
-        require(balances[_from]-_stakeAmt >= _amount);//lock the stake amt so it can't be moved until unstaked
-        balances[_from] = balances[_from].sub(_amount);
-        balances[_to] = balances[_to].add(_amount);
+        uint stakeAmt = getStakeAmt(_from);
+        uint previousBalance = balanceOfAt(_from, block.number);
+        require(previousBalance - stakeAmt  >= _amount);
+        updateValueAtNow(balances[_from], previousBalance - _amount);
+        previousBalance = balanceOfAt(_to, block.number);
+        require(previousBalance + _amount >= previousBalance); // Check for overflow
+        updateValueAtNow(balances[_to], previousBalance + _amount);
         emit Transfer(_from, _to, _amount);
     }
 
@@ -95,12 +167,16 @@ contract Token {
     */
     function disputeTransfer(address _from, address _to, uint _amount) internal {
         StakeInfo memory stakes = staker[_from];
-        require(_amount > 0 && _to != 0);
-        require(stakes.current_state == 3);//lock the stake amt so it can't be moved until unstaked
-        balances[_from] = balances[_from].sub(_amount);
-        balances[_to] = balances[_to].add(_amount);
+        require(_amount > 0 && _to != 0 && stakes.current_state == 3);
+        uint previousBalance = balanceOfAt(_from, block.number);
+        require(previousBalance >= _amount);
+        updateValueAtNow(balances[_from], previousBalance - _amount);
+        previousBalance = balanceOfAt(_to, block.number);
+        require(previousBalance + _amount >= previousBalance); // Check for overflow
+        updateValueAtNow(balances[_to], previousBalance + _amount);
         emit Transfer(_from, _to, _amount);
     }
+
     /**
     * @dev This function approves a _spender an _amount of tokens to use
     * @param _spender address
@@ -108,23 +184,14 @@ contract Token {
     * @return true if spender appproved successfully
     */
     function approve(address _spender, uint _amount) public returns (bool) {
-        uint _stakeAmt = getStakeAmt(msg.sender);
-        require(balances[msg.sender]-_stakeAmt >= _amount);//lock the stake amt so it can't be moved until unstaked
+        uint stakeAmt = getStakeAmt(msg.sender);
+        require(balanceOf(msg.sender) - stakeAmt >= _amount);//lock the stake amt so it can't be moved until unstaked
         allowed[msg.sender][_spender] = _amount;
         emit Approval(msg.sender, _spender, _amount);
         return true;
     }
-    /**
-    * @dev Gets balance of owner specified
-    * @param _owner is the owner address used to look up the balance
-    * @return Returns the balance associated with the passed in _owner
-    */
-    function balanceOf(address _owner) public constant returns (uint bal) { 
-        return balances[_owner]; 
-    }
 
     /**
-    * @dev Getter function allows you to view the allowance left based on the _owner and _spender
     * @param _owner address
     * @param _spender address
     * @return Returns the remaining allowance of tokens granted to the _spender from the _owner
@@ -133,11 +200,11 @@ contract Token {
        return allowed[_owner][_spender]; }
 
     /**
-    *@dev Getter for the total_supply of token
-    *@return total supply
+    * @dev Getter for the total_supply of oracle tokens
+    * @return total supply
     */
-    function totalSupply() public view returns(uint){
-        return total_supply;
+    function totalSupply() public view returns (uint) {
+       return total_supply;
     }
 
 
@@ -180,7 +247,5 @@ contract Token {
         StakeInfo memory stakes = staker[_sender];
         return stakes.stakeAmt;
     }
-
-
-/*****************Staking Functions***************/    
+  
 }

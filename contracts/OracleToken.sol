@@ -1,8 +1,8 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./libraries/SafeMath.sol";
 import "./Token.sol";
-import "./Oracle.sol";
+
 
 /**
 * @title Oracle token
@@ -19,12 +19,10 @@ contract OracleToken is Token{
     string public constant symbol = "POWO";
     uint8 public constant decimals = 18;
     uint public devShare;
-    address public owner;
-    //address public oracleAddress;
     uint public disputeFee;
     uint public minimumQuorum;
     uint public voteDuration;//3days the same as voting period
-
+    address public owner;
 
     event ChangeMinQuorum(uint _newMinimumQuorum);
     event ChangeVoteDuration(uint _newVotingDuration);
@@ -47,7 +45,6 @@ contract OracleToken is Token{
 
     }
 
-
     /**
     * @dev Allows for a transfer of tokens to the first 5 _miners that solve the challenge and 
     * updates the total_supply of the token(total_supply is saved in token.sol)
@@ -58,8 +55,7 @@ contract OracleToken is Token{
     * @param _amount The amount of tokens to send to each address
     * @param _isMine is true if the timestamp has been mined and miners have been paid out
     */
-    function batchTransfer(address[5] _miners, uint256[5] _amount, bool _isMine) internal {
-        //require(msg.sender == oracleAddress);
+    function batchTransfer(address[5] _miners, uint256[5] _amount, bool _isMine) internal {        
         uint _paid;
         for (uint i = 0; i < _miners.length; i++) {
             if (balanceOf(address(this)) >= _amount[i]
@@ -82,7 +78,6 @@ contract OracleToken is Token{
     * @return true after transfer 
     */
     function callTransfer(address _from,uint _amount) internal returns(bool){
-        //require(msg.sender == oracleAddress);
         doTransfer(_from,address(this), _amount);
         return true;
     }
@@ -94,39 +89,9 @@ contract OracleToken is Token{
     * @return true after transfer 
     */
     function devTransfer(address _to,uint _amount) internal returns(bool){
-        //require(msg.sender == oracleAddress);
         doTransfer(address(this),_to, _amount);
         return true;
     }
-
-    /**
-    * @dev  updates to minimum quorum 
-    * @param _minimumQuorum for passing vote and executing disputeFee or stake transfer
-    */
-    function setMinimumQuorum(uint _minimumQuorum) public onlyOwner()  {
-        if (_minimumQuorum == 0 ) _minimumQuorum = 1;
-        minimumQuorum = _minimumQuorum;
-        emit ChangeMinQuorum(minimumQuorum);
-    }
-
-    /**
-    * @dev Updates the vote duration
-    * @param _voteDuration in days
-    */
-    function setVoteDuration(uint _voteDuration) public onlyOwner()  {
-        voteDuration = _voteDuration;
-        emit ChangeVoteDuration(voteDuration);
-    }
-    /**
-    * @dev Updates the dispute fee amount
-    * @param _disputeFee fee amount in POWO tokens 
-    */
-    function setDisputeFee(uint _disputeFee) public onlyOwner()  {
-        disputeFee = _disputeFee;
-        emit ChangeDisputeFee(disputeFee);
-    }
-
-
 
 
 }

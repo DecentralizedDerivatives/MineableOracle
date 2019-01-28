@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./libraries/SafeMath.sol";
 import "./OracleToken.sol";
@@ -25,6 +25,7 @@ contract Oracle is OracleToken{
     uint public miningMultiplier;//This times payout total is the mining reward (it goes down each year)
     uint256 public difficulty; // Difficulty of current block
     uint[5] public payoutStructure;//The structure of the payout (how much uncles vs winner recieve)
+    uint public requestFee;
 
     //API on q info
     bytes32 public apiOnQ; //string of current api with highest PayoutPool
@@ -32,6 +33,10 @@ contract Oracle is OracleToken{
     uint public timeOnQ; //requested timestamp for api with highest Payout
     uint public miningApiId; //API being mined--updates with the ApiOnQ Id 
     
+    uint[] public disputesIds;
+    mapping(uint => Dispute) public disputes;//disputeId=> Disputes
+    mapping (uint => uint) public disputesIdsIndex;
+
     //api to id- user sends in string api and the api gets an id
     mapping(bytes32 => uint) apiId;// api string gets an id = to count of requests array
     //id to string api
@@ -39,9 +44,6 @@ contract Oracle is OracleToken{
     uint[] public apiIds;
     mapping(uint => uint) public apiIdsIndex;
     
-    //[apiId][timestamp]=>requestId = requestsId[].length
-    //mapping(uint => mapping(uint => uint)) requestID;
-    //[apiId][timestamp]=>payoutPool
     mapping(uint => mapping(uint => uint)) payoutPool;//This is the payout pool for a given api/timestamp.
     //[apiId][minedTimestamp]=>block.number
     mapping(uint => mapping(uint => uint)) minedBlockNum;
@@ -54,16 +56,14 @@ contract Oracle is OracleToken{
     mapping(uint => mapping(uint => address[5])) minersbyvalue;//This maps the UNIX timestamp to the 5 miners who mined that value
     //challenge to miner address to yes/no--where yes if they completed the channlenge
     mapping(bytes32 => mapping(address=>bool)) miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
-    uint public requestFee;
+    
+
     Details[5] first_five;
     struct Details {
         uint value;
         address miner;
     }
 
-    uint[] public disputesIds;
-    mapping(uint => Dispute) public disputes;//disputeId=> Disputes
-    mapping (uint => uint) public disputesIdsIndex;
     
     struct Dispute {
         address reportedMiner; //miner who alledgedly submitted the 'bad value' will get disputeFee if dispute vote fails
@@ -97,7 +97,6 @@ contract Oracle is OracleToken{
     event DisputeVoteTallied(uint _disputeID, int _result, uint _quorum, bool _active);
     event DisputeLost(address _reportingParty, uint);
     event StakeLost(address _reportedMiner,uint);
-
 
 
     /*Modifiers*/
@@ -136,19 +135,9 @@ contract Oracle is OracleToken{
     * @return count of values sumbitted so far and the time of the last successful mine
     */
     function proofOfWork(string nonce, uint _apiId, uint value) external returns (uint256,uint256) {
+        require(getStakeAmt(msg.sender)>0);
         bytes32 _solution = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
-        uint _rem = uint(_solution) % 3;
-        bytes32 n;
-        if(_rem == 2){
-            n = keccak256(abi.encodePacked(_solution));
-        }
-        else if(_rem ==1){
-            n = sha256(abi.encodePacked(_solution));
-        }
-        else{
-            n = keccak256(abi.encodePacked(ripemd160(abi.encodePacked(_solution))));
-        }
-
+        bytes32 n = sha256(abi.encodePacked(ripemd160(abi.encodePacked(_solution))));
         require(uint(n) % difficulty == 0 && _apiId == miningApiId && value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a valueS  
         first_five[count].value = value;
         first_five[count].miner = msg.sender;
@@ -158,14 +147,12 @@ contract Oracle is OracleToken{
         emit NonceSubmitted(msg.sender,nonce,_apiId,value);
         if(count == 5) { 
         uint _timediff = now - timeOfLastProof;
+        int _diff = int(_timediff - timeTarget);
         if(count == 5) { 
-            if (_timediff < timeTarget){
-                difficulty = difficulty + _timediff/60;
+            if (_diff != 0){
+                difficulty = difficulty - _timediff/60;
             }
-            else if (_timediff > timeTarget && difficulty > 1){
-                difficulty--;
-            }
-            
+
             uint i = (now - (now % timeTarget) - timeOfLastProof) / timeTarget;
             timeOfLastProof = now - (now % timeTarget);
             uint valuePool;
@@ -188,8 +175,8 @@ contract Oracle is OracleToken{
             count = 0;
             currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
          }
-     return (count,timeOfLastProof); 
-    }
+        return (count,timeOfLastProof); 
+        }
     }
 
     /**
@@ -252,7 +239,6 @@ contract Oracle is OracleToken{
     * mine the apiOnQ, or the api with the highest payout pool
     */
     function requestData(bytes32 _api, uint _timestamp, uint _requestGas) public{
-       // OracleToken oracleToken = OracleToken(oracleTokenAddress);
         require(apiId[_api] == 0 && _requestGas>= requestFee && callTransfer(msg.sender,_requestGas));
         uint _apiId=apiIds.length+1;
         apiIdsIndex[_apiId] = apiIds.length;
@@ -437,7 +423,7 @@ contract Oracle is OracleToken{
         return _miner;
     }
 
-/*****************Disputes and Voting Functions***************/
+    /*****************Disputes and Voting Functions***************/
     /**
     * @dev Helps initialize a dispute by assigning it a disputeId 
     * when a miner returns a false on the validate array(in oracle.ProofOfWork) it sends the 
@@ -447,13 +433,11 @@ contract Oracle is OracleToken{
     * @return the dispute Id
     */
     function initDispute(uint _apiId, uint _timestamp) external returns(uint){
-        //Oracle oracle = Oracle(oracleAddress);
         //get blocknumber for this value and check blocknumber - value.blocknumber < x number of blocks 10 or 144?
         uint _minedblock = getMinedBlockNum(_apiId, _timestamp);
-        require(block.number- _minedblock <= 144 && isData(_apiId, _timestamp) && transfer(address(this), disputeFee));//anyone owning tokens can report bad values, would this transfer from OracleToken to Stake token?
+        require(block.number- _minedblock <= 144 && isData(_apiId, _timestamp) && transfer(address(this), disputeFee));
         uint disputeId = disputesIds.length + 1;
         address _reportedMiner = getMedianMinerbyApiIdTimestamp(_apiId, _timestamp);
-        //Dispute storage disp = disputes[disputeId];//how long can my mapping be? why is timestamp blue?
         disputes[disputeId] = Dispute({
             reportedMiner: _reportedMiner, 
             reportingParty: msg.sender,
@@ -483,19 +467,10 @@ contract Oracle is OracleToken{
     function vote(uint _disputeId, bool _supportsDispute) public returns (uint voteId) {
         Dispute storage disp = disputes[_disputeId];
         StakeInfo memory stakes = staker[msg.sender];
-        uint bal = balanceOf(msg.sender);
-        require(disp.voted[msg.sender] != true && bal > 0 && stakes.current_state != 3);
-        if (stakes.current_state == 0) {
-            stakes.current_state = 4;
-            stakes.stakeAmt= bal;
-        } else if (stakes.current_state == 1) {
-            stakes.current_state = 5;
-        } else if (stakes.current_state == 2){
-            stakes.current_state = 6;
-        } 
+        uint voteWeight = balanceOfAt(msg.sender,disp.blockNumber);
+        require(disp.voted[msg.sender] != true && voteWeight > 0 && stakes.current_state != 3);
         disp.voted[msg.sender] = true;
         disp.numberOfVotes += 1;
-        uint voteWeight = bal;
         disp.quorum +=  voteWeight;
         if (_supportsDispute) {
             disp.tally = disp.tally + int(voteWeight);
@@ -506,23 +481,7 @@ contract Oracle is OracleToken{
         return voteId;
     }
 
-    /**
-    * @dev Allows token holders to unfreeze their funds after tally is ran
-    * @param _disputeId is the dispute id
-    */
-    function voteUnfreeze(uint _disputeId) public {
-        Dispute storage disp = disputes[_disputeId];
-        StakeInfo memory stakes = staker[msg.sender];
-        require(disp.voted[msg.sender] == true && disp.executed == true && stakes.current_state > 3);
-        if (stakes.current_state == 4) {
-            stakes.current_state = 0;
-            stakes.stakeAmt= 0;
-        } else if (stakes.current_state == 5) {
-            stakes.current_state = 1;
-        } else if (stakes.current_state == 6){
-            stakes.current_state = 2;
-        } 
-    } 
+
     /**
     * @dev tallies the votes and executes if minimum quorum is met or exceeded.
     * @param _disputeId is the dispute id
@@ -533,16 +492,13 @@ contract Oracle is OracleToken{
         require(now > disp.minExecutionDate && !disp.executed); //Uncomment for production-commented out for testing 
         uint minQuorum = minimumQuorum;
          require(disp.quorum >= minQuorum); 
-          if (disp.tally > 0 ) {
-             //if vote is >0 (meaning the value reported was a "bad value"), tranfer the stake value to 
-             //the first miner that reported the inconsistency.      
+          if (disp.tally > 0 ) { 
             StakeInfo memory stakes = staker[disp.reportedMiner];        
             stakes.current_state = 2;
             uint stakeAmt = stakes.stakeAmt;
             stakes.stakeAmt = 0;
             disputeTransfer(disp.reportedMiner,disp.reportingParty, stakeAmt);
             emit StakeLost(disp.reportedMiner, stakeAmt);
-            
             disp.disputeVotePassed = true;
             updateDisputeValue(disp.apiId, disp.timestamp);
         } 
@@ -577,8 +533,6 @@ contract Oracle is OracleToken{
     function getDisputesIds() view public returns (uint[]){
         return disputesIds;
     }
-
-/********************************/
 
 
     /**
