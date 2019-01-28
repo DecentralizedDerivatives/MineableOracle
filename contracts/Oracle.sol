@@ -10,11 +10,11 @@ import "./OracleToken.sol";
  * Includes functions for users to read data from, tip the miners and for miners to submit
  * values and get paid out from the master ProofOfWorkToken contract
  */
-contract Oracle {
+contract Oracle is OracleToken{
     using SafeMath for uint256;
     /*Variables*/
     address owner;
-    address oracleTokenAddress;
+    //address oracleTokenAddress;
     bytes32 public currentChallenge; //current challenge to be solved
     uint public timeOfLastProof; // time of last challenge solved
     uint public timeTarget; //The time between blocks (mined Oracle values)
@@ -72,14 +72,177 @@ contract Oracle {
     event NewAPIonQinfo(bytes32 _apiOnQ, uint _timeOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
 
 /********************/
+    uint[] public disputesIds;
+    mapping(uint => Dispute) public disputes;//disputeId=> Disputes
+    mapping (uint => uint) public disputesIdsIndex;
+    
+    struct Dispute {
+        address reportedMiner; //miner who alledgedly submitted the 'bad value' will get disputeFee if dispute vote fails
+        address reportingParty;//miner reporting the 'bad value'-pay disputeFee will get reportedMiner's stake if dispute vote passes
+        uint apiId;
+        uint timestamp;
+        uint value; //the value being disputed
+        uint minExecutionDate; 
+        uint numberOfVotes;
+        uint quorum;
+        uint  blockNumber;
+        int tally;
+        bool executed;
+        bool disputeVotePassed;       
+        mapping (address => bool) voted;
+    }  
+
+    /*Events*/
+    event NewDispute(uint _DisputeID, uint _apiId, uint _timestamp);
+    event Voted(uint _disputeID, bool _position, address _voter);
+    event DisputeVoteTallied(uint _disputeID, int _result, uint _quorum, bool _active);
+    event DisputeLost(address _reportingParty, uint);
+    event StakeLost(address _reportedMiner,uint);
+
+
+/*****************Disputes and Voting Functions***************/
+    /**
+    * @dev Helps initialize a dispute by assigning it a disputeId 
+    * when a miner returns a false on the validate array(in oracle.ProofOfWork) it sends the 
+    * invalidated value information to POS voting
+    * @param _apiId being disputed
+    * @param _timestamp being disputed
+    * @return the dispute Id
+    */
+    function initDispute(uint _apiId, uint _timestamp) external returns(uint){
+        //Oracle oracle = Oracle(oracleAddress);
+        //get blocknumber for this value and check blocknumber - value.blocknumber < x number of blocks 10 or 144?
+        uint _minedblock = getMinedBlockNum(_apiId, _timestamp);
+        require(block.number- _minedblock <= 144 && isData(_apiId, _timestamp) && transfer(address(this), disputeFee));//anyone owning tokens can report bad values, would this transfer from OracleToken to Stake token?
+        uint disputeId = disputesIds.length + 1;
+        address _reportedMiner = getMedianMinerbyApiIdTimestamp(_apiId, _timestamp);
+        //Dispute storage disp = disputes[disputeId];//how long can my mapping be? why is timestamp blue?
+        disputes[disputeId] = Dispute({
+            reportedMiner: _reportedMiner, 
+            reportingParty: msg.sender,
+            apiId: _apiId,
+            timestamp: _timestamp,
+            value: retrieveData(_apiId,_timestamp),  
+            minExecutionDate: now + voteDuration * 1 days, 
+            numberOfVotes: 0,
+            executed: false,
+            disputeVotePassed: false,
+            blockNumber: block.number,
+            quorum: 0,
+            tally: 0
+            });
+        disputesIds.push(disputeId);
+        StakeInfo memory stakes = staker[_reportedMiner];
+        stakes.current_state = 3;
+        return disputeId;
+        emit NewDispute(disputeId,_apiId,_timestamp );
+    }
+
+    /**
+    * @dev Allows token holders to vote
+    * @param _disputeId is the dispute id
+    * @param _supportsDispute is the vote (true=the dispute has basis false = vote against dispute)
+    */
+    function vote(uint _disputeId, bool _supportsDispute) public returns (uint voteId) {
+        Dispute storage disp = disputes[_disputeId];
+        StakeInfo memory stakes = staker[msg.sender];
+        uint bal = balanceOf(msg.sender);
+        require(disp.voted[msg.sender] != true && bal > 0 && stakes.current_state != 3);
+        if (stakes.current_state == 0) {
+            stakes.current_state = 4;
+            stakes.stakeAmt= bal;
+        } else if (stakes.current_state == 1) {
+            stakes.current_state = 5;
+        } else if (stakes.current_state == 2){
+            stakes.current_state = 6;
+        } 
+        disp.voted[msg.sender] = true;
+        disp.numberOfVotes += 1;
+        uint voteWeight = bal;
+        disp.quorum +=  voteWeight;
+        if (_supportsDispute) {
+            disp.tally = disp.tally + int(voteWeight);
+        } else {
+            disp.tally = disp.tally - int(voteWeight);
+        }
+        emit Voted(_disputeId,_supportsDispute,msg.sender);
+        return voteId;
+    }
+
+    /**
+    * @dev Allows token holders to unfreeze their funds after tally is ran
+    * @param _disputeId is the dispute id
+    */
+    function voteUnfreeze(uint _disputeId) public {
+        Dispute storage disp = disputes[_disputeId];
+        StakeInfo memory stakes = staker[msg.sender];
+        require(disp.voted[msg.sender] == true && disp.executed == true && stakes.current_state > 3);
+        if (stakes.current_state == 4) {
+            stakes.current_state = 0;
+            stakes.stakeAmt= 0;
+        } else if (stakes.current_state == 5) {
+            stakes.current_state = 1;
+        } else if (stakes.current_state == 6){
+            stakes.current_state = 2;
+        } 
+    } 
+    /**
+    * @dev tallies the votes and executes if minimum quorum is met or exceeded.
+    * @param _disputeId is the dispute id
+    */
+    function tallyVotes(uint _disputeId) public {
+        Dispute memory disp = disputes[_disputeId];
+        require(disp.executed == false);
+        require(now > disp.minExecutionDate && !disp.executed); //Uncomment for production-commented out for testing 
+        uint minQuorum = minimumQuorum;
+         require(disp.quorum >= minQuorum); 
+          if (disp.tally > 0 ) {
+             //if vote is >0 (meaning the value reported was a "bad value"), tranfer the stake value to 
+             //the first miner that reported the inconsistency.      
+            StakeInfo memory stakes = staker[disp.reportedMiner];        
+            stakes.current_state = 2;
+            uint stakeAmt = stakes.stakeAmt;
+            stakes.stakeAmt = 0;
+            disputeTransfer(disp.reportedMiner,disp.reportingParty, stakeAmt);
+            emit StakeLost(disp.reportedMiner, stakeAmt);
+            
+            disp.disputeVotePassed = true;
+            updateDisputeValue(disp.apiId, disp.timestamp);
+        } 
+        else {
+            disp.executed = true;
+            disp.disputeVotePassed = false;
+            transfer(disp.reportedMiner, disputeFee);
+            emit DisputeLost(disp.reportingParty, disputeFee);
+        }
+        emit DisputeVoteTallied(_disputeId,disp.tally, disp.quorum, disp.disputeVotePassed); 
+    }
 
 
 
 
+    /**
+    *@dev Get Dispute information
+    *@param _disputeId is the dispute id to check the outcome of
+    */
+    function getDisputeInfo(uint _disputeId) view public returns(uint, uint, uint,bool) {
+        Dispute memory disp = disputes[_disputeId];
+        return(disp.apiId, disp.timestamp, disp.value, disp.disputeVotePassed);
+    }
 
+    /**
+    * @dev Gets length of array containing all disputeIds
+    */
+    function countDisputes() view public returns(uint) {
+        return disputesIds.length;
+    }
 
-
-
+    /**
+    * @dev getter function to get all disputessIds
+    */
+    function getDisputesIds() view public returns (uint[]){
+        return disputesIds;
+    }
 
 /********************************/
     /*Modifiers*/
@@ -91,11 +254,10 @@ contract Oracle {
     /*Constructor*/
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
-    * @param _oracleTokenAddress is the oracleTokenAddress.address
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
     */
-    constructor(address _oracleTokenAddress, uint _timeTarget, uint[5] _payoutStructure) public{
+    constructor(uint _timeTarget, uint[5] _payoutStructure) public{
         timeOfLastProof = now - now  % _timeTarget;
         requestFee = 1;
         timeTarget = _timeTarget;
@@ -106,7 +268,7 @@ contract Oracle {
         for(uint i = 0;i<5;i++){
             payoutTotal += _payoutStructure[i];
         }
-        oracleTokenAddress=_oracleTokenAddress;
+        
     }
 
 
@@ -184,8 +346,8 @@ contract Oracle {
     * by adding a _tip to insentivize the miners to submit a value for the time stamp. 
     */
     function addToValuePool (uint _apiId, uint _timestamp, uint _tip) public {  
-        OracleToken oracleToken = OracleToken(oracleTokenAddress);     
-        require(oracleToken.callTransfer(msg.sender,_tip));
+        //OracleToken oracleToken = OracleToken(oracleTokenAddress);     
+        require(callTransfer(msg.sender,_tip));
         uint _time;
         if(_timestamp == 0){
             _time = timeOfLastProof + timeTarget;
@@ -221,23 +383,11 @@ contract Oracle {
     @param _apiId that was diputed
     @param _timestamp that was disputed
     */
-    function updateDisputeValue(uint _apiId, uint _timestamp) public {
-        require(msg.sender == oracleTokenAddress);
+    function updateDisputeValue(uint _apiId, uint _timestamp) internal {
+        //require(msg.sender == oracleTokenAddress);
         values[_apiId][_timestamp] =0;
     }
 
-    /**
-    * @dev Retrieve payout from the data reads. It pays out the 5 miners.
-    * @param _apiId to get the payout pool from
-    * @param _timestamp for which to retreive the payout from
-    */
-    function retrievePayoutPool(uint _apiId, uint _timestamp) public {
-        uint _payoutMultiplier = payoutPool[_apiId][_timestamp] / payoutTotal;
-        require (_payoutMultiplier > 0 && values[_apiId][_timestamp] > 0);
-        uint[5] memory _payout = [payoutStructure[4]*_payoutMultiplier,payoutStructure[3]*_payoutMultiplier,payoutStructure[2]*_payoutMultiplier,payoutStructure[1]*_payoutMultiplier,payoutStructure[0]*_payoutMultiplier];
-        OracleToken(oracleTokenAddress).batchTransfer(minersbyvalue[_apiId][_timestamp], _payout,false);
-        emit PoolPayout(msg.sender, _apiId, _timestamp,minersbyvalue[_apiId][_timestamp], _payout);
-    }
 
     /**
     * @dev Request to retreive value from oracle based on timestamp
@@ -247,8 +397,8 @@ contract Oracle {
     * mine the apiOnQ, or the api with the highest payout pool
     */
     function requestData(bytes32 _api, uint _timestamp, uint _requestGas) public{
-        OracleToken oracleToken = OracleToken(oracleTokenAddress);
-        require(apiId[_api] == 0 && _requestGas>= requestFee && oracleToken.callTransfer(msg.sender,_requestGas));
+       // OracleToken oracleToken = OracleToken(oracleTokenAddress);
+        require(apiId[_api] == 0 && _requestGas>= requestFee && callTransfer(msg.sender,_requestGas));
         uint _apiId=apiIds.length+1;
         apiIdsIndex[_apiId] = apiIds.length;
         apiIds.push(_apiId);
@@ -412,9 +562,9 @@ contract Oracle {
             _payout[i] = payoutStructure[i]*_payoutMultiplier;
         }
         
-        OracleToken oracleToken = OracleToken(oracleTokenAddress);
-        oracleToken.batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
-        oracleToken.devTransfer(oracleTokenAddress,(payoutTotal * oracleToken.devShare() / 100));
+        //OracleToken oracleToken = OracleToken(oracleTokenAddress);
+        batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
+        devTransfer(address(this),(payoutTotal * devShare / 100));
         values[_apiId][_time] = a[2].value;
         minersbyvalue[_apiId][_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
         emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
