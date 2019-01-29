@@ -55,7 +55,7 @@ contract OracleToken is Token{
     * @param _amount The amount of tokens to send to each address
     * @param _isMine is true if the timestamp has been mined and miners have been paid out
     */
-    function batchTransfer(address[5] _miners, uint256[5] _amount, bool _isMine) internal {        
+    function batchTransfer(address[5] memory _miners, uint256[5] memory _amount, bool _isMine) internal {        
         uint _paid;
         for (uint i = 0; i < _miners.length; i++) {
             if (balanceOf(address(this)) >= _amount[i]

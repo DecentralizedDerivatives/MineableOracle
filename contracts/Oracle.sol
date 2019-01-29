@@ -111,7 +111,7 @@ contract Oracle is OracleToken{
     * @param _timeTarget for the dificulty adjustment
     * @param _payoutStructure for miners
     */
-    constructor(uint _timeTarget, uint[5] _payoutStructure) public{
+    constructor(uint _timeTarget, uint[5] memory _payoutStructure) public{
         timeOfLastProof = now - now  % _timeTarget;
         requestFee = 1;
         timeTarget = _timeTarget;
@@ -134,7 +134,7 @@ contract Oracle is OracleToken{
     * @param value of api query
     * @return count of values sumbitted so far and the time of the last successful mine
     */
-    function proofOfWork(string nonce, uint _apiId, uint value) external returns (uint256,uint256) {
+    function proofOfWork(string calldata nonce, uint _apiId, uint value) external returns (uint256,uint256) {
         require(getStakeAmt(msg.sender)>0);
         bytes32 _solution = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
         bytes32 n = sha256(abi.encodePacked(ripemd160(abi.encodePacked(_solution))));
@@ -268,7 +268,7 @@ contract Oracle is OracleToken{
     * @param _apiId to look up
     * @param _timestamp is the timestampt to look up miners for
     */
-    function getMinersByValue(uint _apiId, uint _timestamp) public view returns(address[5]){
+    function getMinersByValue(uint _apiId, uint _timestamp) public view returns(address[5] memory){
         return minersbyvalue[_apiId][_timestamp];
     }
 
@@ -350,7 +350,7 @@ contract Oracle is OracleToken{
     * @dev Getter function for all apiId's 
     * @return array of apiIds
     */
-    function getAllApiIds() external view returns(uint[]){    
+    function getAllApiIds() external view returns(uint[] memory){    
         return apiIds;
     }
 
@@ -385,7 +385,8 @@ contract Oracle is OracleToken{
     function pushValue(uint _apiId, uint _time, uint _payoutMultiplier) internal {
         Details[5] memory a = first_five;
         uint[5] memory _payout;
-        for (uint i = 1;i <5;i++){
+        uint i;
+        for (i = 1;i <5;i++){
             uint temp = a[i].value;
             address temp2 = a[i].miner;
             uint j = i;
@@ -403,7 +404,6 @@ contract Oracle is OracleToken{
             _payout[i] = payoutStructure[i]*_payoutMultiplier;
         }
         
-        //OracleToken oracleToken = OracleToken(oracleTokenAddress);
         batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
         devTransfer(address(this),(payoutTotal * devShare / 100));
         values[_apiId][_time] = a[2].value;
@@ -530,7 +530,7 @@ contract Oracle is OracleToken{
     /**
     * @dev getter function to get all disputessIds
     */
-    function getDisputesIds() view public returns (uint[]){
+    function getDisputesIds() view public returns (uint[] memory){
         return disputesIds;
     }
 

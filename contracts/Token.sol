@@ -89,7 +89,7 @@ contract Token  {
     * @param _blockNumber The block number when the balance is queried
     * @return The balance at _blockNumber
     */
-    function balanceOfAt(address _owner, uint _blockNumber) public constant returns (uint) {
+    function balanceOfAt(address _owner, uint _blockNumber) public view returns (uint) {
         if ((balances[_owner].length == 0) || (balances[_owner][0].fromBlock > _blockNumber)) {
                 return 0;
         }
@@ -103,7 +103,7 @@ contract Token  {
     * @param checkpoints gets the mapping for the balances[owner]
     * @param _block is the block number to search the balance on
     */
-    function getValueAt(Checkpoint[] storage checkpoints, uint _block) constant internal returns (uint) {
+    function getValueAt(Checkpoint[] storage checkpoints, uint _block) view internal returns (uint) {
         if (checkpoints.length == 0) return 0;
         // Shortcut for the actual value
         if (_block >= checkpoints[checkpoints.length-1].fromBlock)
@@ -148,7 +148,7 @@ contract Token  {
     * @param _amount to transfer 
     */
     function doTransfer(address _from, address _to, uint _amount) internal {
-        require(_amount > 0 && _to != 0);
+        require(_amount > 0 && _to != address(0));
         uint stakeAmt = getStakeAmt(_from);
         uint previousBalance = balanceOfAt(_from, block.number);
         require(previousBalance - stakeAmt  >= _amount);
@@ -167,7 +167,7 @@ contract Token  {
     */
     function disputeTransfer(address _from, address _to, uint _amount) internal {
         StakeInfo memory stakes = staker[_from];
-        require(_amount > 0 && _to != 0 && stakes.current_state == 3);
+        require(_amount > 0 && _to != address(0) && stakes.current_state == 3);
         uint previousBalance = balanceOfAt(_from, block.number);
         require(previousBalance >= _amount);
         updateValueAtNow(balances[_from], previousBalance - _amount);
