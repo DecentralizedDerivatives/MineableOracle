@@ -1,9 +1,21 @@
 /** 
 * This tests the oracle functions, including mining.
 */
+const Web3 = require("web3"); // import web3 v1.0 constructor
+const web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:9545"));
+//const web3 = new Web3.setProvider(new Web3.providers.HttpProvider("http://localhost:9545"))
+//const web3 = new Web3;
+//const web3 = new Web3(Web3.currentProvider);
+//web3.setProvider(new Web3.providers.HttpProvider("http://localhost:9545"));
 
-var Oracle = artifacts.require("./Oracle.sol");
-var reader = artifacts.require("Reader.sol");
+const Oracle = artifacts.require("./Oracle.sol"); // globally injected artifacts helper
+var oracleAbi = Oracle.abi;
+var oracleByte = Oracle.bytecode;
+//Oracle.setProvider(web3.currentProvider);
+
+//const artifact = artifacts.require(Oracle) // globally injected artifacts helper
+//var Oracle = artifacts.require("./Oracle.sol");
+//var reader = artifacts.require("Reader.sol");
 
 //var timeframeM = (86400/60)/6; //10mins
 var timeframe = (86400); //Daily
@@ -56,26 +68,47 @@ async function expectThrow(promise){
   assert.fail('Expected throw not received');
 };
 
-contract('Mining Tests', function(accounts) {
+/*contract('Mining Tests', function(accounts) {
   let oracle;
 
     beforeEach('Setup contract for each test', async function () {
         //readcontract = await reader.new();
         oracle = await Oracle.new(600, [1e18,5e18,10e18,5e18,1e18]);
-/*        balance0 = await (oracle.balanceOf(accounts[0],{from:accounts[0]}));
+       balance0 = await (oracle.balanceOf(accounts[0],{from:accounts[0]}));
         await oracle.transfer(accounts[4],10e18,{from:accounts[0]});
         await oracle.transfer(accounts[5],10e18,{from:accounts[0]});
         await oracle.transfer(accounts[6],10e18,{from:accounts[0]});
         await oracle.transfer(accounts[7],10e18,{from:accounts[0]});
-        await oracle.transfer(accounts[8],10e18,{from:accounts[0]}); */
+        await oracle.transfer(accounts[8],10e18,{from:accounts[0]}); 
     });
 
     it("getVariables", async function(){
         vars = await oracle.getVariables();
         console.log(vars);
         //assert(vars[1] == 1);
-    }); 
+    }); */
+contract('Mining Tests', function(accounts) {
+  let oracle;
+  let testing;
+  let owner;
 
+    beforeEach('Setup contract for each test', async function () {
+        //readcontract = await reader.new();
+        owner = accounts[0];
+        console.log("owner set");
+        oracle = await Oracle.new(600);
+
+        //var oracledeploy = await new Oracle.new(600, [1e18,5e18,10e18,5e18,1e18],{data: oracleByte, from: web3.eth.accounts[0], gas: 4700000});
+        //var oracle = await new web3.eth.Contract(oracleAbi, oracledeploy.address);
+        console.log("oracle");
+
+    });
+
+    it("getVariables", async function(){
+        vars = await oracle.getVariables();
+        console.log(vars);
+        assert(vars[2] == 1);
+    }); 
 /****************Mining Tests*/
 /*
     it("Test miner", async function () {

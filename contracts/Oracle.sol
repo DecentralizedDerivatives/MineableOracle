@@ -109,9 +109,9 @@ contract Oracle is OracleToken{
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
     * @param _timeTarget for the dificulty adjustment
-    * @param _payoutStructure for miners
     */
-    constructor(uint _timeTarget, uint[5] memory _payoutStructure) public{
+    constructor(uint _timeTarget) public{
+        uint64[5] memory _payoutStructure = [1e18,5e18,10e18,5e18,1e18];
         timeOfLastProof = now - now  % _timeTarget;
         requestFee = 1;
         timeTarget = _timeTarget;
