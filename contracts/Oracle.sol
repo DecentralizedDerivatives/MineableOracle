@@ -238,7 +238,7 @@ contract Oracle is OracleToken{
     * @param _requestGas amount the requester is willing to pay to be get on queue. Miners
     * mine the apiOnQ, or the api with the highest payout pool
     */
-    function requestData(bytes32 _api, uint _timestamp, uint _requestGas) public{
+    function requestData(bytes32 _api, uint _timestamp, uint _requestGas) public returns(uint){
         require(apiId[_api] == 0 && _requestGas>= requestFee && callTransfer(msg.sender,_requestGas));
         uint _apiId=apiIds.length+1;
         apiIdsIndex[_apiId] = apiIds.length;
@@ -249,6 +249,7 @@ contract Oracle is OracleToken{
         payoutPool[_apiId][_time] = payoutPool[_apiId][_time].add(_requestGas);
         updateAPIonQ (_apiId, _timestamp);
         emit DataRequested(msg.sender,_api,_apiId,_timestamp);
+        return _apiId;
     }
 
     /**

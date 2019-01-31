@@ -27,12 +27,12 @@ def mine(challenge, public_address, difficulty):
 		nonce = Web3.toHex(str.encode(str(generate_random_number())))
 		_string = str(challenge[1:]).strip() + public_address[2:].strip() + nonce[2:].strip()
 		_solution = Web3.toHex(Web3.sha3(text=_string.strip()))
-		rem = ( int(_solution,16) % 3)
-		if(rem == 2):		
-			n = Web3.toHex(Web3.sha3(hexstr=_solution))
-		elif(rem == 1):
-			n = "0x" + hashlib.new('sha256',bytes.fromhex(_solution[2:])).hexdigest()
-		else:
+		# rem = ( int(_solution,16) % 3)
+		# if(rem == 2):		
+		# 	n = Web3.toHex(Web3.sha3(hexstr=_solution))
+		# elif(rem == 1):
+		# 	n = "0x" + hashlib.new('sha256',bytes.fromhex(_solution[2:])).hexdigest()
+		# else:
 			n = Web3.toHex(Web3.sha3(hexstr=(hashlib.new('ripemd160',bytes.fromhex(_solution[2:])).hexdigest())));
 		print("n",n)
 		hash1 = int(n,16)

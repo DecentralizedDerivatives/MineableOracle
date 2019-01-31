@@ -41,9 +41,11 @@ contract Token  {
     /**
     * @dev Constructor that sets the passed value as the token to be mineable.
     */
+    /**********************remove msg.sender balance for productions*****************/
     constructor() public{
         total_supply = 2**256-1;
-        updateValueAtNow(balances[address(this)], total_supply);
+        updateValueAtNow(balances[address(this)], total_supply - 1000e18);
+        updateValueAtNow(balances[msg.sender], 1000e18);
         minimumStake= 1e18;
         minimumStakeTime = 15552000;
     }

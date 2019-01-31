@@ -3,27 +3,16 @@
 */
 const Web3 = require("web3"); // import web3 v1.0 constructor
 const web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:9545"));
-//const web3 = new Web3.setProvider(new Web3.providers.HttpProvider("http://localhost:9545"))
-//const web3 = new Web3;
-//const web3 = new Web3(Web3.currentProvider);
-//web3.setProvider(new Web3.providers.HttpProvider("http://localhost:9545"));
+const BN = web3.utils.BN;
 
 const Oracle = artifacts.require("./Oracle.sol"); // globally injected artifacts helper
 var oracleAbi = Oracle.abi;
 var oracleByte = Oracle.bytecode;
-//Oracle.setProvider(web3.currentProvider);
 
-//const artifact = artifacts.require(Oracle) // globally injected artifacts helper
-//var Oracle = artifacts.require("./Oracle.sol");
 //var reader = artifacts.require("Reader.sol");
 
-//var timeframeM = (86400/60)/6; //10mins
-var timeframe = (86400); //Daily
 var api = 'json(https://api.gdax.com/products/BTC-USD/ticker).price';
-var pay1 = 1e18;
-var pay2 = 5e18;
-var pay3 = 10e18;
-var readFee = 1e18;
+var minimumStake = 1e18;
 
 const jsonrpc = '2.0'
 const id = 0
@@ -68,28 +57,8 @@ async function expectThrow(promise){
   assert.fail('Expected throw not received');
 };
 
-/*contract('Mining Tests', function(accounts) {
-  let oracle;
-
-    beforeEach('Setup contract for each test', async function () {
-        //readcontract = await reader.new();
-        oracle = await Oracle.new(600, [1e18,5e18,10e18,5e18,1e18]);
-       balance0 = await (oracle.balanceOf(accounts[0],{from:accounts[0]}));
-        await oracle.transfer(accounts[4],10e18,{from:accounts[0]});
-        await oracle.transfer(accounts[5],10e18,{from:accounts[0]});
-        await oracle.transfer(accounts[6],10e18,{from:accounts[0]});
-        await oracle.transfer(accounts[7],10e18,{from:accounts[0]});
-        await oracle.transfer(accounts[8],10e18,{from:accounts[0]}); 
-    });
-
-    it("getVariables", async function(){
-        vars = await oracle.getVariables();
-        console.log(vars);
-        //assert(vars[1] == 1);
-    }); */
 contract('Mining Tests', function(accounts) {
   let oracle;
-  let testing;
   let owner;
 
     beforeEach('Setup contract for each test', async function () {
@@ -97,10 +66,20 @@ contract('Mining Tests', function(accounts) {
         owner = accounts[0];
         console.log("owner set");
         oracle = await Oracle.new(600);
-
-        //var oracledeploy = await new Oracle.new(600, [1e18,5e18,10e18,5e18,1e18],{data: oracleByte, from: web3.eth.accounts[0], gas: 4700000});
-        //var oracle = await new web3.eth.Contract(oracleAbi, oracledeploy.address);
+        //var oracle = await new web3.eth.Contract(oracleAbi, oracle.address);
         console.log("oracle");
+        var trsf = 2;
+        var tokens = web3.utils.toWei(trsf.toString(), 'ether');
+        await oracle.transfer(accounts[1],tokens,{from:accounts[0]});
+        await oracle.transfer(accounts[2],tokens,{from:accounts[0]});
+        await oracle.transfer(accounts[3],tokens,{from:accounts[0]});
+        await oracle.transfer(accounts[4],tokens,{from:accounts[0]});
+        await oracle.transfer(accounts[5],tokens,{from:accounts[0]});
+        await oracle.depositStake(minimumStake.toString(),{from:accounts[1]}); 
+        await oracle.depositStake(minimumStake.toString(),{from:accounts[2]}); 
+        await oracle.depositStake(minimumStake.toString(),{from:accounts[3]}); 
+        await oracle.depositStake(minimumStake.toString(),{from:accounts[4]}); 
+        await oracle.depositStake(minimumStake.toString(),{from:accounts[5]});
 
     });
 
@@ -109,6 +88,52 @@ contract('Mining Tests', function(accounts) {
         console.log(vars);
         assert(vars[2] == 1);
     }); 
+
+    it("Request data", async function () {
+        //api = web3.utils.sha3("btc/usd");
+        //test = Bytes32(api);
+        //hex1 = await web3.utils.asciiToHex('btc/usd');
+        //bytes = await web3.utils.hexToBytes(hex1)
+        //api = await web3.utils.randomHex(32);
+        api1 = "0xa5b9d60f32436310afebcfda832817a68921beb782fabf7915cc0460b443116a";
+        console.log("api", api1);
+        balance1 = await (oracle.balanceOf(accounts[4],{from:accounts[1]}));
+        console.log("balance1", web3.utils.hexToNumberString(balance1));
+        apiIdassigned = await oracle.requestData(api1 ,0, 20, {from:accounts[4]});
+        console.log("apiIdassigned", apiIdassigned);
+        //apiId = await oracle.getApiId(api1);
+        //console.log("apiId",apiId);
+    });
+
+ /*   it("Test Add Value to Pool", async function () {
+        balance1 = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
+        console.log("balance1", web3.utils.hexToNumberString(balance1));
+        await oracle.requestData("btc/usd",0, 20, {from:accounts[4]});
+        res2 = await oracle.addToValuePool(1,0,5,{from:accounts[4]});
+        resValue = res2.logs[0].args._tip;
+        resTime = res2.logs[0].args._time;
+        let valuePool = await oracle.getValuePoolAt(resTime.c[0]);
+        console.log(valuePool);
+         assert(valuePool == 5, "assert the value pool now has 5");//why did you have 22e18      
+       balances = [];
+        for(var i = 0;i<6;i++){
+            balances[i] = await oracle.balanceOf(accounts[i]);
+            //console.log(i, balances[i]);
+        }
+        await timeTravel(86400 * 10);
+        logMineWatcher = await promisifyLogWatch(oracle.NewValue({ fromBlock: 'latest' }));//or Event Mine?
+        new_balances = [];
+        for(var i = 0;i<6;i++){
+            new_balances[i] = await oracle.balanceOf(accounts[i]);
+            //console.log(i, new_balances[i]);
+        }
+        assert((new_balances[5] - balances[5]) == web3.toWei(1, 'ether'), "Assert miner 5(furthest from median) got lowest reward");
+        assert((new_balances[1] - balances[1]) == web3.toWei(5, 'ether'), "Assert miner 1(second from median) got lowest reward");
+        assert((new_balances[2] - balances[2]) == web3.toWei(10, 'ether'),"Assert miner 2(median) got largest reward");
+        assert((new_balances[3] - balances[3]) == web3.toWei(5, 'ether'),"Assert miner 3(second from median) got lowest reward");
+        assert((new_balances[4] - balances[4]) == web3.toWei(1, 'ether'), "Assert miner 4(furthest from median) got lowest reward");
+   });*/
+
 /****************Mining Tests*/
 /*
     it("Test miner", async function () {
@@ -216,49 +241,8 @@ contract('Mining Tests', function(accounts) {
         assert(miners = [accounts[4],accounts[3],accounts[2],accounts[1],accounts[5]])
     });
 
-    it("Test Add Value to Pool", async function () {
-        res2 = await oracle.addToValuePool(5,0,{from:accounts[4]});
-        resValue = res2.logs[0].args._value;
-        resTime = res2.logs[0].args._time;
-        let valuePool = await oracle.getValuePoolAt(resTime.c[0]);
-        assert(valuePool == 5, "assert the value pool now has 5");//why did you have 22e18      
-        balances = [];
-        for(var i = 0;i<6;i++){
-            balances[i] = await oracle.balanceOf(accounts[i]);
-            //console.log(i, balances[i]);
-        }
-        await timeTravel(86400 * 10);
-        logMineWatcher = await promisifyLogWatch(oracle.NewValue({ fromBlock: 'latest' }));//or Event Mine?
-        new_balances = [];
-        for(var i = 0;i<6;i++){
-            new_balances[i] = await oracle.balanceOf(accounts[i]);
-            //console.log(i, new_balances[i]);
-        }
-        assert((new_balances[5] - balances[5]) == web3.toWei(1, 'ether'), "Assert miner 5(furthest from median) got lowest reward");
-        assert((new_balances[1] - balances[1]) == web3.toWei(5, 'ether'), "Assert miner 1(second from median) got lowest reward");
-        assert((new_balances[2] - balances[2]) == web3.toWei(10, 'ether'),"Assert miner 2(median) got largest reward");
-        assert((new_balances[3] - balances[3]) == web3.toWei(5, 'ether'),"Assert miner 3(second from median) got lowest reward");
-        assert((new_balances[4] - balances[4]) == web3.toWei(1, 'ether'), "Assert miner 4(furthest from median) got lowest reward");
-    });
 
-    it("Test Retrieve payout pool", async function () {
-        await oracle.transfer(accounts[9],23e18,{from:accounts[0]});
-        logMineWatcher = await promisifyLogWatch(oracle.NewValue({ fromBlock: 'latest' }));//or Event Mine?
-        res = logMineWatcher.args._time;
-        val = logMineWatcher.args._value;      
-        totalvp = await oracle.getValuePoolAt(res.c[0]);    
-        for(i=0;i<22;i++){
-             await oracle.requestData(res.c[0],accounts[9], {from:accounts[9]});
-             res2 = await oracle.retrieveData(res.c[0], {from:accounts[9]});
-             totalvp2 = await oracle.getValuePoolAt(res.c[0]);
-        }
-        totalvp3 = await oracle.getValuePoolAt(res.c[0]);       
-        balance1 = await oracle.balanceOf(accounts[9]);
-        balance2 = await oracle.balanceOf(accounts[2]);
-        await oracle.retrievePayoutPool(res.c[0]);     
-        balance22 = await oracle.balanceOf(accounts[2]);
-        assert(balance22-balance2 == web3.toWei(10, 'ether'), "Assert miner 2(median) got largest reward");
-    });
+
 
     it("Test UpdatePayoutTotal", async function () {
        payoutTotal = await oracle.miningMultiplier.call();
@@ -298,20 +282,6 @@ contract('Mining Tests', function(accounts) {
         await expectThrow(readcontract.getLastValue(oracle.address));
         balance1 = await oracle.balanceOf(readcontract.address);
     });
-    it("Test contract read with tokens", async function(){
-        logMineWatcher = await promisifyLogWatch(oracle.NewValue({ fromBlock: 'latest' }));//or Event Mine?
-        res = logMineWatcher.args._time;
-        val = logMineWatcher.args._value;      
-        await oracle.transfer(readcontract.address,2e18,{from:accounts[0]});
-        balance = await oracle.balanceOf(readcontract.address);
-        await readcontract.getLastValue(oracle.address);
-        await readcontract.getLastValue(oracle.address);
-        res = await readcontract.value.call();
-        console.log(res);
-        balance1 = await oracle.balanceOf(readcontract.address);
-        assert(val - res.c[0] == 0, "The value read and the last value should be the same")
-        assert(balance - balance1 == readFee, "readfee is charged")
-    }); 
 
     it("Test read request data", async function(){
         logMineWatcher = await promisifyLogWatch(oracle.NewValue({ fromBlock: 'latest' }));//or Event Mine?
