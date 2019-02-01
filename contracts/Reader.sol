@@ -1,6 +1,6 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
-import './OracleToken.sol';
+import './Oracle.sol';
 /**
 * @title Reader
 * This contracts tests for authorized and unauthorized access to data
@@ -12,10 +12,10 @@ contract Reader{
 
     /**
     @dev Getter function to get value for last mined _timestamp
-    @param _otoken OracleToken Address
+    @param _oracle_add OracleToken Address
     */
-	function getLastValue(address _otoken) public {
-		OracleToken token = OracleToken(_otoken);
-		(value,ifRetrieve) = token.getLastQuery();
+	function getLastValue(address _oracle_add) public {
+		Oracle doracle = Oracle(_oracle_add);
+		(value,ifRetrieve) = doracle.getLastQuery();
 	}
 }
