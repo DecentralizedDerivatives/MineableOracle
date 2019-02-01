@@ -11,7 +11,7 @@ var oracleByte = Oracle.bytecode;
 
 //var reader = artifacts.require("Reader.sol");
 
-var api = 'json(https://api.gdax.com/products/BTC-USD/ticker).price';
+//var api = 'json(https://api.gdax.com/products/BTC-USD/ticker).price';
 var minimumStake = 1e18;
 
 const jsonrpc = '2.0'
@@ -89,58 +89,13 @@ contract('Mining Tests', function(accounts) {
         assert(vars[2] == 1);
     }); 
 
-    it("Request data", async function () {
-        //api = web3.utils.sha3("btc/usd");
-        //test = Bytes32(api);
-        //hex1 = await web3.utils.asciiToHex('btc/usd');
-        //bytes = await web3.utils.hexToBytes(hex1)
-        //api = await web3.utils.randomHex(32);
-        api1 = "0xa5b9d60f32436310afebcfda832817a68921beb782fabf7915cc0460b443116a";
-        console.log("api", api1);
-        balance1 = await (oracle.balanceOf(accounts[4],{from:accounts[1]}));
-        console.log("balance1", web3.utils.hexToNumberString(balance1));
-        apiIdassigned = await oracle.requestData(api1 ,0, 20, {from:accounts[4]});
-        console.log("apiIdassigned", apiIdassigned);
-        //apiId = await oracle.getApiId(api1);
-        //console.log("apiId",apiId);
-    });
-
- /*   it("Test Add Value to Pool", async function () {
-        balance1 = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
-        console.log("balance1", web3.utils.hexToNumberString(balance1));
-        await oracle.requestData("btc/usd",0, 20, {from:accounts[4]});
-        res2 = await oracle.addToValuePool(1,0,5,{from:accounts[4]});
-        resValue = res2.logs[0].args._tip;
-        resTime = res2.logs[0].args._time;
-        let valuePool = await oracle.getValuePoolAt(resTime.c[0]);
-        console.log(valuePool);
-         assert(valuePool == 5, "assert the value pool now has 5");//why did you have 22e18      
-       balances = [];
-        for(var i = 0;i<6;i++){
-            balances[i] = await oracle.balanceOf(accounts[i]);
-            //console.log(i, balances[i]);
-        }
-        await timeTravel(86400 * 10);
-        logMineWatcher = await promisifyLogWatch(oracle.NewValue({ fromBlock: 'latest' }));//or Event Mine?
-        new_balances = [];
-        for(var i = 0;i<6;i++){
-            new_balances[i] = await oracle.balanceOf(accounts[i]);
-            //console.log(i, new_balances[i]);
-        }
-        assert((new_balances[5] - balances[5]) == web3.toWei(1, 'ether'), "Assert miner 5(furthest from median) got lowest reward");
-        assert((new_balances[1] - balances[1]) == web3.toWei(5, 'ether'), "Assert miner 1(second from median) got lowest reward");
-        assert((new_balances[2] - balances[2]) == web3.toWei(10, 'ether'),"Assert miner 2(median) got largest reward");
-        assert((new_balances[3] - balances[3]) == web3.toWei(5, 'ether'),"Assert miner 3(second from median) got lowest reward");
-        assert((new_balances[4] - balances[4]) == web3.toWei(1, 'ether'), "Assert miner 4(furthest from median) got lowest reward");
-   });*/
-
 /****************Mining Tests*/
-/*
+
     it("Test miner", async function () {
         console.log('START MINING RIG!!');
         logNewValueWatcher = await promisifyLogWatch(oracle.NewValue({ fromBlock: 'latest' }));//or Event Mine?
     });
-
+/*
     it("Test Full Miner", async function () {
         logMineWatcher = await promisifyLogWatch(oracle.NewValue({ fromBlock: 'latest' }));//or Event Mine?
         assert(logMineWatcher.args._value > 0, "The value submitted by the miner should not be zero");

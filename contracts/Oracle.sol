@@ -247,8 +247,8 @@ contract Oracle is OracleToken{
         api[_apiId] = _api;
         uint _time = _timestamp - (_timestamp % timeTarget);
         payoutPool[_apiId][_time] = payoutPool[_apiId][_time].add(_requestGas);
-        updateAPIonQ (_apiId, _timestamp);
-        emit DataRequested(msg.sender,_api,_apiId,_timestamp);
+        updateAPIonQ (_apiId, _time);
+        emit DataRequested(msg.sender,_api,_apiId,_time);
         return _apiId;
     }
 

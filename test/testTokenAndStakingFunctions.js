@@ -156,5 +156,80 @@ contract('Token and Staking Tests', function(accounts) {
     });*/
 
 
+
+    it("getVariables", async function(){
+        vars = await oracle.getVariables();
+        console.log(vars);
+        assert(vars[2] == 1);
+    }); 
+
+    it("Request data", async function () {
+        //api = web3.utils.sha3("btc/usd");
+        //test = Bytes32(api);
+        //hex1 = await web3.utils.asciiToHex('btc/usd');
+        //bytes = await web3.utils.hexToBytes(hex1)
+        //api = await web3.utils.randomHex(32);
+        api2 = "0xa5b9d60f32436310afebcfda832817a68921beb782fabf7915cc0460b443116a";
+        api1 = "0x0";
+        console.log("api1", api1);
+        balance1 = await (oracle.balanceOf(accounts[4],{from:accounts[1]}));
+        console.log("balance1", web3.utils.hexToNumberString(balance1));
+        let res = await oracle.requestData(api1 ,0, 20, {from:accounts[4]});
+        let resApi = await res.logs[0].args._api;//undefined???
+        console.log("resApi", resApi);
+        let resApiId = await res.logs[0].args._apiId;
+        console.log("resApiId", resApiId);
+        apiId = await oracle.getApiId(api1);
+        console.log("apiId",apiId); //works      
+
+        let res2 = await oracle.requestData(api2 ,1549080000, 20, {from:accounts[4]});
+        let apiTimestamp = await res2.logs[0].args._timestamp;
+        console.log("_timestamp",apiTimestamp);
+        apiids2 = await oracle.getAllApiIds();
+        console.log("allapiids2", apiids2)
+        let valuePool = await oracle.getValuePoolAt(2,1549080000);
+        console.log(valuePool);
+    });
+
+  it("Test Add Value to Pool", async function () {
+        api1 = "0x0";
+        time = 1549080000;
+        balance1 = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
+        console.log("balance1", web3.utils.hexToNumberString(balance1));
+        let res = await oracle.requestData(api1,time, 20, {from:accounts[1]});
+        console.log(res.logs[2].args);
+        let resApi = await res.logs[2].args._api;//undefined???
+        console.log("resApi", resApi);
+        let resApiId = await res.logs[2].args._apiId;
+        console.log("resApiId", resApiId);
+        let apiTimestamp = await res.logs[2].args._timestamp;
+        console.log("_timestamp",apiTimestamp);
+        valuePool = await oracle.addToValuePool(1,apiTimestamp,5,{from:accounts[1]});//apiTimestamp
+        //console.log("valuePool", valuePool);
+        getValuePool = await oracle.getValuePoolAt(1, apiTimestamp);//apiTimestamp
+        console.log("Get Value Pool at", getValuePool);
+        balance2 = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
+        console.log("balance2", web3.utils.hexToNumberString(balance2));
+ /*     assert(valuePool == 5, "assert the value pool now has 5");      
+       balances = [];
+        for(var i = 0;i<6;i++){
+            balances[i] = await oracle.balanceOf(accounts[i]);
+            //console.log(i, balances[i]);
+        }
+        await timeTravel(86400 * 10);
+        logMineWatcher = await promisifyLogWatch(oracle.NewValue({ fromBlock: 'latest' }));//or Event Mine?
+        new_balances = [];
+        for(var i = 0;i<6;i++){
+            new_balances[i] = await oracle.balanceOf(accounts[i]);
+            //console.log(i, new_balances[i]);
+        }
+        assert((new_balances[5] - balances[5]) == web3.toWei(1, 'ether'), "Assert miner 5(furthest from median) got lowest reward");
+        assert((new_balances[1] - balances[1]) == web3.toWei(5, 'ether'), "Assert miner 1(second from median) got lowest reward");
+        assert((new_balances[2] - balances[2]) == web3.toWei(10, 'ether'),"Assert miner 2(median) got largest reward");
+        assert((new_balances[3] - balances[3]) == web3.toWei(5, 'ether'),"Assert miner 3(second from median) got lowest reward");
+        assert((new_balances[4] - balances[4]) == web3.toWei(1, 'ether'), "Assert miner 4(furthest from median) got lowest reward");
+ */  });
+
+
 });
  
