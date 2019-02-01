@@ -94,55 +94,6 @@ contract('Token and Staking Tests', function(accounts) {
         assert.equal(allow, 100, "Allowance shoudl be 100");
     });
 
-    it("Staking and attempt to transfer more than balance - stake", async function(){
-        var trsf = 2;
-        var tokens = web3.utils.toWei(trsf.toString(), 'ether');
-        await oracle.transfer(accounts[1],tokens,{from:accounts[0]});
-        balance1 = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
-        console.log("Start balance1", balance1);
-        await oracle.depositStake(minimumStake.toString(),{from:accounts[1]}); 
-        balance1b = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
-        console.log("End balance1", balance1b);
-        stakeAmt = await oracle.getStakeAmt(accounts[1]);
-        console.log("stakeAmt", web3.utils.hexToNumberString(stakeAmt));
-        await expectThrow(oracle.transfer(accounts[0],tokens,{from:accounts[1]}));
-    });
-
-    it("Staking and attempt to withdraw before stake time is up", async function(){
-        var trsf = 2;
-        var tokens = web3.utils.toWei(trsf.toString(), 'ether');
-        await oracle.transfer(accounts[1],tokens,{from:accounts[0]});
-        balance1 = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
-        console.log("Start balance1", balance1);
-        await oracle.depositStake(minimumStake.toString(),{from:accounts[1]}); 
-        balance1b = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
-        console.log("End balance1", balance1b);
-        stakeAmt = await oracle.getStakeAmt(accounts[1]);
-        console.log("stakeAmt", web3.utils.hexToNumberString(stakeAmt));
-        await expectThrow(oracle.withdrawStake({from:accounts[1]}));
-    });
-
-    it("Staking and withdraw stake ", async function(){
-        var trsf = 2;
-        var tokens = web3.utils.toWei(trsf.toString(), 'ether');
-        await oracle.transfer(accounts[1],tokens,{from:accounts[0]});
-        balance1 = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
-        console.log("Start balance1", balance1);
-        await oracle.depositStake(minimumStake.toString(),{from:accounts[1]}); 
-        balance1b = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
-        console.log("End balance1", balance1b);
-        stakeAmt = await oracle.getStakeAmt(accounts[1]);
-        console.log("stakeAmt", web3.utils.hexToNumberString(stakeAmt));
-/*      await timeTravel(15552000);
-        await oracle.withdrawStake({from:accounts[1]});
-        stakeAmt2 = await oracle.getStakeAmt(accounts[1]);
-        console.log("stakeAmt", web3.utils.hexToNumberString(stakeAmt2));*/
-    });
-
-
-
-
-
 /*    it("Total Supply", async function(){
         supply = await oracle.totalSupply();
         console.log("supply:", supply.toString());
@@ -153,64 +104,174 @@ contract('Token and Staking Tests', function(accounts) {
         contra1 = contra.toNumber();
         contrabal= new BN(2**256 - 1 - 1000e18);
         assert.equal(contra1,contrabal,"Contract balance should be max");
-    });*/
+    });*/    
 
+    it("Staking and attempt to transfer more than balance - stake", async function(){
+        var trsf = 2;
+        var tokens = web3.utils.toWei(trsf.toString(), 'ether');
+        await oracle.transfer(accounts[1],tokens,{from:accounts[0]});
+        balance1 = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
+        await oracle.depositStake(minimumStake.toString(),{from:accounts[1]}); 
+        balance1b = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
+        stakeAmt = await oracle.getStakeAmt(accounts[1]);
+        await expectThrow(oracle.transfer(accounts[0],tokens,{from:accounts[1]}));
+        assert(web3.utils.hexToNumberString(stakeAmt) == minimumStake.toString(), "minstake should eaqal stakeamt" );
+        assert(web3.utils.toWei(trsf.toString(), 'ether') == web3.utils.hexToNumberString(balance1), "Balance should equal transferred amt trsf");
+    });
+
+    it("Staking and attempt to Allow and transferFrom more than balance - stake", async function(){
+        var trsf = 2;
+        var tokens = web3.utils.toWei(trsf.toString(), 'ether');
+        await oracle.transfer(accounts[1],tokens,{from:accounts[0]});
+        balance1 = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
+        await oracle.depositStake(minimumStake.toString(),{from:accounts[1]}); 
+        balance1b = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
+        stakeAmt = await oracle.getStakeAmt(accounts[1]);
+        await expectThrow(oracle.approve(accounts[0],tokens,{from:accounts[1]}));
+        await expectThrow(oracle.transferFrom(accounts[1], accounts[8],tokens,{from:accounts[0]}));
+        assert(web3.utils.hexToNumberString(stakeAmt) == minimumStake.toString(), "minstake should eaqal stakeamt" );
+        assert(web3.utils.toWei(trsf.toString(), 'ether') == web3.utils.hexToNumberString(balance1), "Balance should equal transferred amt trsf");
+    });
+
+
+    it("Staking and attempt to withdraw before stake time is up", async function(){
+        var trsf = 2;
+        var tokens = web3.utils.toWei(trsf.toString(), 'ether');
+        await oracle.transfer(accounts[1],tokens,{from:accounts[0]});
+        balance1 = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
+        await oracle.depositStake(minimumStake.toString(),{from:accounts[1]}); 
+        balance1b = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
+        stakeAmt = await oracle.getStakeAmt(accounts[1]);
+        await expectThrow(oracle.withdrawStake({from:accounts[1]}));
+        assert(web3.utils.hexToNumberString(stakeAmt) == minimumStake.toString(), "minstake should eaqal stakeamt" );
+        assert(web3.utils.toWei(trsf.toString(), 'ether') == web3.utils.hexToNumberString(balance1), "Balance should equal transferred amt trsf");
+  
+    });
+
+    it("Staking and withdraw stake ", async function(){
+        var trsf = 2;
+        var tokens = web3.utils.toWei(trsf.toString(), 'ether');
+        await oracle.transfer(accounts[1],tokens,{from:accounts[0]});
+        await oracle.depositStake(minimumStake.toString(),{from:accounts[1]}); 
+        stakeAmt = await oracle.getStakeAmt(accounts[1]);
+/*       console.log("stakeAmt", web3.utils.hexToNumberString(stakeAmt));
+        await timeTravel(86400 * 180);//time travel notworking/ timingout
+        await oracle.withdrawStake({from:accounts[1]});
+        stakeAmt2 = await oracle.getStakeAmt(accounts[1]);
+        console.log("stakeAmt", web3.utils.hexToNumberString(stakeAmt2));*/
+    });
 
 
     it("getVariables", async function(){
         vars = await oracle.getVariables();
-        console.log(vars);
         assert(vars[2] == 1);
     }); 
 
     it("Request data", async function () {
-        //api = web3.utils.sha3("btc/usd");
-        //test = Bytes32(api);
-        //hex1 = await web3.utils.asciiToHex('btc/usd');
-        //bytes = await web3.utils.hexToBytes(hex1)
-        //api = await web3.utils.randomHex(32);
-        api2 = "0xa5b9d60f32436310afebcfda832817a68921beb782fabf7915cc0460b443116a";
         api1 = "0x0";
-        console.log("api1", api1);
-        balance1 = await (oracle.balanceOf(accounts[4],{from:accounts[1]}));
-        console.log("balance1", web3.utils.hexToNumberString(balance1));
-        let res = await oracle.requestData(api1 ,0, 20, {from:accounts[4]});
-        let resApi = await res.logs[0].args._api;//undefined???
-        console.log("resApi", resApi);
-        let resApiId = await res.logs[0].args._apiId;
-        console.log("resApiId", resApiId);
-        apiId = await oracle.getApiId(api1);
-        console.log("apiId",apiId); //works      
+        api2 = "0xa5b9d60f32436310afebcfda832817a68921beb782fabf7915cc0460b443116a";
+        time = 1549080000;
 
-        let res2 = await oracle.requestData(api2 ,1549080000, 20, {from:accounts[4]});
-        let apiTimestamp = await res2.logs[0].args._timestamp;
-        console.log("_timestamp",apiTimestamp);
-        apiids2 = await oracle.getAllApiIds();
-        console.log("allapiids2", apiids2)
-        let valuePool = await oracle.getValuePoolAt(2,1549080000);
-        console.log(valuePool);
+        balance1 = await (oracle.balanceOf(accounts[4],{from:accounts[1]}));
+
+        //data request 1
+        let res = await oracle.requestData(api1,time, 20, {from:accounts[4]});
+        let resApi = await res.logs[2].args._api;
+        let resApiId = await res.logs[2].args._apiId;
+        let apiTimestamp = await res.logs[2].args._timestamp;  
+        //check apid can be retrieved through getter
+        apiId = await oracle.getApiId(api1);  
+        //check value pool
+        let valuePool = await oracle.getValuePoolAt(1, time);
+        assert( web3.utils.hexToNumberString(valuePool) == 20, "value pool should be 20");
+        //check apionQ updated via requestData
+        let apionQ = await res.logs[1].args._apiOnQ;
+        let timeonQ = await res.logs[1].args._timeOnQ;
+        let apiOnQPayout = await res.logs[1].args._apiOnQPayout;
+        assert(web3.utils.hexToNumberString(apiOnQPayout) == 20, "Current payout on Q should be 20");
+        assert(web3.utils.hexToNumberString(apionQ) == web3.utils.hexToNumberString(resApi), "api on Q should be apiId");
+        assert(web3.utils.hexToNumberString(timeonQ) == web3.utils.hexToNumberString(apiTimestamp), "timestamp on Q should be apiTimestamp");
+        
+        //data request 2
+        let res2 = await oracle.requestData(api2,time, 50, {from:accounts[4]});
+        let resApi2 = await res2.logs[2].args._api;
+        let resApiId2 = await res2.logs[2].args._apiId;
+        let apiTimestamp2 = await res2.logs[2].args._timestamp;
+        let valuePool2 = await oracle.getValuePoolAt(2, web3.utils.hexToNumberString(apiTimestamp2));
+        let apionQ2 = await res2.logs[1].args._apiOnQ;
+        let timeonQ2 = await res2.logs[1].args._timeOnQ;
+        let apiOnQPayout2 = await res2.logs[1].args._apiOnQPayout;
+        assert(web3.utils.hexToNumberString(apiOnQPayout2) == 50, "Current payout on Q should be 50");
+        assert(web3.utils.hexToNumberString(apionQ2) == web3.utils.hexToNumberString(resApi2), "api on Q should be apiId");
+        assert(web3.utils.hexToNumberString(timeonQ2) == web3.utils.hexToNumberString(apiTimestamp2), "timestamp on Q should be apiTimestamp");
+ 
+        //check apiIds[] is being updated
+        apiIds = await oracle.getAllApiIds();
+        assert( apiIds = [1,2], "Assert apiIds 1 and 2 exist");
+
+        balance2 = await (oracle.balanceOf(accounts[4],{from:accounts[1]}));
+        assert(web3.utils.hexToNumberString(balance1) - web3.utils.hexToNumberString(balance2) == 70, "balance should be down by 70")
+
     });
 
   it("Test Add Value to Pool", async function () {
         api1 = "0x0";
+        api2 = "0xa5b9d60f32436310afebcfda832817a68921beb782fabf7915cc0460b443116a";
         time = 1549080000;
-        balance1 = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
-        console.log("balance1", web3.utils.hexToNumberString(balance1));
-        let res = await oracle.requestData(api1,time, 20, {from:accounts[1]});
-        console.log(res.logs[2].args);
-        let resApi = await res.logs[2].args._api;//undefined???
-        console.log("resApi", resApi);
+        balance1 = await (oracle.balanceOf(accounts[4],{from:accounts[1]}));
+
+        //data request 1
+        let res = await oracle.requestData(api1,time, 10, {from:accounts[4]});
+        let resApi = await res.logs[2].args._api;
         let resApiId = await res.logs[2].args._apiId;
-        console.log("resApiId", resApiId);
-        let apiTimestamp = await res.logs[2].args._timestamp;
-        console.log("_timestamp",apiTimestamp);
-        valuePool = await oracle.addToValuePool(1,apiTimestamp,5,{from:accounts[1]});//apiTimestamp
-        //console.log("valuePool", valuePool);
-        getValuePool = await oracle.getValuePoolAt(1, apiTimestamp);//apiTimestamp
-        console.log("Get Value Pool at", getValuePool);
-        balance2 = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
-        console.log("balance2", web3.utils.hexToNumberString(balance2));
- /*     assert(valuePool == 5, "assert the value pool now has 5");      
+        let apiTimestamp = await res.logs[2].args._timestamp; 
+        //check value pool  
+        apiId = await oracle.getApiId(api1);
+        let valuePool = await oracle.getValuePoolAt(1, time);
+        assert( web3.utils.hexToNumberString(valuePool) == 10, "value pool should be 20");
+        //check apionQ updated via requestData
+        let apionQ = await res.logs[1].args._apiOnQ;
+        let timeonQ = await res.logs[1].args._timeOnQ;
+        let apiOnQPayout = await res.logs[1].args._apiOnQPayout;
+        assert(web3.utils.hexToNumberString(apiOnQPayout) == 10, "Current payout on Q should be 20");
+        assert(web3.utils.hexToNumberString(apionQ) == web3.utils.hexToNumberString(resApi), "api on Q should be apiId");
+        assert(web3.utils.hexToNumberString(timeonQ) == web3.utils.hexToNumberString(apiTimestamp), "timestamp on Q should be apiTimestamp");
+
+        //data request 2
+        let res2 = await oracle.requestData(api2,time, 20, {from:accounts[4]});
+        let resApi2 = await res2.logs[2].args._api;
+        let resApiId2 = await res2.logs[2].args._apiId;
+        let apiTimestamp2 = await res2.logs[2].args._timestamp;
+        let valuePool2 = await oracle.getValuePoolAt(2, web3.utils.hexToNumberString(apiTimestamp2));
+        let apionQ2 = await res2.logs[1].args._apiOnQ;
+        let timeonQ2 = await res2.logs[1].args._timeOnQ;
+        let apiOnQPayout2 = await res2.logs[1].args._apiOnQPayout;
+        assert(web3.utils.hexToNumberString(apiOnQPayout2) == 20, "Current payout on Q should be 50");
+        assert(web3.utils.hexToNumberString(apionQ2) == web3.utils.hexToNumberString(resApi2), "api on Q should be apiId");
+        assert(web3.utils.hexToNumberString(timeonQ2) == web3.utils.hexToNumberString(apiTimestamp2), "timestamp on Q should be apiTimestamp");
+
+        //check apiIds[] is being updated
+        apiIds = await oracle.getAllApiIds();
+        assert( apiIds = [1,2], "Assert apiIds 1 and 2 exist");
+
+        //balance check
+        balance2 = await (oracle.balanceOf(accounts[4],{from:accounts[1]}));
+        assert(web3.utils.hexToNumberString(balance1) - web3.utils.hexToNumberString(balance2) == 30, "balance should be down by 70")
+
+        //add to value pool of request not on Q 
+        let addvaluePool = await oracle.addToValuePool(1,time,30,{from:accounts[4]});//apiTimestamp
+        getValuePool = await oracle.getValuePoolAt(1, time);//apiTimestamp
+        balance3 = await (oracle.balanceOf(accounts[4],{from:accounts[0]}));
+        assert(web3.utils.hexToNumberString(balance1) - web3.utils.hexToNumberString(balance3) == 60, "balance should be down by 60")
+        
+        //check request on Q updates via addToValuePool
+        vpApiOnQ = await addvaluePool.logs[1].args._apiOnQ;
+        vptimeonQ  = await addvaluePool.logs[1].args._timeOnQ;
+        vpapiOnQPayout = await addvaluePool.logs[1].args._apiOnQPayout;
+        assert(web3.utils.hexToNumberString(vpapiOnQPayout) == 40, "Current payout on Q should be 40");
+        assert(web3.utils.hexToNumberString(vpApiOnQ) == web3.utils.hexToNumberString(resApi), "api on Q should be apiId");
+        assert(web3.utils.hexToNumberString(vptimeonQ) == web3.utils.hexToNumberString(apiTimestamp), "timestamp on Q should be apiTimestamp");
+ /*          
        balances = [];
         for(var i = 0;i<6;i++){
             balances[i] = await oracle.balanceOf(accounts[i]);
@@ -229,6 +290,17 @@ contract('Token and Staking Tests', function(accounts) {
         assert((new_balances[3] - balances[3]) == web3.toWei(5, 'ether'),"Assert miner 3(second from median) got lowest reward");
         assert((new_balances[4] - balances[4]) == web3.toWei(1, 'ether'), "Assert miner 4(furthest from median) got lowest reward");
  */  });
+/*
+initDispute external
+vote    public
+tallyVotes  public
+getDisputeInfo  public view
+countDisputes   public view
+getDisputesIds  public view
+updateDisputeValue  internal
+
+*/
+
 
 
 });

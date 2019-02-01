@@ -91,11 +91,11 @@ contract('Mining Tests', function(accounts) {
 
 /****************Mining Tests*/
 
-    it("Test miner", async function () {
+ /*   it("Test miner", async function () {
         console.log('START MINING RIG!!');
         logNewValueWatcher = await promisifyLogWatch(oracle.NewValue({ fromBlock: 'latest' }));//or Event Mine?
     });
-/*
+
     it("Test Full Miner", async function () {
         logMineWatcher = await promisifyLogWatch(oracle.NewValue({ fromBlock: 'latest' }));//or Event Mine?
         assert(logMineWatcher.args._value > 0, "The value submitted by the miner should not be zero");
