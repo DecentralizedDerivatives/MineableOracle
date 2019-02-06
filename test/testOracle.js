@@ -79,7 +79,7 @@ contract('Mining Tests', function(accounts) {
         await oracle.depositStake(minimumStake.toString(),{from:accounts[3]}); 
         await oracle.depositStake(minimumStake.toString(),{from:accounts[4]}); 
         await oracle.depositStake(minimumStake.toString(),{from:accounts[5]});
-
+        await oracle.requestData()
     });
 
     it("getVariables", async function(){

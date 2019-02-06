@@ -14,25 +14,18 @@ import "./OracleToken.sol";
 contract Oracle is OracleToken{
     using SafeMath for uint256;
     /*Variables*/
-    address owner;
-    //address oracleTokenAddress;
     bytes32 public currentChallenge; //current challenge to be solved
     uint public timeOfLastProof; // time of last challenge solved
-    uint public timeTarget; //The time between blocks (mined Oracle values)
     uint public count;//Number of miners who have mined this value so far
-
-    uint public payoutTotal;//Mining Reward in PoWo tokens given to all miners per value
-    uint public miningMultiplier;//This times payout total is the mining reward (it goes down each year)
     uint256 public difficulty; // Difficulty of current block
-    uint[5] public payoutStructure;//The structure of the payout (how much uncles vs winner recieve)
-    uint public requestFee;
-
-    //API on q info
+    constant uint public payoutTotal = 22e18;//Mining Reward in PoWo tokens given to all miners per value
+    constant uint public timeTarget = 10 * 60; //The time between blocks (mined Oracle values)
+    constant uint[5] public payoutStructure =  [1e18,5e18,10e18,5e18,1e18];//The structure of the payout (how much uncles vs winner recieve)
+    constant uint public requestFee = 1;
     bytes32 public apiOnQ; //string of current api with highest PayoutPool
     uint public apiOnQPayout; //value of highest api/timestamp PayoutPool
     uint public timeOnQ; //requested timestamp for api with highest Payout
     uint public miningApiId; //API being mined--updates with the ApiOnQ Id 
-    
     uint[] public disputesIds;
     mapping(uint => Dispute) public disputes;//disputeId=> Disputes
     mapping (uint => uint) public disputesIdsIndex;
@@ -99,30 +92,15 @@ contract Oracle is OracleToken{
     event StakeLost(address _reportedMiner,uint);
 
 
-    /*Modifiers*/
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
     /*Constructor*/
     /**
     * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
     * @param _timeTarget for the dificulty adjustment
     */
-    constructor(uint _timeTarget) public{
-        uint64[5] memory _payoutStructure = [1e18,5e18,10e18,5e18,1e18];
+    constructor() public{
         timeOfLastProof = now - now  % _timeTarget;
-        requestFee = 1;
-        timeTarget = _timeTarget;
-        miningMultiplier = 1e18;
-        payoutStructure = _payoutStructure;
         currentChallenge = keccak256(abi.encodePacked(timeOfLastProof,currentChallenge, blockhash(block.number - 1)));
         difficulty = 1;
-        for(uint i = 0;i<5;i++){
-            payoutTotal += _payoutStructure[i];
-        }
-        
     }
 
 
@@ -179,30 +157,7 @@ contract Oracle is OracleToken{
         }
     }
 
-    /**
-    * @dev Adds the _tip to the valuePool that pays the miners
-    * @param _apiId the api Id the user want to add to the value pool
-    * @param _timestamp is the timestamp that will be given the _tip once it is mined.
-    * @param _tip amount to add to value pool
-    * It should be the time stamp the user wants to ensure gets mined. They can do that 
-    * by adding a _tip to insentivize the miners to submit a value for the time stamp. 
-    */
-    function addToValuePool (uint _apiId, uint _timestamp, uint _tip) public {  
-        //OracleToken oracleToken = OracleToken(oracleTokenAddress);     
-        require(callTransfer(msg.sender,_tip));
-        uint _time;
-        if(_timestamp == 0){
-            _time = timeOfLastProof + timeTarget;
-        }
-        else{
-            _time = _timestamp - (_timestamp % timeTarget);
-        }
-        payoutPool[_apiId][_time] = payoutPool[_apiId][_time].add(_tip);
-        updateAPIonQ (_apiId, _timestamp);
-        emit ValueAddedToPool(msg.sender,_apiId,_tip,_time);
-    }
-    
-    /**
+       /**
     @dev This contract uses this function to update APIonQ when requestData or addToValuePool are ran
     @param _apiId being requested
     @param _timestamp being requested
@@ -235,23 +190,38 @@ contract Oracle is OracleToken{
     * @dev Request to retreive value from oracle based on timestamp
     * @param _api being requested be mined
     * @param _timestamp reqeusted to be mined
-    * @param _requestGas amount the requester is willing to pay to be get on queue. Miners
+    * @param _tip amount the requester is willing to pay to be get on queue. Miners
     * mine the apiOnQ, or the api with the highest payout pool
     */
-    function requestData(bytes32 _api, uint _timestamp, uint _requestGas) public returns(uint){
-        require(apiId[_api] == 0 && _requestGas>= requestFee && callTransfer(msg.sender,_requestGas));
-        uint _apiId=apiIds.length+1;
-        apiIdsIndex[_apiId] = apiIds.length;
-        apiIds.push(_apiId);
-        apiId[_api] = _apiId;
-        api[_apiId] = _api;
-        uint _time = _timestamp - (_timestamp % timeTarget);
-        payoutPool[_apiId][_time] = payoutPool[_apiId][_time].add(_requestGas);
-        updateAPIonQ (_apiId, _time);
-        emit DataRequested(msg.sender,_api,_apiId,_time);
-        return _apiId;
+    function requestData(string s_api, uint _timestamp, uint _tip) public returns(uint){
+        bytes32 _api = stringToBytes32(s_api);
+        if(apiId[_api] == 0){
+            require(_tip>= requestFee && callTransfer(msg.sender,_tip));
+            uint _apiId=apiIds.length+1;
+            apiIdsIndex[_apiId] = apiIds.length;
+            apiIds.push(_apiId);
+            apiId[_api] = _apiId;
+            api[_apiId] = _api;
+            uint _time = _timestamp - (_timestamp % timeTarget);
+            payoutPool[_apiId][_time] = payoutPool[_apiId][_time].add(_requestGas);
+            updateAPIonQ (_apiId, _time);
+            emit DataRequested(msg.sender,_api,_apiId,_time);
+        }
+        else{
+            require(callTransfer(msg.sender,_tip));
+            uint _time;
+            if(_timestamp == 0){
+                _time = timeOfLastProof + timeTarget;
+            }
+            else{
+                _time = _timestamp - (_timestamp % timeTarget);
+            }
+            payoutPool[_apiId][_time] = payoutPool[_apiId][_time].add(_tip);
+            updateAPIonQ (_apiId, _timestamp);
+            emit ValueAddedToPool(msg.sender,_apiId,_tip,_time);
+            return _apiId;
+        }
     }
-
     /**
     * @dev Retreive value from oracle based on timestamp
     * @param _apiId being requested
@@ -404,7 +374,6 @@ contract Oracle is OracleToken{
         for (i = 0;i <5;i++){
             _payout[i] = payoutStructure[i]*_payoutMultiplier;
         }
-        
         batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
         devTransfer(address(this),(payoutTotal * devShare / 100));
         values[_apiId][_time] = a[2].value;
@@ -434,7 +403,6 @@ contract Oracle is OracleToken{
     * @return the dispute Id
     */
     function initDispute(uint _apiId, uint _timestamp) external returns(uint){
-        //get blocknumber for this value and check blocknumber - value.blocknumber < x number of blocks 10 or 144?
         uint _minedblock = getMinedBlockNum(_apiId, _timestamp);
         require(block.number- _minedblock <= 144 && isData(_apiId, _timestamp) && transfer(address(this), disputeFee));
         uint disputeId = disputesIds.length + 1;
@@ -536,11 +504,13 @@ contract Oracle is OracleToken{
     }
 
 
-    /**
-    *@dev Allows the owner to set a new owner address
-    *@param _new_owner the new owner address
-    */
-    function setOwner(address _new_owner) public onlyOwner() { 
-        owner = _new_owner; 
+    function stringToBytes32(string memory source) returns (bytes32 result) {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+            return 0x0;
+        }
+        assembly {
+            result := mload(add(source, 32))
+        }
     }
 }

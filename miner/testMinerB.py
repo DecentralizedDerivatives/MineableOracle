@@ -49,7 +49,6 @@ def getAPIvalue():
 
 def masterMiner():
 	miners_started = 0
-	getAddress();
 	challenge,difficulty = getVariables();
 	while True:
 		nonce = mine(str(challenge),public_keys[miners_started],difficulty);
@@ -81,6 +80,7 @@ def getVariables():
 	payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_call","params":[{"to":contract_address,"data":"0x94aef022"}, "latest"]}
 	r = requests.post(node_url, data=json.dumps(payload));
 	val = r.content
+	print('Val',val)
 	val2 = val[102:]
 	val2 = val2[:-2]
 	_challenge = val[34:101].decode("utf-8")
@@ -102,6 +102,7 @@ def getAddress():
 	d = jsonParser(r);
 	block = int(d['result'],16)
 	while(block > last_block):
+		print('block',block);
 		try:
 			payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_getTransactionByBlockNumberAndIndex","params":[hex(block),0]}
 			r = requests.post(node_url, data=json.dumps(payload));
@@ -111,17 +112,13 @@ def getAddress():
 			r = requests.post(node_url, data=json.dumps(payload));
 			d = jsonParser(r);
 			tx = d['result']
-			try:
-				logs =tx['logs'][0]['data']
-				print(logs);
-				if static_jazz1 and static_jazz2 in logs:
-					contract_address = logs.replace(static_jazz1,'').replace(static_jazz2,'')
-					last_block = block 
-					block = 0;
-					print('New Contract Address',contract_address)
-					return True;
-			except:
-				pass
+			contract_address =tx['contractAddress']
+			print (len(contract_address))
+			if len(contract_address)>0:
+				last_block = block 
+				block = 0;
+				print('New Contract Address',contract_address)
+				return True;
 		except:
 			pass
 		block = block - 1;
