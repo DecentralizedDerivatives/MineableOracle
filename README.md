@@ -1,5 +1,7 @@
 <p align="center">
-    <font size="+400">tellor</font>
+  <a href='https://www.tellor.io/'>
+    <img src= './public/tellor.png' width="200" height="200" alt='tellor.io' />
+  </a>
 </p>
 
 <p align="center">
@@ -109,7 +111,7 @@ Any contributions are welcome!
 ### Updates <a name="updates"> </a>
 We are happy to report that a successful Tellor build has successfully compiled and been deployed to the Rinkeby testnet. 
 
-July 8, 2018--A proof-of-work oracle project that was the first iteration of this idea was a submission to <b>Angel Hack's Washington DC Hackathon</b> hosted on July 7th - 8th.  It was designed, spec'ed, built, and deployed in a 24-hour agile sprint. For a quick if the origins of the oracle checkout our article, [Proof-of-Work Oracle](https://medium.com/@nfett/proof-of-work-oracle-6de6f795d27).
+July 8, 2018--A proof-of-work oracle project that was the first iteration of this idea was a submission to <b>Angel Hack's Washington DC Hackathon</b> hosted on July 7th - 8th.  It was designed, spec'ed, built, and deployed in a 24-hour agile sprint. For a quick overview of the oracle origins checkout our article, [Proof-of-Work Oracle](https://medium.com/@nfett/proof-of-work-oracle-6de6f795d27).
 
 September 30, 2018--This project has been revised to improve efficiency.
 
