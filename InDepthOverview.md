@@ -393,22 +393,30 @@ S = Stake amount in tokens
 V = Voting share of dev team(in tributes)
 
 Assuming that miners will only mine up to the reward amount  minus a needed premium (assume 10%). The cost of a 51% attack on Tellor:
-
+<p align="center">
   Cost to 51% attack = Reward to miner
-
+</p>
 where per Query Reward to winning miner = 4.4 x P + D (4.4 is 22/5 which is average reward assuming no gaming of median function)
 
 Additionally, to 51% attack the network, you would need to gain all ⅗ mining rewards to ensure you capture the median value
+<p align="center">
   Cost to 51% attack = 3 x (4.4P + D)
-
+</p>
 Each miner would also be required to stake tokens (S) in order to mine so:
+
+<p align="center">
   Cost to 51% attack = 3 ((S x P) + 4.4P + D)
+</p>
+Now we have also added the 10 confirmations and placing the miners on hold.
 
-Now we have also added the 10 confirmations and placing the miners on hold. 
+<p align="center">
   Cost to 51% attack = 3 x 10 ((S x P) + 4.4P + D)
-
+</p>
 This simple analysis though fails to account for the fact that invalid values will never be accepted if reported.  So the actual cost to break is:
+
+<p align="center">
   Cost to attack = max(V * P, 30((S x P) + 4.4P + D))
+</p>
 
 We can summarize that security increases when:
 * The share of token holders voting PoS disputes increases
