@@ -370,7 +370,7 @@ All of these requirements are enforced in the proofOfWork function.
     }
 ```
 
-##Security <a name="security"> </a>
+## Security <a name="security"> </a>
 
 #### Cost of attack
 Security is achieved through the oracle’s architecture (mining algorithm and selection process for median value) and incentives implemented for miners to promptly submit the correct values (see the “Incentives” section for further details).   Ultimate security however is provided by the Proof-of-Stake dispute resolution.  Since any value that is disputed will be put to a vote by all token holders, the simple cost to break is:
