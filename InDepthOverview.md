@@ -53,92 +53,65 @@ Tellor implements a hybrid Proof-of-work (PoW)/Proof-of-Stake (PoS) model where 
 
 Tellor provides an effective, secure system for off-chain data that requires inputs from five random parties(miners) and disincentives dispersion and adversarial submissions through the payout structure and a proof of work challenge that is chosen at random for each submission. 
 
-The Tellor Oracle deploys only one smart contact. It holds and distributes the token supply, informs miners which values to submit, has a built in proof-of-stake methodology for challenges, and holds the historically mined values that contracts can read from. 
+The Tellor Oracle deploys only <b> one smart contact</b>. It holds and distributes the token supply, informs miners which values to submit, has a built in proof-of-stake methodology for challenges, and holds the historically mined values that contracts can read from. 
 
 The contract provides the miners and users the API or data description, along with necessary fields for the data it is collecting and allows miners to submit the proof of work and off-chain data, sorts the values, allows the users to retrieve the values and to bid on which data series is mined next.  The contract allows for new values to be mined every 10 minutes and which data series is mined is determined by which series has the greatest tip going to the miners.  
 
-Miners are required to stake tributes before they are allowed to mine. Once the miner is staked, the stake gets locked for the minimum stake period(one week) and if any dispute is raised against them during that period the stake gets locked until the dispute vote timeperiod expires. 
+Miners are required to stake tributes before they are allowed to mine. The <b>proofOfWork</b> function contains a require statement that ensures this. Once the miner is staked, the stake gets locked for the minimum stake period(one month) and if any dispute is raised against them during that period the stake gets locked until the dispute vote timeperiod expires. 
 
 The basic flow for adding and retrieving data goes like this: 
-1. The user submits <b>requestData</b> to the Oracle using Tributes to incentivize miners to choose the query over other submissions. The user needs to specify the API, timestamp and tip.
 
-2. Other users who want the same data pay or ‘tip’ this data series so miners  are further incentivized to mine it.
-3. Every 10 minutes, the Oracle provides a new challenge along with the data series for miners to mine.
-4. Miners then submit their PoW solution and off-chain data point to the Oracle contract. The Oracle contract sorts the values as they come in and as soon as five values are received the official value is selected and saved on-chain. The miners are then allocated their payout (base reward and tips).
-5. Anyone holding Tellor Tributes can dispute the validity of a mined value within 10 blocks of it being mined by “staking” a fee.  The Tellor token holders will vote on the validity of the data point and if the data point is deemed to be false, the miner will lose their stake. However, if the vote determines the value is correct, the reporting party’s fee is given to the reported miner.
+1. The user submits <b>requestData</b> to the Oracle using Tributes to incentivize miners to choose the query over other submissions. The user needs to specify the API, timestamp and tip. Once a user submits a query the API will get an unique ID assigned to it and if the tip submitted for the request is larger than that of the current query on queue the current request will replace it via the <b>updateAPIonQ</b> function. 
 
-The official value appended to the timeseries is determined by a decentralized mechanism where five values are collected before the official value is selected.  The first five values received are sorted as they are submitted and the miner with the median value is given the highest reward since that will become the 'official' value and the other four miners get a lower reward that decreases the further they are from the median. Once validated and processed the value is available for on-chain contracts to use.
-
-The data collection is decentralized since mining, and by extension data submission, is open to everyone who stakes. To avoid dispersion, incentives are structured to provide the highest reward to the miner that submits the median value. Using the median value instead of the average protects the value from being manipulated by a single party submitting an extreme value. To ensure data availability, multiple parties are incentivized to submit data by rewarding the first five miners that submit the PoW and of-chain data point. 
-
-During the time that the value is being confirmed (10 blocks), parties can challenge this submission.  The challenge and data value are put up to vote by Tribute holders.  This is described in detail in the Incentives section. 
-
-
-
-
-### Incentives <a name="incentives"> </a>
-Miners are given two types of rewards, 1)a base reward per every successful submission, 2)request rewards/tips every time a users request a value. 
-
-
-
-
-#### Mining base reward
-Similar to the way Ethereum rewards ‘Uncles’ or miners who were close to winning, the first five miners to submit a PoW and off-chain value are awarded tributes. The miner that submits the median value is awarded a larger quantity of the total payoff. The current incentive structure leverages game-theory to disincentivize dispersion and adversarial submissions. The payout structure is specified when deploying a new oracle. 
-
-Tellor Base Reward Mechanism  
-
-<p align="center">
-<img src="./public/RewardMechanism.PNG"   alt = "reward">
-</p>
-
-As miners submit the PoW, API Id, and off-chain value, the value is sorted and as soon as five values are received, the median value (integer) and the timestamp (Unix timestamp) are saved to create an on-chain timeseries and a new challenge is assigned. The median value is selected efficiently via an insert sort in the pushValue function used within the OracleToken contract proofOfWork function:
-
+These are the requestData and updateAPIonQ functions:
 ```solidity
-    function pushValue(uint _apiId, uint _time, uint _payoutMultiplier) internal {
-        Details[5] memory a = first_five;
-        uint[5] memory _payout;
-        uint i;
-        for (i = 1;i <5;i++){
-            uint temp = a[i].value;
-            address temp2 = a[i].miner;
-            uint j = i;
-            while(j > 0 && temp < a[j-1].value){
-                a[j].value = a[j-1].value;
-                a[j].miner = a[j-1].miner;   
-                j--;
-            }
-            if(j<i){
-                a[j].value = temp;
-                a[j].miner= temp2;
-            }
+    function requestData(string s_api, uint _timestamp, uint _tip) public returns(uint){
+        bytes32 _api = stringToBytes32(s_api);
+        if(apiId[_api] == 0){
+            require(_tip>= requestFee && callTransfer(msg.sender,_tip));
+            uint _apiId=apiIds.length+1;
+            apiIdsIndex[_apiId] = apiIds.length;
+            apiIds.push(_apiId);
+            apiId[_api] = _apiId;
+            api[_apiId] = _api;
+            uint _time = _timestamp - (_timestamp % timeTarget);
+            payoutPool[_apiId][_time] = payoutPool[_apiId][_time].add(_requestGas);
+            updateAPIonQ (_apiId, _time);
+            emit DataRequested(msg.sender,_api,_apiId,_time);
         }
-        for (i = 0;i <5;i++){
-            _payout[i] = payoutStructure[i]*_payoutMultiplier;
+        else{
+            require(callTransfer(msg.sender,_tip));
+            uint _time;
+            if(_timestamp == 0){
+                _time = timeOfLastProof + timeTarget;
+            }
+            else{
+                _time = _timestamp - (_timestamp % timeTarget);
+            }
+            payoutPool[_apiId][_time] = payoutPool[_apiId][_time].add(_tip);
+            updateAPIonQ (_apiId, _timestamp);
+            emit ValueAddedToPool(msg.sender,_apiId,_tip,_time);
+            return _apiId;
         }
-        batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
-        devTransfer(address(this),(payoutTotal * devShare / 100));
-        values[_apiId][_time] = a[2].value;
-        minersbyvalue[_apiId][_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
-        emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
-        emit NewValue(_apiId,timeOfLastProof,a[2].value);
     }
+
+    function updateAPIonQ (uint _apiId, uint _timestamp) internal {
+        uint _payout = payoutPool[_apiId][_timestamp];
+        if (_payout > apiOnQPayout ) {
+            apiOnQ = api[_apiId];
+            apiOnQPayout = _payout;
+            timeOnQ = _timestamp;
+            emit NewAPIonQinfo(apiOnQ, timeOnQ, apiOnQPayout);
+        } 
+    }    
 ```
+2. Other users who want the same API data, pay or ‘tip’ this data series so miners are further incentivized to mine it. If the API has already been requested, the <b>requestData</b> function will automatically add to the previously submitted query to create a pool and push the query up to queue.
 
-Miners are rewarded with tributes. Trubutes are charged for API requests. This gives each token value, and more importantly, the value goes up as more smart contracts use our Oracle, thus creating a stronger incentive for miners to continue to mine and provide correct values.
+3. Every 10 minutes, the Oracle provides a new challenge along with the data series for miners to mine. 
 
+4. Miners can stake using the <b>depositStake</b> function and the stake will be locked for a minimum time period. Also, if a dispute against a miner is raised, the stake is locked through the dispute process. Contact us if you are interested on becoming an early miner. 
 
-#### Mining rewards and tips
-
-Users can incentivize miners by posting a bounty via the addToValuePool function to ensure the timestamp they are interested on is mined. This function basically allows users to tip the miners.
-
-
-
-#### Mining <a name="mining-process"> </a>
-One of the main challenges for a mineable token or any process that relies on mining is that there are many ASICS currently available and if used on a small ecosystem these specialized systems can quickly monopolize it. Daxia's proof of work challenge is designed to be different that Bitcoin mining challenge. The challenge is chosen at random from three possible options for each submission. This setup requires miners to invest significant amount of time to update the mining algorithm and should disincentivize miners to become part of the ecosystem too early, allowing it to grow and mature before larger players join. 
-
-The PoW, is basically guessing a nonce that produces a hash with a certain number of leading zeros using the randomly selected hash function. The PoW challenge is chosen at random from the three challenges included in the proofOfWork function and the difficulty for the PoW is adjusted to target 10 minutes. However, the difficulty only increases if the previous challenge is solved faster than 60% of the timetarget. If it was a hard cutoff, it ran a higher risk of the next value failing submission if it takes longer than the time target to mine or be added to the Ethereum mainnet.   Miners can submit the PoW and the off-chain value using the function proofOfwork in OracleToken.sol. 
-
-The mining process is formally expressed as:
+5. Miners then submit their PoW solution, API ID, and off-chain data point to the Oracle contract via the <b>proofOfWork</b> function. The Oracle contract sorts the values as they come in(via the <b>pushValue</b> function) and as soon as five values are received the official value is selected and saved on-chain. The miners are then allocated their payout (base reward and tips). The next API to mine is set at this time based on the current API on queue or the API with the highest payout. This allows the users to bid their request up to the queue until the next value is mined.  
 
 ```solidity
     function proofOfWork(string calldata nonce, uint _apiId, uint value) external returns (uint256,uint256) {
@@ -185,10 +158,89 @@ The mining process is formally expressed as:
         return (count,timeOfLastProof); 
         }
     }
+
+    function pushValue(uint _apiId, uint _time, uint _payoutMultiplier) internal {
+        Details[5] memory a = first_five;
+        uint[5] memory _payout;
+        uint i;
+        for (i = 1;i <5;i++){
+            uint temp = a[i].value;
+            address temp2 = a[i].miner;
+            uint j = i;
+            while(j > 0 && temp < a[j-1].value){
+                a[j].value = a[j-1].value;
+                a[j].miner = a[j-1].miner;   
+                j--;
+            }
+            if(j<i){
+                a[j].value = temp;
+                a[j].miner= temp2;
+            }
+        }
+        for (i = 0;i <5;i++){
+            _payout[i] = payoutStructure[i]*_payoutMultiplier;
+        }
+        batchTransfer([a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout,true);
+        devTransfer(address(this),(payoutTotal * devShare / 100));
+        values[_apiId][_time] = a[2].value;
+        minersbyvalue[_apiId][_time] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
+        emit Mine(msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner], _payout);
+        emit NewValue(_apiId,timeOfLastProof,a[2].value);
+    }
 ```
+
+6. Anyone holding Tellor Tributes can dispute the validity of a mined value within 10 blocks of it being mined by “staking” a fee.  Tribute holders will vote on the validity of the data point. If the vote determines the value was invalid the reporting party gets awarded the miner's stake, otherwise the wrongly acused miner gets the reporting fee. Votes are weighted based on the amount of tributes held by the mining party at the time of voting (block.number). The miner under dispute is barred from voting. 
+
+ 
+
+
+
+
+### Incentives <a name="incentives"> </a>
+Miners are given two types of rewards, 1)a base reward per every successful submission, 2)request rewards/tips every time a users request a value. 
+
+
+
+
+#### Mining base reward
+Similar to the way Ethereum rewards ‘Uncles’ or miners who were close to winning, the first five miners to submit a PoW and off-chain value are awarded tributes. The miner that submits the median value is awarded a larger quantity of the total payoff. The current incentive structure leverages game-theory to disincentivize dispersion and adversarial submissions. The payout structure is specified when deploying a new oracle. 
+
+Tellor Base Reward Mechanism  
+
+<p align="center">
+<img src="./public/RewardMechanism.PNG"   alt = "reward">
+</p>
+
+As miners submit the PoW, API Id, and off-chain value, the value is sorted and as soon as five values are received, the median value (integer) and the timestamp (Unix timestamp) are saved to create an on-chain timeseries and a new challenge is assigned. The median value is selected efficiently via an insert sort in the pushValue function used within the OracleToken contract proofOfWork function:
+
+
+
+Miners are rewarded with tributes. Trubutes are charged for API requests. This gives each token value, and more importantly, the value goes up as more smart contracts use our Oracle, thus creating a stronger incentive for miners to continue to mine and provide correct values.
+
+
+#### Mining rewards and tips
+
+Users can incentivize miners by posting a bounty via the addToValuePool function to ensure the timestamp they are interested on is mined. This function basically allows users to tip the miners.
+
+
+
+#### Mining <a name="mining-process"> </a>
+One of the main challenges for a mineable token or any process that relies on mining is that there are many ASICS currently available and if used on a small ecosystem these specialized systems can quickly monopolize it. Daxia's proof of work challenge is designed to be different that Bitcoin mining challenge. The challenge is chosen at random from three possible options for each submission. This setup requires miners to invest significant amount of time to update the mining algorithm and should disincentivize miners to become part of the ecosystem too early, allowing it to grow and mature before larger players join. 
+
+The PoW, is basically guessing a nonce that produces a hash with a certain number of leading zeros using the randomly selected hash function. The PoW challenge is chosen at random from the three challenges included in the proofOfWork function and the difficulty for the PoW is adjusted to target 10 minutes. However, the difficulty only increases if the previous challenge is solved faster than 60% of the timetarget. If it was a hard cutoff, it ran a higher risk of the next value failing submission if it takes longer than the time target to mine or be added to the Ethereum mainnet.   Miners can submit the PoW and the off-chain value using the function proofOfwork in OracleToken.sol. 
+
+The mining process is formally expressed as:
+
+
 
 An implementation of the miner is described in python in the 'miner' sub directory.  In 'miner.py', the script imports the web3 library, pandas, and various other dependencies to solve the keccak256, sha256, and ripemd160 puzzle.  In submitter.js, the nonce value inputs are submitted to the smart contract on-chain.  To examine the mining script, navigate [here](./miner/).
 
+
+The official value appended to the timeseries is determined by a decentralized mechanism where five values are collected before the official value is selected.  The first five values received are sorted as they are submitted and the miner with the median value is given the highest reward since that will become the 'official' value and the other four miners get a lower reward that decreases the further they are from the median. Once validated and processed the value is available for on-chain contracts to use.
+
+The data collection is decentralized since mining, and by extension data submission, is open to everyone who stakes. To avoid dispersion, incentives are structured to provide the highest reward to the miner that submits the median value. Using the median value instead of the average protects the value from being manipulated by a single party submitting an extreme value. To ensure data availability, multiple parties are incentivized to submit data by rewarding the first five miners that submit the PoW and of-chain data point. 
+
+During the time that the value is being confirmed (10 blocks), parties can challenge this submission.  The challenge and data value are put up to vote by Tribute holders.  This is described in detail in the Security section.
 
 ## Potential Applications <a name="potential-applications"> </a>
 
