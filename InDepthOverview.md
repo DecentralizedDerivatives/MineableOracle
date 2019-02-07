@@ -1,6 +1,6 @@
 <p align="center">
   <a href='https://www.tellor.io/'>
-    <img src= './public/tellor.png' width="200" height="200" alt='tellor.io' />
+    <img src= './public/Tellor.png' width="200" height="200" alt='tellor.io' />
   </a>
 </p>
 
@@ -53,9 +53,25 @@ Tellor implements a hybrid Proof-of-work (PoW)/Proof-of-Stake (PoS) model where 
 
 Tellor provides an effective, secure system for off-chain data that requires inputs from five random parties(miners) and disincentives dispersion and adversarial submissions through the payout structure and a proof of work challenge that is chosen at random for each submission. 
 
+The Tellor Oracle deploys only one smart contact. It holds and distributes the token supply, informs miners which values to submit, has a built in proof-of-stake methodology for challenges, and holds the historically mined values that contracts can read from. 
+
+The contract provides the miners and users the API or data description, along with necessary fields for the data it is collecting and allows miners to submit the proof of work and off-chain data, sorts the values, allows the users to retrieve the values and to bid on which data series is mined next.  The contract allows for new values to be mined every 10 minutes and which data series is mined is determined by which series has the greatest tip going to the miners.  
+
 Miners are required to stake tributes before they are allowed to mine. Once the miner is staked, the stake gets locked for the minimum stake period(one week) and if any dispute is raised against them during that period the stake gets locked until the dispute vote timeperiod expires. 
 
+The basic flow for adding and retrieving data goes like this: 
+1. The user submits <b>requestData</b> to the Oracle using Tributes to incentivize miners to choose the query over other submissions. The user needs to specify the API, timestamp and tip.
 
+2. Other users who want the same data pay or ‘tip’ this data series so miners  are further incentivized to mine it.
+3. Every 10 minutes, the Oracle provides a new challenge along with the data series for miners to mine.
+4. Miners then submit their PoW solution and off-chain data point to the Oracle contract. The Oracle contract sorts the values as they come in and as soon as five values are received the official value is selected and saved on-chain. The miners are then allocated their payout (base reward and tips).
+5. Anyone holding Tellor Tributes can dispute the validity of a mined value within 10 blocks of it being mined by “staking” a fee.  The Tellor token holders will vote on the validity of the data point and if the data point is deemed to be false, the miner will lose their stake. However, if the vote determines the value is correct, the reporting party’s fee is given to the reported miner.
+
+The official value appended to the timeseries is determined by a decentralized mechanism where five values are collected before the official value is selected.  The first five values received are sorted as they are submitted and the miner with the median value is given the highest reward since that will become the 'official' value and the other four miners get a lower reward that decreases the further they are from the median. Once validated and processed the value is available for on-chain contracts to use.
+
+The data collection is decentralized since mining, and by extension data submission, is open to everyone who stakes. To avoid dispersion, incentives are structured to provide the highest reward to the miner that submits the median value. Using the median value instead of the average protects the value from being manipulated by a single party submitting an extreme value. To ensure data availability, multiple parties are incentivized to submit data by rewarding the first five miners that submit the PoW and of-chain data point. 
+
+During the time that the value is being confirmed (10 blocks), parties can challenge this submission.  The challenge and data value are put up to vote by Tribute holders.  This is described in detail in the Incentives section. 
 
 
 
