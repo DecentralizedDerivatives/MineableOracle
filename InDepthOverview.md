@@ -5,9 +5,6 @@
 </p>
 
 <p align="center">
-  <a href='https://dapp.daxia.us/'>
-    <img src= ./public/DApp-Daxia-blue.svg alt='Slack' />
-  </a>
   <a href='https://deriveth.slack.com/'>
     <img src= ./public/Chat-Slack-blue.svg alt='Slack' />
   </a>
@@ -17,7 +14,7 @@
   <a href='https://twitter.com/DaxiaOfficial'>
     <img src= 'https://img.shields.io/twitter/url/http/shields.io.svg?style=social' alt='Twitter DaxiaOfficial' />
   </a> 
-  <img src= ./public/License-MIT-blue.svg alt='MIT License' /> 
+
 </p>
 
     
@@ -107,7 +104,17 @@ These are the requestData and updateAPIonQ functions:
 
 3. Every 10 minutes, the Oracle provides a new challenge along with the data series for miners to mine. 
 
-4. Miners can stake using the <b>depositStake</b> function and the stake will be locked for a minimum time period. Also, if a dispute against a miner is raised, the stake is locked through the dispute process. Contact us if you are interested on becoming an early miner. 
+4. Miners can stake using the <b>depositStake</b> function and the stake will be locked for a minimum time period. Also, if a dispute against a miner is raised, the stake is locked through the dispute process. The stake is locked via the tranfer and approve functions. Both check the balance avaiable for transfer or approval excludes any stake amount.
+
+```solidity
+function approve(address _spender, uint _amount) public returns (bool) {
+        uint stakeAmt = getStakeAmt(msg.sender);
+        require(balanceOf(msg.sender) - stakeAmt >= _amount);
+        ...
+}
+```
+
+Contact us if you are interested on becoming an early miner. 
 
 5. Miners then submit their PoW solution, API ID, and off-chain data point to the Oracle contract via the <b>proofOfWork</b> function. The Oracle contract sorts the values as they come in(via the <b>pushValue</b> function) and as soon as five values are received the official value is selected and saved on-chain. The miners are then allocated their payout (base reward and tips). the miner with the median value is given the highest reward since that will become the 'official' value and the other four miners get a lower reward that decreases the further they are from the median. The next API to mine is set at this time based on the current API on queue or the API with the highest payout. This allows the users to bid their request up to the queue until the next value is mined.  
 
@@ -189,6 +196,55 @@ These are the requestData and updateAPIonQ functions:
 
 6. Anyone holding Tellor Tributes can dispute the validity of a mined value within 10 blocks of it being mined by “staking” a fee via the <b> initDispute </b> function.  Tribute holders will vote on the validity of the data point. If the vote determines the value was invalid the reporting party gets awarded the miner's stake, otherwise the wrongly acused miner gets the reporting fee. Votes are weighted based on the amount of tributes held by the mining party at the time of voting (block.number). The miner under dispute is barred from voting. 
 
+The miner's stake is "locked" when a dispute is initiated, since <b> initDispute </b>  changes their stake state to 3. Miners can only <b>withdrawStake</b> their stake when their state is 1 and the minimum stake time has elapsed. The stake state for the miner will return to 1 once the <b>tallyVotes</b> is ran, if the vote is on their favor, otherwise they lose their stake to the party that reported them and their stake state is marked as 2 and the stake amount as zero.  
+
+```solidity
+    function initDispute(uint _apiId, uint _timestamp) external returns(uint){
+        uint _minedblock = getMinedBlockNum(_apiId, _timestamp);
+        ...
+        stakes.current_state = 3;
+        return disputeId;
+        emit NewDispute(disputeId,_apiId,_timestamp );
+    }
+
+
+    function withdrawStake() public {
+        StakeInfo memory stakes = staker[msg.sender];
+        uint _today = now - (now % 86400);
+        require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state == 1 && balanceOf(msg.sender) >= stakes.stakeAmt);
+        stakes.current_state = 2;
+        emit StakeWithdrawn(msg.sender, stakes.stakeAmt);
+        stakes.stakeAmt = 0;
+    }
+
+    function tallyVotes(uint _disputeId) public {
+        Dispute memory disp = disputes[_disputeId];
+        require(disp.executed == false);
+        require(now > disp.minExecutionDate && !disp.executed);
+        uint minQuorum = minimumQuorum;
+        StakeInfo memory stakes = staker[disp.reportedMiner]; 
+         require(disp.quorum >= minQuorum); 
+          if (disp.tally > 0 ) {        
+            stakes.current_state = 2;
+            uint stakeAmt = stakes.stakeAmt;
+            stakes.stakeAmt = 0;
+            disputeTransfer(disp.reportedMiner,disp.reportingParty, stakeAmt);
+            emit StakeLost(disp.reportedMiner, stakeAmt);
+            disp.disputeVotePassed = true;
+            updateDisputeValue(disp.apiId, disp.timestamp);
+        } 
+        else {
+            disp.executed = true;
+            disp.disputeVotePassed = false;
+            transfer(disp.reportedMiner, disputeFee);
+            emit DisputeLost(disp.reportingParty, disputeFee);
+            stakes.current_state = 1;
+        }
+        emit DisputeVoteTallied(_disputeId,disp.tally, disp.quorum, disp.disputeVotePassed); 
+    }
+
+```
+
 7. The data is available on-chain for everyone to read via the <b>retreiveData</b> and <b>getLastQuery</b> functions.
 
 
@@ -215,7 +271,7 @@ The Tellor Oracle implements a ten percent dev share.  This dev share will be ma
 Tellor will use the initial tokens to provide liquidity to users of the oracle.  There is no pre-mine or token offering.  Tokens will be sold on as needed basis by Tellor to provide liquidity to the users of the oracle.  If you want to partner with us to utilize the oracle in your smart contracts, please contact us for details. 
 
 ## Incentives <a name="incentives"> </a>
-Two types of incentives are implented in this hybrid model, 1) rewards for PoW submissions and 2) structural incentives to promote accurate value submissions. 
+Two types of incentives are implemented in this hybrid model, 1) rewards for PoW submissions and 2) structural incentives to promote accurate value submissions. 
 
 The next subsections provide further details and goals of the reward incentives and on how the miners are incentivised to provide accurate values. 
 
@@ -274,13 +330,15 @@ Blockchains are secured via multiple avenues.  The first is in the random select
 
 ## Mining <a name="mining-process"> </a>
 
-Miners are given the following information from the Tellor oracle contract:
+Miners need the following information from the Tellor oracle contract:
 * Current Challenge
 * Difficulty
 * API to query
 
+Miners obtain this information via the <b>getVariables</b> function.  
+
 #### The Algorithm
-Our algorithm is different than that of Bitcoin or Ethereum. 
+Tello's algorithm is different than that of Bitcoin or Ethereum. 
 
 The PoW, is basically guessing a nonce that produces a hash with a certain number of leading zeros using the randomly selected hash function. When mining became hightly competitive for Bitcoin, specialzed sytems called "application-specific integrated circuit", ASICS, were developed. ASICS are "an integrated circuit customized for a particular use", and in the case of Bitcoin, these are designed to solve the PoW faster and more efficiently that CPU's and GPU's ([Learn more about ASICS](https://en.bitcoin.it/wiki/ASIC)). Currently, mining Bitcoin has become so competitive that most of it is mined via mining pools ([Read more about mining pools](https://en.wikipedia.org/wiki/Mining_pool)). Mining Bitcoin also requires large amounts of electricity and many solo ASICS in areas where electricity is more expensive, have been left without use. 
 
@@ -321,6 +379,37 @@ Security is achieved through the oracle’s architecture (mining algorithm and s
 
 This PoW/PoS hybrid model allows for Tellor to take advantage of the efficiency and minimalism of a pure PoW design as well as the final security of PoS.  The main problem with PoW consensus mechanisms is that 51% attacks are relatively trivial on smaller chains.  The problem with a pure PoS mechanism is that stakers are not properly incentivized to mine (since usually economic punishments are needed) and the general security of negative reinforcement properties do not promote competition in speed and accuracy.  Both of these issues are solved through Tellor’s hybrid model and the security of the  Oracle should suffice for relatively large purposes shortly after launch.  
 
+##### Minimum Cost to Attack Analysis
+
+The cost to successfully attack and break the Tellor oracle is determined by several factors:
+1. The price of the oracle Tellor Tributes
+2. Average price (in fiat)  per query (Demand)
+3. Stake amount for mining
+4. Voting share of dev team(in tributes)
+where:
+P = Price of Tellor Tributes
+D = Average price (in fiat) per query (Demand)
+S = Stake amount in tokens
+V = Voting share of dev team(in tributes)
+
+Assuming that miners will only mine up to the reward amount  minus a needed premium (assume 10%). The cost of a 51% attack on Tellor:
+
+  Cost to 51% attack = Reward to miner
+
+where per Query Reward to winning miner = 4.4 x P + D (4.4 is 22/5 which is average reward assuming no gaming of median function)
+
+Additionally, to 51% attack the network, you would need to gain all ⅗ mining rewards to ensure you capture the median value
+  Cost to 51% attack = 3 x (4.4P + D)
+
+Each miner would also be required to stake tokens (S) in order to mine so:
+  Cost to 51% attack = 3 ((S x P) + 4.4P + D)
+
+Now we have also added the 10 confirmations and placing the miners on hold. 
+  Cost to 51% attack = 3 x 10 ((S x P) + 4.4P + D)
+
+This simple analysis though fails to account for the fact that invalid values will never be accepted if reported.  So the actual cost to break is:
+  Cost to attack = max(V * P, 30((S x P) + 4.4P + D))
+
 We can summarize that security increases when:
 * The share of token holders voting PoS disputes increases
 * The price of the token increases
@@ -347,6 +436,25 @@ As Tellor is a contract mechanism that allows oracle data to be derived in a com
 5. <b>Prediction Market Resolution:</b> i.e. determining who won the most recent presidential election or sporting event
 6. <b>Damage verification:</b> What were the net total results in damage for insurance contracts
 7. <b>Pseudorandom number generation:</b> to select a winner in a distributed-lottery smart contract, etc.
+
+## Future
+
+The Tellor team is already looking toward furthering research in the field of decentralized Oracles.  Several solutions have already been identified as potential ways to increase security and speed of  the Tellor Oracle. 
+
+* Zero-knowledge submissions
+Zero-knowledge proofs (ZKP) allow for parties to prove that they know a value without revealing the value.  For the Oracle, parties could submit a ZKP for the mining solution along a hidden query value.  Once the five parties are chosen as successful miners, they are then required to post the unhidden value (Oracle query) which corresponds to the hidden value submitted with the ZKP.  
+
+* TLS Notary Proofs
+TLS Notary Proofs give assurances that a website was queried accurately and that no error was returned.  The Tellor Oracle has plans to utilize different levels of assurances that can be returned with the query to ensure that miners are accurately reporting data from the requested query. 
+
+* Plasma Implementation
+One of the big concerns for the future of Tellor is its reliance on mainchain Ethereum transactions.  This can get expensive and will be unnecessary in the near future as miners and validators should be able to operate on a trustless off-chain plasma component.  Even using a basic Plasma implementation, the mining parties staking to perform the PoW are natural validators for a sidechain and security properties of the Oracle can still hold even if the mainchain contract off loads all mining to the plasma chain.  Values, token distribution and staking will be handled by the mainchain, however, these are the more efficient pieces of the current Oracle structure.  
+
+* Optimistic Implementation
+The implementation of a complementing non-mining oracle system that allows for data submission by any party for the data requests. This complementary system assumes data submitters have the best intentions.  This “optimistic” approach can allow for disputes by requiring a PoS and/or can be based on submitter reputation. This implementation would be considered less secure and would cater to projects/Dapps/users that may not be time sensitive and can “shop” around for data.
+
+* Automatic Reporting and monitoring
+Off-chain analysis for detecting outliers and reporting these to “gain” the “bad” miner’s stake. For example, reporting a value/miner, if the mean differs from median by certain amount.
 
 
 ## Conclusion <a name="conclusion"> </a>
