@@ -1,7 +1,5 @@
 <p align="center">
-  <a href='https://www.daxia.us/'>
-    <img src= './public/DarkText_IconColor.png' width="300" height="100" alt='tellor.io' />
-  </a>
+    <font size="+400">tellor</font>
 </p>
 
 <p align="center">
@@ -15,7 +13,6 @@
   <a href='https://twitter.com/DaxiaOfficial'>
     <img src= 'https://img.shields.io/twitter/url/http/shields.io.svg?style=social' alt='Twitter DaxiaOfficial' />
   </a> 
-  <img src= ./public/License-MIT-blue.svg alt='MIT License' /> 
 </p>
 
 ## Table of Contents
@@ -32,7 +29,7 @@
    * [Copyright](#copyright)
  </details>
 
-# Daxia's Proof of Work Oracle (PoWO)
+# Tellor Oracle
 
 
 ### Instructions for quick start with Truffle Deployment <a name="Quick-Deployment"> </a> 
@@ -71,11 +68,9 @@ Step by step instructions on setting up a Mineable Oracle without truffle are av
 ## Overview <a name="overview"> </a>  
 Ethereum smart contracts cannot access off-chain data. If your smart contract relies on off-chain (e.g. internet) data to evaluate or execute a function, you either have to manually feed the data to your contract, incentivize users to do it, or rely on a centralized party to provide the data (Oraclize.it is generally the standard). 
 
-<b>Proof of Work Oracle (PoWO)</b> is a decentralized oracle. It provides a decentralized alternative for contracts to interact with and obtain data from off-chain. 
+<b>The tellor oracle</b> is a decentralized oracle. It provides a decentralized alternative for contracts to interact with and obtain data from off-chain (aka API data). 
 
-The PoWO implements a mineable proof-of-work (PoW) where miners, along with the PoW solution also provide an off-chain data point. The first five miners to provide the PoW and off-chain data point are rewarded: the miner with the median value is given the highest reward since that is what is used as the 'offical' value and the four miners get a lower reward that decreases the further they are from the median. Once validated and processed the value is available for on-chain contracts to use.
-
-We have implemented PoW because it is reliable, <b>now</b>. However, once Proof of Stake (PoS) is proven Daxia can decide to switch from PoW to Proof of Stake (PoS).
+Tellor implements a hybrid Proof-of-work (PoW)/Proof-of-Stake (PoS) model where miners have to stake tellor tributes (tellor's native token) to be able to mine and along with the PoW solution they also provide an off-chain data point. The first five miners to provide the PoW and off-chain data point are rewarded: the miner with the median value is given the highest reward since that is what is used as the 'offical' value and the four miners get a lower reward that decreases the further they are from the median. Once validated and processed the value is available for on-chain contracts to use. The value can be disputed by anyone holding tellor tributes within 10 blocks after being mined for a fee. After the value goes to dispute, anyone holding tributes can vote on it's validity. If the vote determines the value was invalid the reporting party gets awarded the miner's stake, otherwise the wrongly acused miner gets the reporting fee. 
 
 <p align="center">
 <img src="./public/Powo.png" width="400" height="200" alt = "How it works">
@@ -83,7 +78,7 @@ We have implemented PoW because it is reliable, <b>now</b>. However, once Proof 
 
 A deep dive in methododology is available here: [In-Depth Overview](./InDepthOverview.md)
 
-For a quick overview checkout our article, [Proof-of-Work Oracle](https://medium.com/@nfett/proof-of-work-oracle-6de6f795d27).  
+  
 
 ### Useful links <a name="useful-links"> </a>
 High level inspiration from [EIP918 Mineable Token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-918.md).
@@ -112,9 +107,9 @@ Check out or issues log here on Github or contribute to our future plans to impl
 Any contributions are welcome!
 
 ### Updates <a name="updates"> </a>
-We are happy to report that a successful PoWO build has successfully compiled and been deployed to the Rinkeby testnet. 
+We are happy to report that a successful Tellor build has successfully compiled and been deployed to the Rinkeby testnet. 
 
-July 8, 2018--this project was a submission to <b>Angel Hack's Washington DC Hackathon</b> hosted on July 7th - 8th.  It was designed, spec'ed, built, and deployed in a 24-hour agile sprint.
+July 8, 2018--A proof-of-work oracle project that was the first iteration of this idea was a submission to <b>Angel Hack's Washington DC Hackathon</b> hosted on July 7th - 8th.  It was designed, spec'ed, built, and deployed in a 24-hour agile sprint. For a quick if the origins of the oracle checkout our article, [Proof-of-Work Oracle](https://medium.com/@nfett/proof-of-work-oracle-6de6f795d27).
 
 September 30, 2018--This project has been revised to improve efficiency.
 
