@@ -37,7 +37,9 @@
 ### Instructions for quick start with Truffle Deployment <a name="Quick-Deployment"> </a> 
 Follow the steps below to launch the Oracle contracts using Truffle. 
 
-Open terminal:
+1. Open two terminals.
+
+2. On one terminal run:
     Clone the repo, cd into it, and then run:
 
     $ npm install
@@ -46,20 +48,21 @@ Open terminal:
 
     $ truffle migrate
 
-    $ truffle exec scripts/01_DeployAndSetDudOracleAndTwoOracles.js
+    $ truffle exec scripts/01_DeployTellor.js
 
-##### Testing
+#### Testing through Truffle<a name="testing"> </a>
 
-1. Open a second terminal and run:
+
+3. On the second termila run:
+```solidity
    $ ganache-cli -m "nick lucian brenda kevin sam fiscal patch fly damp ocean produce wish"
-
-2. On main terminal run: 
+```
+4. On the first terminal run: 
 ```solidity
     $   truffle test
 ```
-3. And wait for the message 'START MINING RIG!!'
-
-4. Kick off the python miner file [./miner/testMinerB.py](./miner/testMinerB.py).
+5. And wait for the message 'START MINING RIG!!'
+6. Kick off the python miner file [./miner/testMinerB.py](./miner/testMinerB.py).
 
 
 Production and test python miners are available under the miner subdirectory [here](./miner/). You will need to get at least 5 miners running.
