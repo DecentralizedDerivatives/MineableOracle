@@ -1,13 +1,11 @@
 <p align="center">
   <a href='https://www.daxia.us/'>
-    <img src= './public/DarkText_IconColor.png' width="300" height="100" alt='Daxia.us' />
+    <img src= './public/DarkText_IconColor.png' width="300" height="100" alt='tellor.io' />
   </a>
 </p>
 
 <p align="center">
-  <a href='https://dapp.daxia.us/'>
-    <img src= ./public/DApp-Daxia-blue.svg alt='Slack' />
-  </a>
+
   <a href='https://deriveth.slack.com/'>
     <img src= ./public/Chat-Slack-blue.svg alt='Slack' />
   </a>
