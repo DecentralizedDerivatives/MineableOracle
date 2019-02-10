@@ -10,32 +10,29 @@ contract Token  {
     using SafeMath for uint256;
 
     /*Variables*/
-    uint public minimumStake;//stake required to become a miner and/or vote on disputes in oracle tokens
-    uint public minimumStakeTime;
-    address[] public stakers;
+    uint constant public minimumStakeTime = 7 days;
     uint public total_supply;
+    address[] public stakers;
+    uint constant stakeAmt = 1e18;
     mapping (address => Checkpoint[]) balances;
     mapping(address => mapping (address => uint)) internal allowed;
-    mapping(address => uint) public stakersIndex;
     mapping(address => StakeInfo) public staker;
     struct StakeInfo {
-        uint current_state;//1=started, 2 = ended, 3= OnDispute
+        uint current_state;//1=started, 2=LockedForWithdraw 3= OnDispute
         uint startDate; //stake start date
-        uint stakeAmt;
+        uint index;
     }
     struct  Checkpoint {
-        // fromBlock is the block number that the value was generated from
-        uint128 fromBlock;
-        // value is the amount of tokens at a specific block number
-        uint128 value;
+        uint128 fromBlock;// fromBlock is the block number that the value was generated from
+        uint128 value;// value is the amount of tokens at a specific block number
     }
       
     /*Events*/
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
-    event NewStake(address _sender, uint _value);
-    event StakeWithdrawn(address _sender, uint _value);
-    event StakeExtended(address _sender, uint _startdate, uint _stakeAmt);
+    event NewStake(address _sender);
+    event StakeWithdrawn(address _sender);
+    event StakeWithdrawRequested(address _sender);
 
     /*Functions*/
     /**
@@ -43,11 +40,9 @@ contract Token  {
     */
     /**********************remove msg.sender balance for productions*****************/
     constructor() public{
-        total_supply = 2**256-1;
-        updateValueAtNow(balances[address(this)], total_supply - 1000e18);
+        updateValueAtNow(balances[address(this)], 2**256-1 - 1000e18);
         updateValueAtNow(balances[msg.sender], 1000e18);
-        minimumStake= 1e18;
-        minimumStakeTime = 15552000;
+        total_supply = 100e18;
     }
     
     /**
@@ -107,11 +102,9 @@ contract Token  {
     */
     function getValueAt(Checkpoint[] storage checkpoints, uint _block) view internal returns (uint) {
         if (checkpoints.length == 0) return 0;
-        // Shortcut for the actual value
         if (_block >= checkpoints[checkpoints.length-1].fromBlock)
             return checkpoints[checkpoints.length-1].value;
         if (_block < checkpoints[0].fromBlock) return 0;
-
         // Binary search of the value in the array
         uint min = 0;
         uint max = checkpoints.length-1;
@@ -132,8 +125,7 @@ contract Token  {
     * @param _value is the new balance
     */
     function updateValueAtNow(Checkpoint[] storage checkpoints, uint _value) internal  {
-        if ((checkpoints.length == 0)
-        || (checkpoints[checkpoints.length -1].fromBlock < block.number)) {
+        if ((checkpoints.length == 0) || (checkpoints[checkpoints.length -1].fromBlock < block.number)) {
                Checkpoint storage newCheckPoint = checkpoints[ checkpoints.length++ ];
                newCheckPoint.fromBlock =  uint128(block.number);
                newCheckPoint.value = uint128(_value);
@@ -150,10 +142,8 @@ contract Token  {
     * @param _amount to transfer 
     */
     function doTransfer(address _from, address _to, uint _amount) internal {
-        require(_amount > 0 && _to != address(0));
-        uint stakeAmt = getStakeAmt(_from);
+        require(_amount > 0 && _to != address(0) && allowedToTrade(_from,_amount));
         uint previousBalance = balanceOfAt(_from, block.number);
-        require(previousBalance - stakeAmt  >= _amount);
         updateValueAtNow(balances[_from], previousBalance - _amount);
         previousBalance = balanceOfAt(_to, block.number);
         require(previousBalance + _amount >= previousBalance); // Check for overflow
@@ -186,8 +176,7 @@ contract Token  {
     * @return true if spender appproved successfully
     */
     function approve(address _spender, uint _amount) public returns (bool) {
-        uint stakeAmt = getStakeAmt(msg.sender);
-        require(balanceOf(msg.sender) - stakeAmt >= _amount);//lock the stake amt so it can't be moved until unstaked
+        require(isStaked(msg.sender));//lock the stake amt so it can't be moved until unstaked
         allowed[msg.sender][_spender] = _amount;
         emit Approval(msg.sender, _spender, _amount);
         return true;
@@ -214,40 +203,64 @@ contract Token  {
 
 /**
 * @dev This function allows users to stake 
-* @param _deposit amout to stake
 */
-    function depositStake(uint _deposit) public {
-        require(_deposit >= minimumStake && balanceOf(msg.sender) >= _deposit);
+    function depositStake() public {
+        require( balanceOf(msg.sender) >= stakeAmt);
         stakers.push(msg.sender);
-        stakersIndex[msg.sender] = stakers.length-1;
         staker[msg.sender] = StakeInfo({
             current_state: 1,
             startDate: now - (now % 86400),
-            stakeAmt: _deposit
+            index:stakers.length-1
             });
-        emit NewStake(msg.sender, _deposit);
+        emit NewStake(msg.sender);
     }
 
     function withdrawStake() public {
         StakeInfo memory stakes = staker[msg.sender];
         uint _today = now - (now % 86400);
-        require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state == 1 && balanceOf(msg.sender) >= stakes.stakeAmt);
-        stakes.current_state = 2;
-        emit StakeWithdrawn(msg.sender, stakes.stakeAmt);
-        stakes.stakeAmt = 0;
+        require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state == 2);
+        stakes.current_state = 0;
+        emit StakeWithdrawn(msg.sender);
     }
 
-    function extendStake() public {
+    function requestWithdraw() public{
         StakeInfo memory stakes = staker[msg.sender];
-        uint _today = now - (now % 86400);
-        require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state == 2 && balanceOf(msg.sender) >= stakes.stakeAmt);
-        stakes.startDate = now - (now % 86400);
-        emit StakeExtended(msg.sender, stakes.startDate, stakes.stakeAmt);
+        require(stakes.current_state == 1);
+        stakes.current_state = 2;
+        stakes.startDate = now -(now % 86400);
+        uint _index = stakes.index;
+        uint _lastIndex = stakers.length - 1;
+        address _lastStaker = stakers[_lastIndex];
+        stakers[_index] = _lastStaker;
+        staker[_lastStaker].index = _index;
+        stakers.length--;
+        emit StakeWithdrawRequested(msg.sender);
     }
 
-    function getStakeAmt(address _sender) public view returns(uint){
-        StakeInfo memory stakes = staker[_sender];
-        return stakes.stakeAmt;
+    function allowedToTrade(address _user,uint _amount) public view returns(bool){
+        StakeInfo memory stakes = staker[_user];
+        if(stakes.current_state > 1){
+            return false;
+        }
+        else if(balanceOf(_user).sub(stakes.current_state * stakeAmt).sub(_amount) > 0){
+            return true;
+        }
+        else{
+            return false;
+        }
     }
-  
+
+    function isStaked(address _staker) public view returns(bool){
+        StakeInfo memory stakes = staker[_staker];
+        return (stakes.current_state == 1);
+    }
+
+    function getStakers() public view returns(uint){
+        return stakers.length;
+    }
+
+    function getStakerInfo(address _staker) public view returns(uint,uint,uint){
+        StakeInfo memory stakes = staker[_staker];
+        return (stakes.current_state,stakes.startDate,stakes.index);
+    }
 }
