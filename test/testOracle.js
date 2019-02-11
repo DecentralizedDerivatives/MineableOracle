@@ -65,7 +65,7 @@ contract('Mining Tests', function(accounts) {
 
     beforeEach('Setup contract for each test', async function () {
         owner = accounts[0];
-        oracle = await Oracle.new(600);
+        oracle = await Oracle.new();
         oracle2 = await new web3.eth.Contract(oracleAbi,oracle.address)
         console.log('Oracle Address ',oracle.address);
         var tokens = await web3.utils.toWei('2', 'ether');
@@ -74,23 +74,35 @@ contract('Mining Tests', function(accounts) {
         await oracle.transfer(accounts[3],tokens,{from:accounts[0]});
         await oracle.transfer(accounts[4],tokens,{from:accounts[0]});
         await oracle.transfer(accounts[5],tokens,{from:accounts[0]});
-        await oracle.depositStake(minimumStake.toString(),{from:accounts[1]}); 
-        await oracle.depositStake(minimumStake.toString(),{from:accounts[2]}); 
-        await oracle.depositStake(minimumStake.toString(),{from:accounts[3]}); 
-        await oracle.depositStake(minimumStake.toString(),{from:accounts[4]}); 
-        await oracle.depositStake(minimumStake.toString(),{from:accounts[5]});
-        await oracle.requestData()
+        await oracle.depositStake({from:accounts[1]}); 
+        await oracle.depositStake({from:accounts[2]}); 
+        await oracle.depositStake({from:accounts[3]}); 
+        await oracle.depositStake({from:accounts[4]}); 
+        await oracle.depositStake({from:accounts[5]});
+        await oracle.requestData(api,1);
     });
 
     it("getVariables", async function(){
-        vars = await oracle.getVariables();
-        assert(vars[2] == 1);
+        var val = await oracle.getVariables();
+        console.log(val);
+        var res1 = new BN(val['1'])
+        var res2 = new BN(val['2'])
+        console.log(val);
+        console.log(res1.toNumber());
+        console.log(res2.toNumber());
+        assert(val[2] == 1);
     }); 
 
 /****************Mining Tests******************/
-
     it("Test miner", async function () {
         console.log('START MINING RIG!!');
+        var val = await oracle.getVariables();
+        console.log(val);
+        var res1 = new BN(val['1'])
+        var res2 = new BN(val['2'])
+        console.log(val);
+        console.log(res1.toNumber());
+        console.log(res2.toNumber());
         await promisifyLogWatch(oracle2, 'NewValue')
    });
 

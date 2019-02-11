@@ -49,7 +49,7 @@ def getAPIvalue():
 
 def masterMiner():
 	miners_started = 0
-	challenge,difficulty = getVariables();
+	challenge,difficulty,apiString = getVariables();
 	while True:
 		nonce = mine(str(challenge),public_keys[miners_started],difficulty);
 		if(nonce > 0):
@@ -79,15 +79,22 @@ def getVariables():
 	print (contract_address)
 	payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_call","params":[{"to":contract_address,"data":"0x94aef022"}, "latest"]}
 	r = requests.post(node_url, data=json.dumps(payload));
-	val = r.content
-	print('Val',val)
-	val2 = val[102:]
-	val2 = val2[:-2]
-	_challenge = val[34:101].decode("utf-8")
-	val3 = bytes.decode(val2)
-	print(val3)
-	_difficulty = int(val3);
-	return _challenge,_difficulty
+	val = jsonParser(r);
+	val = val['result'];
+	print('val',val);
+	_challenge = val[:66]
+	val = val[66:]
+	_apiId = int(val[:64])
+	val = val[64:]
+	_difficulty = int(val[:64]);
+	val = val[64:]
+	print(_challenge)
+	print(_apiId)
+	print(_difficulty)
+	print(val)
+	_apiString = web3.toAscii(val)
+	print(_apiString)
+	return _challenge,_apiId,_difficulty,_apiString
 
 def jsonParser(_info):
 	my_json = _info.content
@@ -148,8 +155,8 @@ def bytes_to_int(bytes):
 
 #testHash();
 #working()
-#getVariables()
-masterMiner();
+getVariables()
+#masterMiner();
 #runInParallel(masterMiner,masterMiner,masterMiner,masterMiner,masterMiner)
 
 #getAddress();

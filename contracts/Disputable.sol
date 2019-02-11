@@ -17,13 +17,12 @@ contract Disputable is OracleToken{
     uint[] public disputesIds;
     uint constant public disputeFee = 1e17;
     mapping(uint => Dispute) public disputes;//disputeId=> Disputes
-    mapping(bytes32 => uint) apiId;// api string gets an id = to count of requests array
-    uint[] public apiIds;
+    mapping(bytes32 => uint) apiId;// api bytes32 gets an id = to count of requests array
     struct API{
         string api_string;//id to string api
         bytes32 apiHash;//hash of string
         uint index; //index in apiIds'
-        mapping(uint => uint) payoutPool;//payoutPool for given timestamp
+        uint payout;
         mapping(uint => uint) minedBlockNum;//[apiId][minedTimestamp]=>block.number
         mapping(uint => uint) values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
         mapping(uint => address[5]) minersbyvalue;  
