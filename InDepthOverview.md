@@ -40,7 +40,7 @@ Ethereum smart contracts cannot access off-chain data. If your smart contract re
 
 The tellor oracle is a decentralized oracle. It provides a decentralized alternative for contracts to interact with and obtain data from off-chain (aka API data). 
 
-Tellor implements a hybrid Proof-of-work (PoW)/Proof-of-Stake (PoS) model where miners have to stake tellor tributes (tellor's native token) to be able to mine and along with the PoW solution they also provide an off-chain data point. The first five miners to provide the PoW and off-chain data point are rewarded: the miner with the median value is given the highest reward since that is what is used as the 'offical' value and the four miners get a lower reward that decreases the further they are from the median. Once validated and processed the value is available for on-chain contracts to use. The value can be disputed by anyone holding tellor tributes within 10 blocks after being mined for a fee. After the value goes to dispute, anyone holding tributes can vote on it's validity. If the vote determines the value was invalid the reporting party gets awarded the miner's stake, otherwise the wrongly acused miner gets the reporting fee.
+Tellor implements a hybrid Proof-of-work (PoW)/Proof-of-Stake (PoS) model where miners have to stake tellor tributes (tellor's native token) to be able to mine and along with the PoW solution they also provide an off-chain data point. The first five miners to provide the PoW and off-chain data point are rewarded: the miner with the median value is given the highest reward since that is what is used as the 'official' value and the four miners get a lower reward that decreases the further they are from the median. Once validated and processed the value is available for on-chain contracts to use. The value can be disputed by anyone holding tellor tributes within 10 blocks after being mined for a fee. After the value goes to dispute, anyone holding tributes can vote on it's validity. If the vote determines the value was invalid the reporting party gets awarded the miner's stake, otherwise the wrongly accused miner gets the reporting fee.
 
 <p align="center">
 <img src="./public/Powo.png" width="500" height="300" alt = "How it works">
@@ -48,11 +48,11 @@ Tellor implements a hybrid Proof-of-work (PoW)/Proof-of-Stake (PoS) model where 
 
 ## Implementation <a name="Implementation"> </a>
 
-The Tellor Oracle deploys only <b> one smart contact</b>. It holds and distributes the token supply, informs miners which values to submit, has a built in proof-of-stake methodology for challenges, and holds the historically mined values that contracts can read from. 
+The Tellor Oracle deploys only <b> one smart contact</b>. It holds and distributes the token supply, informs miners which values to submit, has a built-in proof-of-stake methodology for challenges, and holds the historically mined values that contracts can read from. 
 
 The contract provides the miners and users the API or data description, along with necessary fields for the data it is collecting and allows miners to submit the proof of work and off-chain data, sorts the values, allows the users to retrieve the values and to bid on which data series is mined next.  The contract allows for new values to be mined every 10 minutes and which data series is mined is determined by which series has the greatest tip going to the miners.  
 
-Miners are required to stake tributes before they are allowed to mine. The <b>proofOfWork</b> function contains a require statement that ensures this. Once the miner is staked, the stake gets locked for the minimum stake period(one month) and if any dispute is raised against them during that period the stake gets locked until the dispute vote timeperiod expires. 
+Miners are required to stake tributes before they are allowed to mine. The <b>proofOfWork</b> function contains a require statement that ensures this. Once the miner is staked, the stake gets locked for the minimum stake period (one month) and if any dispute is raised against them during that period the stake gets locked until the dispute vote time period expires. 
 
 The basic flow for adding and retrieving data goes like this: 
 
@@ -100,7 +100,7 @@ These are the requestData and updateAPIonQ functions:
         } 
     }    
 ```
-2. Other users who want the same API data, they an pay or ‘tip’ this data series so miners are further incentivized to mine it. If the API has already been requested, the <b>requestData</b> function will automatically add to the previously submitted query to create a pool and help push the query up the queue.
+2. Other users who want the same API data, they pay or ‘tip’ this data series so miners are further incentivized to mine it. If the API has already been requested, the <b>requestData</b> function will automatically add to the previously submitted query to create a pool and help push the query up the queue.
 
 3. Every 10 minutes, the Oracle provides a new challenge along with the data series for miners to mine. 
 
@@ -116,7 +116,7 @@ function approve(address _spender, uint _amount) public returns (bool) {
 
 Contact us if you are interested on becoming an early miner. 
 
-5. Miners then submit their PoW solution, API ID, and off-chain data point to the Oracle contract via the <b>proofOfWork</b> function. The Oracle contract sorts the values as they come in(via the <b>pushValue</b> function) and as soon as five values are received the official value is selected and saved on-chain. The miners are then allocated their payout (base reward and tips). the miner with the median value is given the highest reward since that will become the 'official' value and the other four miners get a lower reward that decreases the further they are from the median. The next API to mine is set at this time based on the current API on queue or the API with the highest payout. This allows the users to bid their request up to the queue until the next value is mined.  
+5. Miners then submit their PoW solution, API ID, and off-chain data point to the Oracle contract via the <b>proofOfWork</b> function. The Oracle contract sorts the values as they come in (via the <b>pushValue</b> function) and as soon as five values are received the official value is selected and saved on-chain. The miners are then allocated their payout (base reward and tips). the miner with the median value is given the highest reward since that will become the 'official' value and the other four miners get a lower reward that decreases the further they are from the median. The next API to mine is set at this time based on the current API on queue or the API with the highest payout. This allows the users to bid their request up to the queue until the next value is mined.  
 
 ```solidity
     function proofOfWork(string calldata nonce, uint _apiId, uint value) external returns (uint256,uint256) {
@@ -194,7 +194,7 @@ Contact us if you are interested on becoming an early miner.
     }
 ```
 
-6. Anyone holding Tellor Tributes can dispute the validity of a mined value within 10 blocks of it being mined by “staking” a fee via the <b> initDispute </b> function.  Tribute holders will vote on the validity of the data point. If the vote determines the value was invalid the reporting party gets awarded the miner's stake, otherwise the wrongly acused miner gets the reporting fee. Votes are weighted based on the amount of tributes held by the mining party at the time of voting (block.number). The miner under dispute is barred from voting. 
+6. Anyone holding Tellor Tributes can dispute the validity of a mined value within 10 blocks of it being mined by “staking” a fee via the <b> initDispute </b> function.  Tribute holders will vote on the validity of the data point. If the vote determines the value was invalid the reporting party gets awarded the miner's stake, otherwise the wrongly accused miner gets the reporting fee. Votes are weighted based on the amount of tributes held by the mining party at the time of voting (block.number). The miner under dispute is barred from voting. 
 
 The miner's stake is "locked" when a dispute is initiated, since <b> initDispute </b>  changes their stake state to 3. Miners can only <b>withdrawStake</b> their stake when their state is 1 and the minimum stake time has elapsed. The stake state for the miner will return to 1 once the <b>tallyVotes</b> is ran, if the vote is on their favor, otherwise they lose their stake to the party that reported them and their stake state is marked as 2 and the stake amount as zero.  
 
@@ -273,7 +273,7 @@ Tellor will use the initial tokens to provide liquidity to users of the oracle. 
 ## Incentives <a name="incentives"> </a>
 Two types of incentives are implemented in this hybrid model, 1) rewards for PoW submissions and 2) structural incentives to promote accurate value submissions. 
 
-The next subsections provide further details and goals of the reward incentives and on how the miners are incentivised to provide accurate values. 
+The next subsections provide further details and goals of the reward incentives and on how the miners are incentivized to provide accurate values. 
 
 ### 1. Rewards for PoW submissions
 
@@ -284,9 +284,9 @@ Miners are given two types of rewards for the PoW:
 The next two subsections provide further details and goals of these.
 
 #### A base reward per every successful submission <a name="base-reward"> </a>
-The base reward incentivizes miners to provide data via the PoW and its pay structure incentivises them to provide accurate values. 
+The base reward incentivizes miners to provide data via the PoW and its pay structure incentivizes them to provide accurate values. 
 
-Similar to the way Ethereum rewards ‘Uncles’ or miners who were close to winning, the first five miners to submit a PoW, API ID and off-chain value are awarded tributes. The miner that submits the median value is awarded the largest quantity of the total payoff. The median value is selected efficiently via an insert sort in the <b>pushValue</b> function called withing the <b>proofOfWork</b> function.
+Similar to the way Ethereum rewards ‘Uncles’ or miners who were close to winning, the first five miners to submit a PoW, API ID and off-chain value are awarded tributes. The miner that submits the median value is awarded the largest quantity of the total payoff. The median value is selected efficiently via an insert sort in the <b>pushValue</b> function called within the <b>proofOfWork</b> function.
 
 The current incentive structure leverages game-theory to disincentivize dispersion and adversarial submissions. The payout structure is specified when deploying a new oracle. 
 
@@ -306,7 +306,7 @@ Miners are rewarded with tributes. Trubutes are charged for API requests. This g
 
 Users incentivize miners to retrieve their value by posting a bounty to ensure the query they are interested on is mined. Akin to paying a higher gas fee for a prioritized transaction, this is a tip to the miners and is paid out in the same staggered reward structure as the base reward. As the ecosystem expands (increasing number of DApps and the value hosted on these), securing data to finalize or execute a contract will lead to higher tips and higher incentivization of miners to continue to mine.
 
-Since the time target of the oracle is 10 minutes, there are only 144 queries per day on average.  As the Tellor oracle is adopted, the queue will fill and price competitions will take place.  This is a self fulfilling cycle as adoption increases so does demand, miner rewards, security and further adoption. 
+Since the time target of the oracle is 10 minutes, there are only 144 queries per day on average.  As the Tellor oracle is adopted, the queue will fill and price competitions will take place.  This is a self-fulfilling cycle as adoption increases so does demand, miner rewards, security and further adoption. 
 
 
 ### 2. Structural incentives to promote accurate value submissions
@@ -340,7 +340,7 @@ Miners obtain this information via the <b>getVariables</b> function.
 #### The Algorithm
 Tello's algorithm is different than that of Bitcoin or Ethereum. 
 
-The PoW, is basically guessing a nonce that produces a hash with a certain number of leading zeros using the randomly selected hash function. When mining became hightly competitive for Bitcoin, specialzed sytems called "application-specific integrated circuit", ASICS, were developed. ASICS are "an integrated circuit customized for a particular use", and in the case of Bitcoin, these are designed to solve the PoW faster and more efficiently that CPU's and GPU's ([Learn more about ASICS](https://en.bitcoin.it/wiki/ASIC)). Currently, mining Bitcoin has become so competitive that most of it is mined via mining pools ([Read more about mining pools](https://en.wikipedia.org/wiki/Mining_pool)). Mining Bitcoin also requires large amounts of electricity and many solo ASICS in areas where electricity is more expensive, have been left without use. 
+The PoW, is basically guessing a nonce that produces a hash with a certain number of leading zeros using the randomly selected hash function. When mining became highly competitive for Bitcoin, specialized systems called "application-specific integrated circuit", ASICS, were developed. ASICS are "an integrated circuit customized for a particular use", and in the case of Bitcoin, these are designed to solve the PoW faster and more efficiently that CPU's and GPU's ([Learn more about ASICS](https://en.bitcoin.it/wiki/ASIC)). Currently, mining Bitcoin has become so competitive that most of it is mined via mining pools ([Read more about mining pools](https://en.wikipedia.org/wiki/Mining_pool)). Mining Bitcoin also requires large amounts of electricity and many solo ASICS in areas where electricity is more expensive, have been left without use. 
 
 One of the main challenges for a mineable token or any process that relies on mining is the surplus of solo ASICS currently available since if they are used on a small ecosystem these specialized systems can quickly monopolize it. Tellor’s proof of work challenge is designed to be different than the Bitcoin mining challenge. This setup requires miners to invest a significant amount of time to update the mining algorithm and should disincentivize miners to become part of the ecosystem too early, allowing Tellor to grow and mature before larger players join.
 The code to determine a successful mine for a  given challenge and difficulty is:
@@ -429,7 +429,7 @@ Tellor implements a finality period of 10 blocks after original data submissions
 
 A challenger must submit a stake to each challenge.  Once a challenge is submitted, the miner who submitted the value is placed in a locked state.  For the next week, tribute holders vote on the validity of the mined value.   A proper submission is one that corresponds to a valid API query within the time period between the release of the challenge and the submission of the value.  
 
-If the challenge is deemed successful, the challenger receives the stake of the malicious miner.  If the challenge is deemed unsuccessful, the honest miner receives the challengers stake.
+If the challenge is deemed successful, the challenger receives the stake of the malicious miner.  If the challenge is deemed unsuccessful, the honest miner receives the challenger's stake.
 
 
 ## Potential Applications <a name="potential-applications"> </a>
@@ -466,7 +466,7 @@ Off-chain analysis for detecting outliers and reporting these to “gain” the 
 
 
 ## Conclusion <a name="conclusion"> </a>
-Tellor provides a decentralized option for off-chain data. We realize the short coming of PoW but as of now it has proven to work and we are providing users a way to move away from it once a better option comes along.  
+Tellor provides a decentralized option for off-chain data. We realize the short coming of PoW but as of now it has proven to work so we implemented a hybrid model.  
 
 By creating an oracle schema that uses an incented construct to derive the validity of off-chain data, we:
 * <b>Reduce the risks</b> associated with single-party oracle providers, who can cut access to API data, forge message data, etc
@@ -484,7 +484,7 @@ Join our slack, shoot us an email or contact us: [<img src="./public/slack.png" 
 [<img src="./public/telegram.png" width="24" height="24">](https://t.me/ddaorg)
 [<img src="./public/discord.png" width="24" height="24">](https://discordapp.com/invite/xtsdpbS)
 
-Check out or issues log here on Github or contribute to our future plans to implement a GPU miner(not built in python), provide a way to pay in Ether for data, and improve our reward/incentives mechanism. 
+Check out or issues log here on Github or contribute to our future plans to implement a GPU miner (not built in python), provide a way to pay in Ether for data, and improve our reward/incentives mechanism. 
 
 Any contributions are welcome!
 

@@ -75,20 +75,20 @@ Ethereum smart contracts cannot access off-chain data. If your smart contract re
 
 <b>The tellor oracle</b> is a decentralized oracle. It provides a decentralized alternative for contracts to interact with and obtain data from off-chain (aka API data). 
 
-Tellor implements a hybrid Proof-of-work (PoW)/Proof-of-Stake (PoS) model where miners have to stake tellor tributes (tellor's native token) to be able to mine and along with the PoW solution they also provide an off-chain data point. The first five miners to provide the PoW and off-chain data point are rewarded: the miner with the median value is given the highest reward since that is what is used as the 'offical' value and the four miners get a lower reward that decreases the further they are from the median. Once validated and processed the value is available for on-chain contracts to use. The value can be disputed by anyone holding tellor tributes within 10 blocks after being mined for a fee. After the value goes to dispute, anyone holding tributes can vote on it's validity. If the vote determines the value was invalid the reporting party gets awarded the miner's stake, otherwise the wrongly acused miner gets the reporting fee. 
+Tellor implements a hybrid Proof-of-work (PoW)/Proof-of-Stake (PoS) model where miners have to stake tellor tributes (tellor's native token) to be able to mine and along with the PoW solution they also provide an off-chain data point. The first five miners to provide the PoW and off-chain data point are rewarded: the miner with the median value is given the highest reward since that is what is used as the 'official' value and the four miners get a lower reward that decreases the further they are from the median. Once validated and processed the value is available for on-chain contracts to use. The value can be disputed by anyone holding tellor tributes within 10 blocks after being mined for a fee. After the value goes to dispute, anyone holding tributes can vote on it's validity. If the vote determines the value was invalid the reporting party gets awarded the miner's stake, otherwise the wrongly accused miner gets the reporting fee. 
 
 <p align="center">
 <img src="./public/Powo.png" width="400" height="200" alt = "How it works">
 </p>
 
-A deep dive in methododology is available here: [In-Depth Overview](./InDepthOverview.md)
+A deep dive in methodology is available here: [In-Depth Overview](./InDepthOverview.md)
 
   
 
 ### Useful links <a name="useful-links"> </a>
 High level inspiration from [EIP918 Mineable Token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-918.md).
 
-Why we need a decentralized option? Checkout: ["Trusted third parites are security holes" ~ Nick Szabo, 2001](https://nakamotoinstitute.org/trusted-third-parties/)
+Why we need a decentralized option? Checkout: ["Trusted third parties are security holes" ~ Nick Szabo, 2001](https://nakamotoinstitute.org/trusted-third-parties/)
 
 Metamask - www.metamask.io 
 
@@ -124,7 +124,7 @@ December 10, 2018 -- This project has been revised to improve security.
 
 #### Contributors<a name="contributors"> </a>
 
-Nicholas Fett (nfett@daxia.us), Kevin Leffew (kleffew94@gmail.com), Sam Everett (severett29@gmail.com), Brenda Loya (bloya@daxia.us), Lucian Stroie (luciandstroie@gmail.com)
+Nicholas Fett (nfett@daxia.us), Brenda Loya (bloya@daxia.us), Kevin Leffew (kleffew94@gmail.com), Sam Everett (severett29@gmail.com),  Lucian Stroie (luciandstroie@gmail.com)
 
 
 #### Copyright

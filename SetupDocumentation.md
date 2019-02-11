@@ -33,7 +33,7 @@
  </details>
 
 ## Documentation <a name="Documentation"> </a>  
-The documentation is broken down into four parts: steps for setting up, quick instructions for setting up and test using Truffle, users and miners functions, contracts descriptions, and scripts (javascript) descriptions.
+The documentation is broken down into four parts: steps for setting up, quick instructions for setting up and test using Truffle, users' and miners' functions, contracts' descriptions, and scripts' (javascript) descriptions.
 
 
 ### Operator Setup <a name="operator-setup"> </a>  
@@ -90,7 +90,7 @@ Production and test python miners are available under the miner subdirectory [he
 Once the operator deploys the Oracle. Users can buy the ERC-20 PoWO token via an exchange or mine them.
 
 To request data, users will need Tributes to call this function:
-* <b>requestData</b> function allows the user to specify the API, timestamp and tip (this can be thought of as “gas”, the higher the tip/payout the the higher the probability it will get mined next) for the value they are requesting.  If multiple parties are requesting the same data at the same time, their tips are combined to further incentivize miners at that time period and/or API. 
+* <b>requestData</b> function allows the user to specify the API, timestamp and tip (this can be thought of as “gas”, the higher the tip/payout the higher the probability it will get mined next) for the value they are requesting.  If multiple parties are requesting the same data at the same time, their tips are combined to further incentivize miners at that time period and/or API. 
 
 ```javascript
 oracle.requestData(string s_api, uint _timestamp, uint _tip)
@@ -173,7 +173,7 @@ Join our slack, shoot us an email or contact us: [<img src="./public/slack.png" 
 [<img src="./public/telegram.png" width="24" height="24">](https://t.me/ddaorg)
 [<img src="./public/discord.png" width="24" height="24">](https://discordapp.com/invite/xtsdpbS)
 
-Check out or issues log here on Github or contribute to our future plans to implement a GPU miner(not built in python), provide a way to pay in Ether for data, and improve our reward/incentives mechanism. 
+Check out or issues log here on Github or contribute to our future plans to implement a GPU miner (not built in python), provide a way to pay in Ether for data, and improve our reward/incentives mechanism. 
 
 Any contributions are welcome!
 
