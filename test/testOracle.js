@@ -17,27 +17,19 @@ var minimumStake = 1e18;
 
 function promisifyLogWatch(_contract,_event) {
   return new Promise((resolve, reject) => {
-    subscribeLogEvent(_contract,_event,(error, log) => {
-      web3.eth.clearSubscriptions();
-      if (error !== null)
-        reject(error);
-      resolve(log);
-    });
-    });
+    web3.eth.subscribe('logs', {
+      address: _contract.options.address,
+      topics:  ['0xc12a8e1d75371aee68708dbc301ab95ef7a6022cd0eda54f8669aafcb77d21bd']
+    }, (error, result) => {
+        console.log('Result',result);
+        console.log('Error',error);
+        if (error)
+          reject(error);
+        web3.eth.clearSubscriptions();
+        resolve(result);
+    })
+  });
 }
-
-// Subscriber method
-function subscribeLogEvent(contract, eventName){
-  web3.eth.subscribe('logs', {
-    address: contract.options.address,
-  }, (error, result) => {
-    if (!error) {
-      return
-      console.log(`New ${eventName}!`, eventObj)
-    }
-  })
-}
-
 
 async function expectThrow(promise){
   try {
@@ -97,12 +89,6 @@ contract('Mining Tests', function(accounts) {
     it("Test miner", async function () {
         console.log('START MINING RIG!!');
         var val = await oracle.getVariables();
-        console.log(val);
-        var res1 = new BN(val['1'])
-        var res2 = new BN(val['2'])
-        console.log(val);
-        console.log(res1.toNumber());
-        console.log(res2.toNumber());
         await promisifyLogWatch(oracle2, 'NewValue')
    });
 
