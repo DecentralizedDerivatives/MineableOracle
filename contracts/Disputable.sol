@@ -19,7 +19,7 @@ contract Disputable is OracleToken{
     mapping(uint => Dispute) public disputes;//disputeId=> Disputes
     mapping(bytes32 => uint) apiId;// api bytes32 gets an id = to count of requests array
     struct API{
-        string api_string;//id to string api
+        string apiString;//id to string api
         bytes32 apiHash;//hash of string
         uint index; //index in apiIds'
         uint payout;
@@ -84,7 +84,6 @@ contract Disputable is OracleToken{
             tally: 0,
             index:disputeId
             });
-
         disputesIds.push(disputeId);
         StakeInfo memory stakes = staker[_miners[2]];
         stakes.current_state = 3;
@@ -128,11 +127,12 @@ contract Disputable is OracleToken{
         StakeInfo memory stakes = staker[disp.reportedMiner];  
          require(disp.quorum >= minQuorum); 
           if (disp.tally > 0 ) { 
-            stakes.current_state = 0;
+            stakes.current_state = 1;
             doTransfer(disp.reportedMiner,disp.reportingParty, stakeAmt);
+            stakes.current_state = 0;
             emit StakeLost(disp.reportedMiner, stakeAmt);
             disp.disputeVotePassed = true;
-            _api.values[disp.timestamp] =0;
+            _api.values[disp.timestamp] = 0;
         } 
         else {
             stakes.current_state = 1;
@@ -166,6 +166,7 @@ contract Disputable is OracleToken{
     function getDisputesIds() view public returns (uint[] memory){
         return disputesIds;
     }
+
     /**
     * @dev Gets blocknumber for mined timestamp 
     * @param _apiId to look up
@@ -174,4 +175,43 @@ contract Disputable is OracleToken{
     function getMinedBlockNum(uint _apiId, uint _timestamp) public view returns(uint){
         return apiDetails[_apiId].minedBlockNum[_timestamp];
     }
+
+    /**
+    * @dev Gets the API struct variables that are not mappings
+    * @param _apiId to look up
+    */
+    function getApiVars(uint _apiId) external view returns(string memory, bytes32, uint, uint) {
+        API memory _api = apiDetails[_apiId]; 
+        return (_api.apiString, _api.apiHash, _api.index,_api.payout);
+    }
+
+    /**
+    * @dev Gets the API struct variables that are mappings
+    * @param _apiId to look up
+    * @param _timestamp is the timestamp to look up
+    */
+    function getApiMappings(uint _apiId, uint _timestamp) external view returns(uint, address[5] memory){
+        API storage _api = apiDetails[_apiId]; 
+        return(_api.values[_timestamp],_api.minersbyvalue[_timestamp]);
+    }
+
+    /**
+    * @dev Gets the Dispute struct variables that are not mappings
+    * @param _disputeId to look up
+    */
+/*    function getAllDisputeVars(uint _disputeId) external view returns(address, address, uint, uint, uint ,uint, uint, uint,int, bool){
+        Dispute memory disp = disputes[_disputeId];
+        return(disp.reportedMiner, disp.reportingParty, disp.apiId, disp.minExecutionDate, 
+            disp.numberOfVotes,disp.quorum, disp.blockNumber, disp.index,disp.tally,disp.executed); 
+    }*/
+    
+    /**
+    * @dev Checks if an address voted in a dispute
+    * @param _disputeId to look up
+    * @param _address to look up
+    */
+    function didVote(uint _disputeId, address _address) external view returns(bool){
+        return disputes[_disputeId].voted[_address];
+    }
+
 }
