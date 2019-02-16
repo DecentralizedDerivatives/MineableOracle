@@ -98,8 +98,10 @@ contract('Mining Tests', function(accounts) {
 
     it("Test Full Miner", async function () {
         let logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        console.log("logoutput",logMineWatcher);
-        console.log("value", logMineWatcher.args._value)
+        console.log("logoutput",logMineWatcher.data);
+        testing = await web3.eth.abi.decodeParameters(['uint', 'uint', 'uint'], web3.utils.hexToNumberString(logMineWatcher.data));
+        console.log('testing', testing);
+        //console.log("value", logMineWatcher.args[0]._value);
         //assert(logMineWatcher.args[1]._value > 0, "The value submitted by the miner should not be zero");
     });
 /*
