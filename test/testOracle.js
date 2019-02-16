@@ -41,6 +41,7 @@ contract('Mining Tests', function(accounts) {
   let owner;
   let reader;
   let logNewValueWatcher;
+  let logMineWatcher;
 
     beforeEach('Setup contract for each test', async function () {
         owner = accounts[0];
@@ -97,29 +98,31 @@ contract('Mining Tests', function(accounts) {
    });
 
     it("Test Full Miner", async function () {
-        let logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         console.log("logoutput",logMineWatcher.data);
         testing = await web3.eth.abi.decodeParameters(['uint', 'uint', 'uint'], web3.utils.hexToNumberString(logMineWatcher.data));
         console.log('testing', testing);
         //console.log("value", logMineWatcher.args[0]._value);
         //assert(logMineWatcher.args[1]._value > 0, "The value submitted by the miner should not be zero");
     });
-/*
+
   it("Test Total Supply Increase", async function () {
         initTotalSupply = await oracle.totalSupply();
-        logMineWatcher = await helper.promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         newTotalSupply = await oracle.totalSupply();
         payout = await oracle.payoutTotal.call();
-        it= await web3.fromWei(initTotalSupply, 'ether').toNumber();
-        ts= await web3.fromWei(newTotalSupply, 'ether').toNumber();
-        pt= await web3.fromWei(payout, 'ether').toNumber();            
+        it= await web3.utils.fromWei(initTotalSupply, 'ether');
+        console.log('it',it);
+        ts= await web3.utils.fromWei(newTotalSupply, 'ether');
+        console.log("ts", ts);
+        pt= await web3.utils.fromWei(payout, 'ether');            
         assert((ts-it) == pt , "Difference should equal the payout");
     });
 
-
+/*
     it("Test 10 Mines", async function () {
         for(var i = 0;i < 10;i++){
-            logMineWatcher = await helper.promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+            logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
             //console.log('Mining...',i);
         }
         res = logMineWatcher.args._value;
@@ -127,7 +130,7 @@ contract('Mining Tests', function(accounts) {
     });
 
     it("Test Is Data", async function () {
-        logMineWatcher = await helper.promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;       
         //data = await oracle.isData.call(res.c[0]);
@@ -136,7 +139,7 @@ contract('Mining Tests', function(accounts) {
     });
 
     it("Test Get Last Query", async function () {
-        logMineWatcher = await helper.promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;
         await oracle.getLastQuery();       
@@ -146,7 +149,7 @@ contract('Mining Tests', function(accounts) {
     });
     
     it("Test Data Read", async function () {
-        logMineWatcher = await helper.promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;      
         begbal_sender =await oracle.balanceOf(accounts[4]);
@@ -159,82 +162,86 @@ contract('Mining Tests', function(accounts) {
         assert(begbal_sender - endbal_sender == web3.toWei(1, 'ether'), "Should be equal to fee per read");
         assert(begbal_sender - endbal_sender == readFee, "Should be equal to readfee per read");
     });
-
+*/
    it("Test Miner Payout", async function () {
         balances = []
         for(var i = 0;i<6;i++){
             balances[i] = await oracle.balanceOf(accounts[i]);
         }
-        logMineWatcher = await helper.promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         new_balances = []
         for(var i = 0;i<6;i++){
             new_balances[i] = await oracle.balanceOf(accounts[i]);
         }
-        assert((new_balances[5] - balances[5]) == web3.toWei(1, 'ether'));
-        assert((new_balances[1] - balances[1]) == web3.toWei(5, 'ether'));
-        assert((new_balances[2] - balances[2]) ==web3.toWei(10, 'ether'));
-        assert((new_balances[3] - balances[3]) == web3.toWei(5, 'ether'));
-        assert((new_balances[4] - balances[4]) == web3.toWei(1, 'ether'));
+        console.log("balance and new balance", balances[1], new_balances[3]);
+        assert((new_balances[5] - balances[5]) == 1);
+        assert((new_balances[1] - balances[1]) == 5);
+        assert((new_balances[2] - balances[2]) == 10);
+        assert((new_balances[3] - balances[3]) == 5);
+        assert((new_balances[4] - balances[4]) == 1);
     });
     
     it("Test Difficulty Adjustment", async function () {
-        logMineWatcher = await helper.promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         vars = await oracle.getVariables();
-        assert(vars[1] = 2);
-        logMineWatcher = await helper.promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        console.log("vars1", vars);
+        assert(vars[2] = 2);
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         vars = await oracle.getVariables();
-        assert(vars[1] = 3);
+        console.log("vars2", vars);
+        assert(vars[2] = 3);
     });
 
     it("Test didMine ", async function () {
         vars = await oracle.getVariables();
-        logMineWatcher = await helper.promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         didMine = oracle.didMine(vars[0],accounts[1]);
         assert(didMine);
     });
 
      it("Test Get MinersbyValue ", async function () {
-        logMineWatcher = await helper.promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         res = logMineWatcher.args._time;
+        console.log("res",res);
         miners = await oracle.getMinersByValue(res);
         assert(miners = [accounts[4],accounts[3],accounts[2],accounts[1],accounts[5]])
     });
 
 
 
-
+/*
     it("Test UpdatePayoutTotal", async function () {
        payoutTotal = await oracle.miningMultiplier.call();
-       val = await web3.fromWei(payoutTotal.toNumber(), "ether" ) 
+       val = await web3.utils.fromWei(payoutTotal.toNumber(), "ether" ) 
        await helper.timeTravel(86400 * 366)
        await oracle.updatePayoutTotal();
        payoutTotal = await oracle.miningMultiplier.call();
-       val = web3.fromWei(payoutTotal.toNumber(), "ether" ) 
+       val = web3.utils.fromWei(payoutTotal.toNumber(), "ether" ) 
        assert(val == 1 * 4 /5, "Miner reward should decrease 1/5 after year=1")
        await helper.timeTravel(86400 * 366)
        await oracle.updatePayoutTotal();
        payoutTotal = await oracle.miningMultiplier.call();
-        val = web3.fromWei(payoutTotal.toNumber(), "ether" ) 
+        val = web3.utils.fromWei(payoutTotal.toNumber(), "ether" ) 
        assert(val == 1 * 3 /5, "Miner reward should decrease 1/5 from year1 to year2")
        await helper.timeTravel(86400 * 366)
        await oracle.updatePayoutTotal();
        payoutTotal = await oracle.miningMultiplier.call();
-        val = web3.fromWei(payoutTotal.toNumber(), "ether" ) 
+        val = web3.utils.fromWei(payoutTotal.toNumber(), "ether" ) 
        assert(val == 1 * 2 /5, "Miner reward should decrease 1/5 from year2 to year3")
        await helper.timeTravel(86400 * 366)
        await oracle.updatePayoutTotal();
        payoutTotal = await oracle.miningMultiplier.call();
-        val = web3.fromWei(payoutTotal.toNumber(), "ether" ) 
+        val = web3.utils.fromWei(payoutTotal.toNumber(), "ether" ) 
        assert(val == 1 * 1 /5, "Miner reward should decrease 1/5 from year4 to year5")
        await helper.timeTravel(86400 * 366)
        await oracle.updatePayoutTotal();
         payoutTotal = await oracle.miningMultiplier.call();
-        val = web3.fromWei(payoutTotal.toNumber(), "ether" ) 
+        val = web3.utils.fromWei(payoutTotal.toNumber(), "ether" ) 
        assert(val == 0, "Miner reward should be zero after year 5")
     });
 
     it("Test contract read no tokens", async function(){
-        logMineWatcher = await helper.promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         res = logMineWatcher.args._time;
         val = logMineWatcher.args._value;      
         balance = await oracle.balanceOf(readcontract.address);
@@ -243,7 +250,7 @@ contract('Mining Tests', function(accounts) {
     });
 
     it("Test read request data", async function(){
-        logMineWatcher = await helper.promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         res = logMineWatcher.args._time;  
         await oracle.requestData(res.c[0],accounts[4], {from:accounts[4]});
         info = await oracle.getRequest(res.c[0],accounts[4])
@@ -251,7 +258,7 @@ contract('Mining Tests', function(accounts) {
     }); 
     it("Test dev Share", async function(){
         begbal = await oracle.balanceOf(accounts[0]);
-        logMineWatcher = await helper.promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         endbal = await oracle.balanceOf(accounts[0]);
         devshare = await oracle.devShare.call();
         payout = await oracle.payoutTotal.call();
