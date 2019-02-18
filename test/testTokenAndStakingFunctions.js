@@ -337,25 +337,6 @@ contract('Token and Staking Tests', function(accounts) {
         assert(web3.utils.hexToNumberString(vpApiOnQ) == web3.utils.hexToNumberString(resApiHash), "api on Q should be apiId");
         assert(web3.utils.hexToNumberString(vpApiIdonQ) == web3.utils.hexToNumberString(resApiId), "timestamp on Q should be apiTimestamp");
           
-/*       balances = [];
-        for(var i = 0;i<6;i++){
-            balances[i] = await oracle.balanceOf(accounts[i]);
-            //console.log(i, balances[i]);
-        }
-        oracle2 = await new web3.eth.Contract(oracleAbi,oracle.address);
-        await helper.advanceTime(86400 * 10);
-        logMineWatcher = await promisifyLogWatch(oracle2, "NewValue");//or Event Mine?
-        new_balances = [];
-        for(var i = 0;i<6;i++){
-            new_balances[i] = await oracle.balanceOf(accounts[i]);
-            //console.log(i, new_balances[i]);
-        }
-        assert((new_balances[5] - balances[5]) == web3.toWei(1, 'ether'), "Assert miner 5(furthest from median) got lowest reward");
-        assert((new_balances[1] - balances[1]) == web3.toWei(5, 'ether'), "Assert miner 1(second from median) got lowest reward");
-        assert((new_balances[2] - balances[2]) == web3.toWei(10, 'ether'),"Assert miner 2(median) got largest reward");
-        assert((new_balances[3] - balances[3]) == web3.toWei(5, 'ether'),"Assert miner 3(second from median) got lowest reward");
-        assert((new_balances[4] - balances[4]) == web3.toWei(1, 'ether'), "Assert miner 4(furthest from median) got lowest reward");
- */
  }); 
 
 
