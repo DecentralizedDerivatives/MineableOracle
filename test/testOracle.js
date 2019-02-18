@@ -270,5 +270,65 @@ contract('Mining Tests', function(accounts) {
         assert((endbal - begbal)/1e18  - (payout.toNumber() * devshare.toNumber())/1e18 < .1, "devShare")
     }); 
     
+    it("Test miner, alternating api request on Q and auto select", async function () {
+        await oracle.requestData(api,1);
+        await oracle.requestData(api2,10);
+        await oracle.requestData(api,11);
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        //console.log("value", logMineWatcher.args[0]._value);
+        //console.log("value", logMineWatcher.args[0]._time);
+        //console.log("value", logMineWatcher.args[0]._apiId);
+        //assert(logMineWatcher.args[1]._value > 0, "The value submitted by the miner should not be zero");
+        await oracle.requestData(api2,15);
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        //console.log("value", logMineWatcher.args[0]._value);
+        //console.log("value", logMineWatcher.args[0]._time);
+        //console.log("value", logMineWatcher.args[0]._apiId);
+        //assert(logMineWatcher.args[1]._value > 0, "The value submitted by the miner should not be zero");
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        //console.log("value", logMineWatcher.args[0]._value);
+        //console.log("value", logMineWatcher.args[0]._time);
+        //console.log("value", logMineWatcher.args[0]._apiId);
+        //assert(logMineWatcher.args[1]._value > 0, "The value submitted by the miner should not be zero");
+    });
+
+    it("Test dispute", async function () {
+         await oracle.requestData(api,1);
+        await oracle.requestData(api2,10);
+        await oracle.requestData(api,11);
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        //console.log("value", logMineWatcher.args[0]._value);
+        //console.log("value", logMineWatcher.args[0]._time);
+        //console.log("value", logMineWatcher.args[0]._apiId);
+        //assert(logMineWatcher.args[1]._value > 0, "The value submitted by the miner should not be zero");
+        await oracle.requestData(api2,15);
+        await helper.advanceTime(10 * 1);
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        //console.log("value", logMineWatcher.args[0]._value);
+        _timestamp2 = web3.utils.hexToNumberString(logMineWatcher.args[0]._time);
+        _apiId2 = web3.utils.hexToNumberString(logMineWatcher.args[0]._apiId);
+        //console.log("value", logMineWatcher.args[0]._time);
+        //console.log("value", logMineWatcher.args[0]._apiId);
+        //assert(logMineWatcher.args[1]._value > 0, "The value submitted by the miner should not be zero");
+        apid2value = await oracle.retrieveData(_apiId2, _timestamp2);
+        console.log("apid2value", apid2value);
+        await helper.advanceTime(30 * 1);
+        await oracle.initDispute(_apiId2, _timestamp2, {from:accounts[5]});
+        count = await oracle.countDisputes();
+        console.log('dispute count:', web3.utils.hexToNumberString(count));
+        await oracle.vote(_apiId2, true, {from:accounts[5]});
+        await oracle.tallyVotes(_apiId2);
+        dispInfo = await oracle.getDisputeInfo(_apiId2);
+        console.log("dispInfo", dispInfo);
+        voted = await.didVote(1, accounts[0]);
+        assert(voted == true, "account 0 voted");
+        voted = await.didVote(1, accounts[5]);
+        assert(voted == false, "account 5 did not vote");
+        alldisp = await oracle.getDisputesIds();
+        console.log("alldisp", alldisp);
+        apid2valueF = await oracle.retrieveData(_apiId2, _timestamp2);
+        console.log("apid2value", apid2valueF);
+        assert(apid2valueF == 0 ,"value should now be zero this checks updateDisputeValue-internal fx  works");
+    });
     */
 });

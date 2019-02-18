@@ -70,12 +70,12 @@ contract('Token and Staking Tests', function(accounts) {
 
 /*    it("Total Supply", async function(){
         supply = await oracle.totalSupply();
-        console.log("supply:", supply.toString());
+        console.log("supply:", web3.utils.hexToNumberString(supply));
         const supply1 = new BN(2**256 - 1).toString();
-        console.log("supply1", supply1.toString());
-        assert.equal(supply1.toString,supply.toString,"Supply should be 10000");
+        console.log("supply1", web3.utils.hexToNumberString(supply1));
+        assert.equal(web3.utils.hexToNumberString(supply1),web3.utils.hexToNumberString(supply),"Supply should be 10000");
         contra = await oracle.balanceOf(oracle.address);
-        contra1 = contra.toNumber();
+        contra1 = await web3.utils.hexToNumberString(contra);
         contrabal= new BN(2**256 - 1 - 1000e18);
         assert.equal(contra1,contrabal,"Contract balance should be max");
     });*/    
@@ -357,16 +357,7 @@ contract('Token and Staking Tests', function(accounts) {
         assert((new_balances[4] - balances[4]) == web3.toWei(1, 'ether'), "Assert miner 4(furthest from median) got lowest reward");
  */
  }); 
-/*
-initDispute external
-vote    public
-tallyVotes  public
-getDisputeInfo  public view
-countDisputes   public view
-getDisputesIds  public view
-updateDisputeValue  internal
 
-*/
 
 
 
