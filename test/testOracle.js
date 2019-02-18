@@ -12,6 +12,7 @@ var oracleAbi = Oracle.abi;
 var oracleByte = Oracle.bytecode;
 
 var api = 'json(https://api.gdax.com/products/BTC-USD/ticker).price';
+
 function promisifyLogWatch(_contract,_event) {
   return new Promise((resolve, reject) => {
     web3.eth.subscribe('logs', {
@@ -34,6 +35,30 @@ function promisifyLogWatch(_contract,_event) {
 
   });
 }
+
+/*function promisifyLogWatch(_contract,_event) {
+  return new Promise((resolve, reject) => {
+    web3.eth.subscribe('logs', {
+      address: _contract.options.address,
+      topics:  ['0x62ca650db86f0a3c5182ae2d9536edbaa54d4603ddf88e0385ed28915a7d2535']
+    }, (error, result) => {
+        console.log('Result',result);
+        console.log('Error',error);
+        if (error)
+          reject(error);
+        web3.eth.clearSubscriptions();
+        resolve(result);
+    })
+    .on("data", (log) => {
+    console.log(log);
+    })
+    .on("changed", (log) => {
+    console.log(log);
+   })
+
+  });
+}*/
+
 
 contract('Mining Tests', function(accounts) {
   let oracle;
@@ -101,10 +126,16 @@ contract('Mining Tests', function(accounts) {
 //https://codeburst.io/deep-dive-into-ethereum-logs-a8d2047c7371
     it("Test Full Miner", async function () {
         console.log("newvalue sha3------",web3.eth.utils.sha3('NewValue(uint,uint,uint)'));
-        console.log("newvalue sholidity sha3------",web3.eth.utils.sha3('NewValue(uint,uint,uint)'));
+        console.log("newvalue solidity sha3------",web3.eth.utils.soliditySha3('NewValue(uint,uint,uint)'));
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         console.log("logoutput DATA------",logMineWatcher.data);
-        testing2 = await web3.eth.abi.decodeLog(['uint', 'uint', 'uint'],logMineWatcher.data,'0xc12a8e1d75371aee68708dbc301ab95ef7a6022cd0eda54f8669aafcb77d21bd');
+        //types = [i['type'] for i in e['inputs']]['uint', 'uint', 'uint'];
+        //names = [i['name'] for i in e['inputs']]['_apiId','_time','_value'];
+/*        values =  eth_abi.decode_abi(['uint', 'uint', 'uint'], logMineWatcher['data']);
+        dict(zip(['_apiId','_time','_value'], values));
+        console.log("dictzip", dict(zip(['_apiId','_time','_value'], values)));*/
+        console.log('testing log stuff');
+        testing2 = await web3.eth.abi.decodeLog(['uint', 'uint', 'uint'],logMineWatcher['data'],'0xc12a8e1d75371aee68708dbc301ab95ef7a6022cd0eda54f8669aafcb77d21bd');
         console.log('testing2', testing2);
         testing = await web3.eth.abi.decodeParameters(['uint', 'uint', 'uint'], web3.utils.hexToNumberString(logMineWatcher.data));
         console.log('testing', testing);
