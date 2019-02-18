@@ -14,7 +14,7 @@ contract Token  {
     uint public total_supply;
     address[] public stakers;
     uint constant stakeAmt = 1e18;
-    mapping (address => Checkpoint[]) balances;
+    mapping (address => Checkpoint[]) public balances;
     mapping(address => mapping (address => uint)) internal allowed;
     mapping(address => StakeInfo) public staker;
     struct StakeInfo {
@@ -176,7 +176,8 @@ contract Token  {
     * @return true if spender appproved successfully
     */
     function approve(address _spender, uint _amount) public returns (bool) {
-        require(isStaked(msg.sender));//lock the stake amt so it can't be moved until unstaked
+        require(allowedToTrade(msg.sender,_amount));
+        //require(isStaked(msg.sender));//lock the stake amt so it can't be moved until unstaked
         allowed[msg.sender][_spender] = _amount;
         emit Approval(msg.sender, _spender, _amount);
         return true;
@@ -216,7 +217,7 @@ contract Token  {
     }
 
     function withdrawStake() public {
-        StakeInfo memory stakes = staker[msg.sender];
+        StakeInfo storage stakes = staker[msg.sender];
         uint _today = now - (now % 86400);
         require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state == 2);
         stakes.current_state = 0;
@@ -224,7 +225,7 @@ contract Token  {
     }
 
     function requestWithdraw() public{
-        StakeInfo memory stakes = staker[msg.sender];
+        StakeInfo storage stakes = staker[msg.sender];
         require(stakes.current_state == 1);
         stakes.current_state = 2;
         stakes.startDate = now -(now % 86400);
@@ -255,7 +256,7 @@ contract Token  {
         return (stakes.current_state == 1);
     }
 
-    function getStakers() public view returns(uint){
+    function getStakersCount() public view returns(uint){
         return stakers.length;
     }
 

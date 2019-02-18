@@ -25,6 +25,7 @@ contract Oracle is Disputable{
     uint public timeOfLastProof; // time of last challenge solved
     uint public count;//Number of miners who have mined this value so far
     uint256 public difficulty_level; // Difficulty of current block
+    uint public apiIdOnQ;
     bytes32 public apiOnQ; //string of current api with highest PayoutPool
     uint public apiOnQPayout; //value of highest api/timestamp PayoutPool
     uint public miningApiId; //API being mined--updates with the ApiOnQ Id 
@@ -32,7 +33,7 @@ contract Oracle is Disputable{
     uint[] public timestamps;
     uint private requests;
     //challenge to miner address to yes/no--where yes if they completed the channlenge
-    mapping(bytes32 => mapping(address=>bool)) miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
+    mapping(bytes32 => mapping(address=>bool)) public miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
     
 
     Details[5] first_five;
@@ -42,17 +43,17 @@ contract Oracle is Disputable{
     }
 
 
-    mapping(uint => uint) apiListIndexToId;
-    uint[50] payoutPool;
+    mapping(uint => uint) public payoutPoolIndexToApiId;
+    uint[50] public payoutPool;
 
 
     /*Events*/
     event Mine(address sender,address[5] _miners, uint _paid);//Emits upon a succesful value mine, indicates the msg.sender, 5 miners included in block, and the mined value
     event NewValue(uint _apiId, uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
     event ValueAddedToPool(address sender, uint _apiId, uint _value);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
-    event DataRequested(address _sender, bytes32 _api, uint _apiId);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
+    event DataRequested(address _sender,string _sapi, bytes32 _apiHash, uint _apiId);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
     event NonceSubmitted(address _miner, string _nonce, uint _apiId, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
-    event NewAPIonQinfo(uint _apiId, bytes32 _apiOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
+    event NewAPIonQinfo(uint _apiId, string _sapi, bytes32 _apiOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
 
 
     /*Constructor*/
@@ -64,6 +65,7 @@ contract Oracle is Disputable{
         currentChallenge = keccak256(abi.encodePacked(timeOfLastProof,currentChallenge, blockhash(block.number - 1)));
         difficulty_level = 1;
         payoutPool[0] = 1;
+        miningApiId = 1;
     }
 
 
@@ -139,10 +141,10 @@ contract Oracle is Disputable{
             uint _index;
             uint _max;
             (_max,_index) = Utilities.getMax(payoutPool);
-            miningApiId = apiListIndexToId[_index];
+            miningApiId = payoutPoolIndexToApiId[_index];
             apiOnQ = apiDetails[miningApiId].apiHash;
             apiOnQPayout = _max;
-            emit NewAPIonQinfo(miningApiId,apiOnQ,apiOnQPayout);
+            emit NewAPIonQinfo(miningApiId,apiDetails[miningApiId].apiString,apiOnQ,apiOnQPayout);
         }
     }
 
@@ -154,10 +156,10 @@ contract Oracle is Disputable{
         API storage _api = apiDetails[_apiId];
         uint _payout = _api.payout;
         if (_payout > apiOnQPayout ) {
-            miningApiId = _apiId;
+            apiIdOnQ = _apiId;
             apiOnQ = _api.apiHash;
             apiOnQPayout = _payout;
-            emit NewAPIonQinfo(miningApiId,apiOnQ,apiOnQPayout);
+            emit NewAPIonQinfo(_apiId,_api.apiString,apiOnQ,apiOnQPayout);
         }
         if(_api.index == 0){
             uint _min;
@@ -165,7 +167,7 @@ contract Oracle is Disputable{
             (_min,_index) = Utilities.getMin(payoutPool);
             if(_payout > _min){
                 payoutPool[_index] = _payout;
-                apiListIndexToId[_index] = _apiId;
+                payoutPoolIndexToApiId[_index] = _apiId;
                 _api.index = _index;
             }
         }
@@ -173,6 +175,7 @@ contract Oracle is Disputable{
             payoutPool[_api.index] = _payout;
         }
     }
+    
     /**
     * @dev Adds the _tip to the valuePool that pays the miners
     * @param _apiId the api Id the user want to add to the value pool.
@@ -187,6 +190,8 @@ contract Oracle is Disputable{
         updateAPIonQ(_apiId);
         emit ValueAddedToPool(msg.sender,_apiId,_tip);
     }
+
+event test(uint _uint);
     /**
     * @dev Request to retreive value from oracle based on timestamp
     * @param _sapi being requested be mined
@@ -203,16 +208,16 @@ contract Oracle is Disputable{
         require(apiId[_apiHash] == 0 && _tip>= requestFee);
         doTransfer(msg.sender,address(this),_tip);
         requests++;
-        uint _apiId=requests;
+        _apiId=requests;
         apiDetails[_apiId] = API({
-            api_string : _sapi, 
+            apiString : _sapi, 
             apiHash: _apiHash,
             payout: _tip,
             index: 0
             });
         apiId[_apiHash] = _apiId;
         updateAPIonQ (_apiId);
-        emit DataRequested(msg.sender,_apiHash,_apiId);
+        emit DataRequested(msg.sender,_sapi,_apiHash,_apiId);
     }
     /**
     * @dev Retreive value from oracle based on timestamp
@@ -257,8 +262,16 @@ contract Oracle is Disputable{
     * @return current challenge, MiningApiID, level of difficulty_level
     */
     function getVariables() external view returns(bytes32, uint, uint,string memory){    
-        return (currentChallenge,miningApiId,difficulty_level,apiDetails[miningApiId].api_string);
+        return (currentChallenge,miningApiId,difficulty_level,apiDetails[miningApiId].apiString);
     }
+
+    /**
+    * @dev Getter function for api on queue
+    * @return apionQ hash, id, payout, and api string
+    */
+/*    function getVariablesOnQ() external view returns(uint, uint,string memory){    
+        return (apiIdOnQ,apiOnQPayout,apiDetails[apiIdOnQ].apiString);
+    }*/
 
     /**
     * @dev Gets the a value for the latest timestamp available
@@ -282,12 +295,12 @@ contract Oracle is Disputable{
     * @param _apiId the apiId to look up the api string
     * @return api string/bytes32
     */
-    function getApi(uint _apiId) external view returns(bytes32){    
+    function getApiHash(uint _apiId) external view returns(bytes32){    
         return apiDetails[_apiId].apiHash;
     }
 
     /**
-    * @dev Getter function for apiId based on api
+    * @dev Getter function for apiId based on api hash
     * @param _api string to check if it already has an apiId
     * @return uint apiId
     */
@@ -303,4 +316,14 @@ contract Oracle is Disputable{
     function getValuePoolAt(uint _apiId) external view returns(uint){
         return apiDetails[_apiId].payout;
     }
+
+    /**
+    * @dev Getter function for the apiId for the specified payoutPool index
+    * @param _payoutPoolIndexToApiId to look up the apiId
+    * @return apiId
+    */
+    function getpayoutPoolIndexToApiId(uint _payoutPoolIndexToApiId) external view returns(uint){
+        return payoutPoolIndexToApiId[_payoutPoolIndexToApiId];
+    }
+
 }

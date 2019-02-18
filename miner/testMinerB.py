@@ -59,6 +59,12 @@ def getAPIvalue(_api):
 	print(price)
 	return int(float(price))
 
+# def getAPIvalue():
+# 	url = "https://api.gdax.com/products/BTC-USD/ticker"
+# 	response = requests.request("GET", url)
+# 	price =response.json()['price']
+# 	return int(float(price))
+
 def masterMiner():
 	miners_started = 0
 	challenge,apiId,difficulty,apiString = getVariables();
@@ -67,6 +73,7 @@ def masterMiner():
 		if(nonce > 0):
 			print ("You guessed the hash!");
 			value = getAPIvalue(apiString) - miners_started*10; #account 2 should always be winner
+			#value = getAPIvalue() - miners_started*10; #account 2 should always be winner
 			arg_string =""+ str(nonce) + " "+ str(apiId) +" " + str(value)+" "+str(contract_address)+" "+str(public_keys[miners_started])+" "+str(private_keys[miners_started])
 			run_js('testSubmitter.js',arg_string);
 			miners_started += 1
