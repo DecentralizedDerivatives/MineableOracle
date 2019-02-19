@@ -80,12 +80,14 @@ def masterMiner():
 			if(miners_started == 5):
 				v = False;
 				while(v == False):
+					time.sleep(1);
 					_challenge,_apiId,_difficulty,_apiString = getVariables();
 					if challenge == _challenge:
 						v = False
 						time.sleep(10);
 					else:
 						v = True
+
 						challenge = _challenge;
 						apiId = _apiId;
 						difficulty = _difficulty;

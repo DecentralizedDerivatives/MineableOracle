@@ -17,48 +17,16 @@ function promisifyLogWatch(_contract,_event) {
   return new Promise((resolve, reject) => {
     web3.eth.subscribe('logs', {
       address: _contract.options.address,
-      topics:  ['0xc12a8e1d75371aee68708dbc301ab95ef7a6022cd0eda54f8669aafcb77d21bd']
+      topics:  ['0xba11e319aee26e7bbac889432515ba301ec8f6d27bf6b94829c21a65c5f6ff25']
     }, (error, result) => {
-        console.log('Result',result);
-        console.log('Error',error);
         if (error)
+          console.log('Error',error);
           reject(error);
         web3.eth.clearSubscriptions();
         resolve(result);
     })
-    .on("data", (log) => {
-    console.log(log);
-    })
-    .on("changed", (log) => {
-    console.log(log);
-   })
-
   });
 }
-
-/*function promisifyLogWatch(_contract,_event) {
-  return new Promise((resolve, reject) => {
-    web3.eth.subscribe('logs', {
-      address: _contract.options.address,
-      topics:  ['0x62ca650db86f0a3c5182ae2d9536edbaa54d4603ddf88e0385ed28915a7d2535']
-    }, (error, result) => {
-        console.log('Result',result);
-        console.log('Error',error);
-        if (error)
-          reject(error);
-        web3.eth.clearSubscriptions();
-        resolve(result);
-    })
-    .on("data", (log) => {
-    console.log(log);
-    })
-    .on("changed", (log) => {
-    console.log(log);
-   })
-
-  });
-}*/
-
 
 contract('Mining Tests', function(accounts) {
   let oracle;
@@ -97,20 +65,16 @@ contract('Mining Tests', function(accounts) {
         let stake = web3.utils.hexToNumberString(info['0']);
         let state = web3.utils.hexToNumberString(info['1']);
         let index = web3.utils.hexToNumberString(info['2']);
-        console.log("stake, state, index", stake, state, index);
         let today = new Date()
         let today2 = today - (today % 86400);
-        console.log("today", today, today2)
-    });
+     });
     
 
     it("getVariables", async function(){
         var vars = await oracle.getVariables();
-        console.log(vars);
         let miningApiId = web3.utils.hexToNumberString(vars['1']);
         let difficulty = web3.utils.hexToNumberString(vars['2']);
         let sapi = vars['3'];
-        console.log("miningApiId, difficulty, sapi", miningApiId, difficulty, sapi);
         assert(miningApiId == 1, "miningApiId should be 1");
         assert(difficulty == 1, "Difficulty should be 1");
         assert.equal(sapi,api, "sapi = api");
@@ -121,28 +85,7 @@ contract('Mining Tests', function(accounts) {
         var val = await oracle.getVariables();
         await promisifyLogWatch(oracle2, 'NewValue');
    });
-//pass
-//https://web3js.readthedocs.io/en/1.0/web3-eth-abi.html#decodelog
-//https://codeburst.io/deep-dive-into-ethereum-logs-a8d2047c7371
-    it("Test Full Miner", async function () {
-        console.log("newvalue sha3------",web3.eth.utils.sha3('NewValue(uint,uint,uint)'));
-        console.log("newvalue solidity sha3------",web3.eth.utils.soliditySha3('NewValue(uint,uint,uint)'));
-        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        console.log("logoutput DATA------",logMineWatcher.data);
-        //types = [i['type'] for i in e['inputs']]['uint', 'uint', 'uint'];
-        //names = [i['name'] for i in e['inputs']]['_apiId','_time','_value'];
-/*        values =  eth_abi.decode_abi(['uint', 'uint', 'uint'], logMineWatcher['data']);
-        dict(zip(['_apiId','_time','_value'], values));
-        console.log("dictzip", dict(zip(['_apiId','_time','_value'], values)));*/
-        console.log('testing log stuff');
-        testing2 = await web3.eth.abi.decodeLog(['uint', 'uint', 'uint'],logMineWatcher['data'],'0xc12a8e1d75371aee68708dbc301ab95ef7a6022cd0eda54f8669aafcb77d21bd');
-        console.log('testing2', testing2);
-        testing = await web3.eth.abi.decodeParameters(['uint', 'uint', 'uint'], web3.utils.hexToNumberString(logMineWatcher.data));
-        console.log('testing', testing);
-        //console.log("value", logMineWatcher.args[0]._value);
-        //assert(logMineWatcher.args[1]._value > 0, "The value submitted by the miner should not be zero");
-    });
-//pass
+
   it("Test Total Supply Increase", async function () {
         initTotalSupply = await oracle.totalSupply();
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
@@ -156,7 +99,7 @@ contract('Mining Tests', function(accounts) {
         assert((ts-it) == pt , "Difference should equal the payout");
     });
 
-/*
+
     it("Test 10 Mines", async function () {
         for(var i = 0;i < 10;i++){
             logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
@@ -230,8 +173,7 @@ contract('Mining Tests', function(accounts) {
         vars = await oracle.getVariables();
         console.log("vars2", vars);
         assert(vars[2] = 3);
-    });*/
-//pass
+    });
     it("Test didMine ", async function () {
         vars = await oracle.getVariables();
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
@@ -239,14 +181,14 @@ contract('Mining Tests', function(accounts) {
         assert(didMine);
     });
 
-/*     it("Test Get MinersbyValue ", async function () {
+     it("Test Get MinersbyValue ", async function () {
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         ///get the timestamp from the emit newValue log...
         res = logMineWatcher.args._time;
         console.log("res",res);
         miners = await oracle.getMinersByValue(1, res);
         assert(miners = [accounts[4],accounts[3],accounts[2],accounts[1],accounts[5]])
-    });*/
+    });
 
 /*
 
