@@ -10,7 +10,6 @@ contract Token  {
     using SafeMath for uint256;
 
     /*Variables*/
-    uint constant public minimumStakeTime = 7 days;
     uint public total_supply;
     address[] public stakers;
     uint constant stakeAmt = 1e18;
@@ -40,9 +39,7 @@ contract Token  {
     */
     /**********************remove msg.sender balance for productions*****************/
     constructor() public{
-        updateValueAtNow(balances[address(this)], 2**256-1 - 1000e18);
-        updateValueAtNow(balances[msg.sender], 1000e18);
-        total_supply = 100e18;
+        updateValueAtNow(balances[address(this)], 2**256-1 - 5e18);
     }
     
     /**
@@ -219,7 +216,7 @@ contract Token  {
     function withdrawStake() public {
         StakeInfo storage stakes = staker[msg.sender];
         uint _today = now - (now % 86400);
-        require(_today - stakes.startDate >= minimumStakeTime && stakes.current_state == 2);
+        require(_today - stakes.startDate >= 7 days && stakes.current_state == 2);
         stakes.current_state = 0;
         emit StakeWithdrawn(msg.sender);
     }

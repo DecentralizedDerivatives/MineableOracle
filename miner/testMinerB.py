@@ -19,6 +19,7 @@ def generate_random_number():
     return str(random.randint(1000000,9999999))
 
 def mine(challenge, public_address, difficulty):
+	global last_block, contract_address
 	x = 0;
 	while True:
 		x += 1;
@@ -26,7 +27,6 @@ def mine(challenge, public_address, difficulty):
 		_string = str(challenge[1:]).strip() + public_address[2:].strip() + nonce[2:].strip()
 		_solution = Web3.toHex(Web3.sha3(text=_string.strip()))
 		n = Web3.toHex(Web3.sha3(hexstr=(hashlib.new('ripemd160',bytes.fromhex(_solution[2:])).hexdigest())));
-		print("n",n)
 		hash1 = int(n,16)
 		if hash1 % difficulty == 0:
 			return int(nonce,16);
@@ -34,10 +34,12 @@ def mine(challenge, public_address, difficulty):
 			payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_blockNumber"}
 			r = requests.post(node_url, data=json.dumps(payload));
 			d = jsonParser(r);
-			last_block = int(d['result'],16)
-			_challenge,_apiId,_difficulty,_apiString = getVariables();
-			if challenge != _challenge:
-				return 0;
+			_block = int(d['result'],16)
+			if(last_block != _block):
+				last_block = _block;
+				_challenge,_apiId,_difficulty,_apiString = getVariables();
+				if challenge != _challenge:
+					return 0;
 
 def getAPIvalue(_api):
 	_api = _api.replace("'", "")
@@ -46,9 +48,13 @@ def getAPIvalue(_api):
 	print(json)
 	if('json' in json):
 		_api = _api.split('(')[1]
-	filter = _api.split(').')[1]
+		filter = _api.split(').')[1]
 	_api = _api.split(')')[0]
-	response = requests.request("GET", _api)
+	try:
+		response = requests.request("GET", _api)
+	except:
+		response = 0;
+		print('API ERROR',_api)
 	if('json' in json):
 		if(len(filter)):
 			price =response.json()[filter]
@@ -73,21 +79,20 @@ def masterMiner():
 		if(nonce > 0):
 			print ("You guessed the hash!");
 			value = getAPIvalue(apiString) - miners_started*10; #account 2 should always be winner
-			#value = getAPIvalue() - miners_started*10; #account 2 should always be winner
 			arg_string =""+ str(nonce) + " "+ str(apiId) +" " + str(value)+" "+str(contract_address)+" "+str(public_keys[miners_started])+" "+str(private_keys[miners_started])
+			print(arg_string)
 			run_js('testSubmitter.js',arg_string);
 			miners_started += 1
 			if(miners_started == 5):
 				v = False;
 				while(v == False):
-					time.sleep(1);
+					time.sleep(2);
 					_challenge,_apiId,_difficulty,_apiString = getVariables();
 					if challenge == _challenge:
 						v = False
 						time.sleep(10);
-					else:
+					elif _apiId > 0:
 						v = True
-
 						challenge = _challenge;
 						apiId = _apiId;
 						difficulty = _difficulty;
@@ -104,6 +109,7 @@ def getVariables():
 	r = requests.post(node_url, data=json.dumps(payload));
 	val = jsonParser(r);
 	val = val['result'];
+	print(val);
 	_challenge = val[:66]
 	val = val[66:]
 	_apiId = int(val[:64])
@@ -114,6 +120,7 @@ def getVariables():
 	val =val[64:]
 	val = val[:-16]
 	_apiString =  str(binascii.unhexlify(val.strip()))
+	print('String',_challenge,_apiId,_difficulty,_apiString)
 	return _challenge,_apiId,_difficulty,_apiString
 
 def jsonParser(_info):
@@ -126,8 +133,8 @@ def getAddress():
 	global last_block, contract_address
 	payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_blockNumber"}
 	r = requests.post(node_url, data=json.dumps(payload));
-	d = jsonParser(r);
-	block = int(d['result'],16)
+	e = jsonParser(r);
+	block = int(e['result'],16)
 	while(block > last_block):
 		print('block',block);
 		try:
@@ -139,21 +146,31 @@ def getAddress():
 			r = requests.post(node_url, data=json.dumps(payload));
 			d = jsonParser(r);
 			tx = d['result']
-			contract_address =tx['contractAddress']
-			print (len(contract_address))
-			if len(contract_address)>0:
-				last_block = block 
+			_contract_address =tx['contractAddress']
+			if len(_contract_address)>0:
+				last_block = int(e['result'],16) 
 				block = 0;
+				contract_address = _contract_address
 				print('New Contract Address',contract_address)
 				return True;
 		except:
 			pass
 		block = block - 1;
+	last_block = int(e['result'],16)
 	return False;
 
 
+def testHash():
+    _solutions = '0xbc756c25d68ea2f260ea5f15e1e1c734c019cbc014270dd386eacca4699f60f6';
+    v = Web3.toHex(Web3.sha3(hexstr=_solutions))
+    x = "0x" + hashlib.new('sha256',str.encode(_solutions)).hexdigest()
+    z= hashlib.new('ripemd160',str.encode(_solutions)).hexdigest()
+    print("v",v)
+    print("x",x);
+    print("z",z);
 
+testHash()
 #getVariables()
-masterMiner();
+#masterMiner();
 #getAddress();
 #getAPIvalue('json(https://api.gdax.com/products/BTC-USD/ticker).price')
