@@ -74,9 +74,11 @@ contract('Mining Tests', function(accounts) {
         console.log('Oracle Address ',oracle.address);
         console.log('START MINING RIG!!');
         var val = await oracle.getVariables();
-        await promisifyLogWatch(oracle2, 'NewValue');
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        res = web3.eth.abi.decodeParameters(['uint256','uint256','uint256'],logMineWatcher.data)
+        assert(res[2] > 0, "value should be positive")
    });
-        it("Test 5 Mines", async function () {
+   it("Test 5 Mines", async function () {
         for(var i = 0;i < 5;i++){
             logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
             await oracle.requestData(api,0);
@@ -87,10 +89,10 @@ contract('Mining Tests', function(accounts) {
             console.log(miningApiId,difficulty,sapi)
 
         }
-        res = logMineWatcher.args._value;
-        assert(res > 0, "Ensure miners are working by checking the submitted value of 10 miners is not zero");
+        res = web3.eth.abi.decodeParameters(['uint256','uint256','uint256'],logMineWatcher.data)
+        assert(res[2] > 0, "value should be positive")
     });
-/*
+
   it("Test Total Supply Increase", async function () {
         initTotalSupply = await oracle.totalSupply();
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
@@ -101,7 +103,7 @@ contract('Mining Tests', function(accounts) {
         pt= await web3.utils.fromWei(payout, 'ether');            
         assert((ts-it) == pt , "Difference should equal the payout");
     });
-    it("Test Is Data", async function () {
+    /*it("Test Is Data", async function () {
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         res = web3.eth.abi.decodeParameters(['uint256','uint256','uint256'],logMineWatcher)
         console.log(res);
