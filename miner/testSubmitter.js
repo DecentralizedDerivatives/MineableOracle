@@ -19,8 +19,9 @@ var address = process.argv[5];
 var abi = json.abi;
 var account = process.argv[6];
 var privateKey = new Buffer(process.argv[7], 'hex');
-solution = web3.utils.toHex(solution);
-console.log(solution);
+console.log('Presolution',solution);
+//solution = web3.utils.toHex(solution);
+console.log('My Solution',solution);
 
 let myContract = new web3.eth.Contract(abi,address);
 let data = myContract.methods.proofOfWork(solution,apiId,value).encodeABI();

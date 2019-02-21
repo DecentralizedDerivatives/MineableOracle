@@ -89,9 +89,8 @@ contract Oracle is Disputable{
     */
     function proofOfWork(string calldata nonce, uint _apiId, uint value) external{
         require(isStaked(msg.sender) && _apiId == miningApiId);
-        bytes32 _solution = keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce)); // generate random hash based on input
-        bytes32 n = sha256(abi.encodePacked(ripemd160(abi.encodePacked(_solution))));
-        require(/*uint(n) % difficulty_level == 0 && */value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a valueS  
+        bytes32 n = sha256(abi.encodePacked(ripemd160(abi.encodePacked(keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce))))));
+        require(uint(n) % difficulty_level == 0 && value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a valueS  
         first_five[count].value = value;
         first_five[count].miner = msg.sender;
         count++;

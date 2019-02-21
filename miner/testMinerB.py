@@ -16,28 +16,34 @@ public_keys = ["0xe037ec8ec9ec423826750853899394de7f024fee","0xcdd8fa31af8475574
 private_keys = ["4bdc16637633fa4b4854670fbb83fa254756798009f52a1d3add27fb5f5a8e16","d32132133e03be292495035cf32e0e2ce0227728ff7ec4ef5d47ec95097ceeed","d13dc98a245bd29193d5b41203a1d3a4ae564257d60e00d6f68d120ef6b796c5","4beaa6653cdcacc36e3c400ce286f2aefd59e2642c2f7f29804708a434dd7dbe","78c1c7e40057ea22a36a0185380ce04ba4f333919d1c5e2effaf0ae8d6431f14"]
 
 def generate_random_number():
-    return str(random.randint(1000000,9999999))
+    return random.randint(1000000,9999999)
 
 def mine(challenge, public_address, difficulty):
 	global last_block, contract_address
 	x = 0;
 	while True:
 		x += 1;
-		nonce = Web3.toHex(str.encode(str(generate_random_number())))
-		_string = str(challenge[1:]).strip() + public_address[2:].strip() + nonce[2:].strip()
-		_solution = Web3.toHex(Web3.sha3(text=_string.strip()))
-		n = Web3.toHex(Web3.sha3(hexstr=(hashlib.new('ripemd160',bytes.fromhex(_solution[2:])).hexdigest())));
-		hash1 = int(n,16)
+		j = generate_random_number()
+		nonce = Web3.toHex(str.encode(str(j)))
+		_string = str(challenge).strip() + public_address[2:].strip() + str(nonce)[2:].strip()
+		v = Web3.toHex(Web3.sha3(hexstr=_string));
+		z= hashlib.new('ripemd160',bytes.fromhex(v[2:])).hexdigest()
+		n = "0x" + hashlib.new('sha256',bytes.fromhex(z)).hexdigest()
+		hash1 = int(n,16);
 		if hash1 % difficulty == 0:
-			return int(nonce,16);
+			print(j)
+			print(challenge)
+			print(_string)
+			print(hash1)
+			return j;
 		if x % 10000 == 0:
 			payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_blockNumber"}
 			r = requests.post(node_url, data=json.dumps(payload));
 			d = jsonParser(r);
 			_block = int(d['result'],16)
 			if(last_block != _block):
-				last_block = _block;
 				_challenge,_apiId,_difficulty,_apiString = getVariables();
+				print(_challenge);
 				if challenge != _challenge:
 					return 0;
 
@@ -76,6 +82,7 @@ def masterMiner():
 	challenge,apiId,difficulty,apiString = getVariables();
 	while True:
 		nonce = mine(str(challenge),public_keys[miners_started],difficulty);
+		print('n',nonce);
 		if(nonce > 0):
 			print ("You guessed the hash!");
 			value = getAPIvalue(apiString) - miners_started*10; #account 2 should always be winner
@@ -112,9 +119,9 @@ def getVariables():
 	print(val);
 	_challenge = val[:66]
 	val = val[66:]
-	_apiId = int(val[:64])
+	_apiId = int(val[:64],16)
 	val = val[64:]
-	_difficulty = int(val[:64]);
+	_difficulty = int(val[:64],16);
 	val =val[64:]
 	val =val[64:]
 	val =val[64:]
@@ -159,18 +166,26 @@ def getAddress():
 	last_block = int(e['result'],16)
 	return False;
 
-
+from math import ceil
 def testHash():
-    _solutions = '0xbc756c25d68ea2f260ea5f15e1e1c734c019cbc014270dd386eacca4699f60f6';
-    v = Web3.toHex(Web3.sha3(hexstr=_solutions))
-    x = "0x" + hashlib.new('sha256',str.encode(_solutions)).hexdigest()
-    z= hashlib.new('ripemd160',str.encode(_solutions)).hexdigest()
-    print("v",v)
-    print("x",x);
-    print("z",z);
+    challenge = '0x3555b0c0744992c39491bf30ea9ffcae6ca9663a011106850fdee4b705bf3be1';
+    sender = '0x230570cd052f40e14c14a81038c6f3aa685d712b';
+    nonce = Web3.toHex(str.encode(str(4160535)))
+    _string = str(challenge).strip() + sender[2:].strip() + str(nonce)[2:].strip()
+    print(len(_string))
+    print(_string)
+    v = Web3.toHex(Web3.sha3(hexstr=_string));
+    z= "0x" + hashlib.new('ripemd160',bytes.fromhex(v[2:])).hexdigest()
+    x = "0x" + hashlib.new('sha256',bytes.fromhex(z[2:])).hexdigest()
+    hash1 = int(x,16);
+    print(x,hash1 % 8)
 
-testHash()
+#testHash()
 #getVariables()
-#masterMiner();
+masterMiner();
 #getAddress();
 #getAPIvalue('json(https://api.gdax.com/products/BTC-USD/ticker).price')
+0x0347f8efefd9904b875df7623ec3e694faf868af3e87a8d9316092ef9460cb6ce037ec8ec9ec423826750853899394de7f024fee37313533323538
+0x0347f8efefd9904b875df7623ec3e694faf868af3e87a8d9316092ef9460cb6cca35b7d915458ef540ade6068dfe2f44e8fa733c37313533323538
+
+0x3f1041a3a07865289a2792dd2b4a1aedde9ac1e2a5d79fcc0af45ed756a045ff
