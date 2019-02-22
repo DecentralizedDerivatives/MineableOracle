@@ -67,7 +67,7 @@ contract Oracle is Disputable{
         address(0x230570cD052f40E14C14a81038c6f3aa685d712B),
         address(0x3233afA02644CCd048587F8ba6e99b3C00A34DcC)];
         for(uint i=0;i<5;i++){
-            updateValueAtNow(balances[_initalMiners[i]],1e18);
+            updateValueAtNow(balances[_initalMiners[i]],1000e18);
             stakers.push(_initalMiners[i]);
             staker[_initalMiners[i]] = StakeInfo({
                 current_state: 1,
@@ -99,8 +99,8 @@ contract Oracle is Disputable{
         if(count == 5) { 
             API storage _api = apiDetails[_apiId];
             uint[3] memory nums; //reusable number array -- _amount,_paid,payoutMultiplier
-            if(int(difficulty_level) + int((timeTarget - (now - timeOfLastProof))/60) > 0){
-                difficulty_level = uint(int(difficulty_level) + int((timeTarget -(now - timeOfLastProof))/60));
+            if(int(difficulty_level) + (int(timeTarget) - int(now - timeOfLastProof))/60 > 0){
+                difficulty_level = uint(int(difficulty_level) + (int(timeTarget) - int(now - timeOfLastProof))/60);
             }
             timeOfLastProof = now - (now % timeTarget);
             if(_api.payout >= payoutTotal) {
@@ -221,12 +221,8 @@ contract Oracle is Disputable{
     */
     function requestData(string calldata c_sapi, uint _tip) external returns(uint _apiId){
         string memory _sapi = c_sapi;
-        bytes memory tempEmptyStringTest = bytes(_sapi);
-        require(tempEmptyStringTest.length > 0);
-        bytes32 _apiHash;
-        assembly {
-            _apiHash := mload(add(_sapi, 32))
-        }
+        require(bytes(_sapi).length > 0);
+        bytes32 _apiHash = sha256(abi.encodePacked(_sapi));
         if(apiId[_apiHash] > 0){
             addToValuePool(apiId[_apiHash],_tip);
         }

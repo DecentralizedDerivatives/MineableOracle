@@ -12,7 +12,7 @@ contract Token  {
     /*Variables*/
     uint public total_supply;
     address[] public stakers;
-    uint constant stakeAmt = 1e18;
+    uint constant stakeAmt = 1000e18;
     mapping (address => Checkpoint[]) public balances;
     mapping(address => mapping (address => uint)) internal allowed;
     mapping(address => StakeInfo) public staker;
@@ -39,7 +39,7 @@ contract Token  {
     */
     /**********************remove msg.sender balance for productions*****************/
     constructor() public{
-        updateValueAtNow(balances[address(this)], 2**256-1 - 5e18);
+        updateValueAtNow(balances[address(this)], 2**256-1 - 5000e18);
     }
     
     /**
@@ -237,20 +237,19 @@ contract Token  {
 
     function allowedToTrade(address _user,uint _amount) public view returns(bool){
         StakeInfo memory stakes = staker[_user];
-        if(stakes.current_state > 1){
-            return false;
+        if(stakes.current_state >0){
+            if(balanceOf(_user).sub(stakeAmt).sub(_amount) > 0){
+                return true;
+            }
         }
-        else if(balanceOf(_user).sub(stakes.current_state * stakeAmt).sub(_amount) > 0){
-            return true;
+        else if(balanceOf(_user).sub(_amount) > 0){
+                return true;
         }
-        else{
-            return false;
-        }
+        return false;
     }
 
     function isStaked(address _staker) public view returns(bool){
-        StakeInfo memory stakes = staker[_staker];
-        return (stakes.current_state == 1);
+        return (staker[_staker].current_state == 1);
     }
 
     function getStakersCount() public view returns(uint){
@@ -258,7 +257,6 @@ contract Token  {
     }
 
     function getStakerInfo(address _staker) public view returns(uint,uint,uint){
-        StakeInfo memory stakes = staker[_staker];
-        return (stakes.current_state,stakes.startDate,stakes.index);
+        return (staker[_staker].current_state,staker[_staker].startDate,staker[_staker].index);
     }
 }

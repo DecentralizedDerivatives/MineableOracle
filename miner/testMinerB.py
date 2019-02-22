@@ -116,7 +116,6 @@ def getVariables():
 	r = requests.post(node_url, data=json.dumps(payload));
 	val = jsonParser(r);
 	val = val['result'];
-	print(val);
 	_challenge = val[:66]
 	val = val[66:]
 	_apiId = int(val[:64],16)
