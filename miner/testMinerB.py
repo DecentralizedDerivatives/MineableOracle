@@ -16,28 +16,36 @@ public_keys = ["0xe037ec8ec9ec423826750853899394de7f024fee","0xcdd8fa31af8475574
 private_keys = ["4bdc16637633fa4b4854670fbb83fa254756798009f52a1d3add27fb5f5a8e16","d32132133e03be292495035cf32e0e2ce0227728ff7ec4ef5d47ec95097ceeed","d13dc98a245bd29193d5b41203a1d3a4ae564257d60e00d6f68d120ef6b796c5","4beaa6653cdcacc36e3c400ce286f2aefd59e2642c2f7f29804708a434dd7dbe","78c1c7e40057ea22a36a0185380ce04ba4f333919d1c5e2effaf0ae8d6431f14"]
 
 def generate_random_number():
-    return str(random.randint(1000000,9999999))
+    return random.randint(1000000,9999999)
 
 def mine(challenge, public_address, difficulty):
+	global last_block, contract_address
 	x = 0;
 	while True:
 		x += 1;
-		nonce = Web3.toHex(str.encode(str(generate_random_number())))
-		_string = str(challenge[1:]).strip() + public_address[2:].strip() + nonce[2:].strip()
-		_solution = Web3.toHex(Web3.sha3(text=_string.strip()))
-		n = Web3.toHex(Web3.sha3(hexstr=(hashlib.new('ripemd160',bytes.fromhex(_solution[2:])).hexdigest())));
-		print("n",n)
-		hash1 = int(n,16)
+		j = generate_random_number()
+		nonce = Web3.toHex(str.encode(str(j)))
+		_string = str(challenge).strip() + public_address[2:].strip() + str(nonce)[2:].strip()
+		v = Web3.toHex(Web3.sha3(hexstr=_string));
+		z= hashlib.new('ripemd160',bytes.fromhex(v[2:])).hexdigest()
+		n = "0x" + hashlib.new('sha256',bytes.fromhex(z)).hexdigest()
+		hash1 = int(n,16);
 		if hash1 % difficulty == 0:
-			return int(nonce,16);
+			print(j)
+			print(challenge)
+			print(_string)
+			print(hash1)
+			return j;
 		if x % 10000 == 0:
 			payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_blockNumber"}
 			r = requests.post(node_url, data=json.dumps(payload));
 			d = jsonParser(r);
-			last_block = int(d['result'],16)
-			_challenge,_apiId,_difficulty,_apiString = getVariables();
-			if challenge != _challenge:
-				return 0;
+			_block = int(d['result'],16)
+			if(last_block != _block):
+				_challenge,_apiId,_difficulty,_apiString = getVariables();
+				print(_challenge);
+				if challenge != _challenge:
+					return 0;
 
 def getAPIvalue(_api):
 	_api = _api.replace("'", "")
@@ -46,9 +54,13 @@ def getAPIvalue(_api):
 	print(json)
 	if('json' in json):
 		_api = _api.split('(')[1]
-	filter = _api.split(').')[1]
+		filter = _api.split(').')[1]
 	_api = _api.split(')')[0]
-	response = requests.request("GET", _api)
+	try:
+		response = requests.request("GET", _api)
+	except:
+		response = 0;
+		print('API ERROR',_api)
 	if('json' in json):
 		if(len(filter)):
 			price =response.json()[filter]
@@ -70,24 +82,24 @@ def masterMiner():
 	challenge,apiId,difficulty,apiString = getVariables();
 	while True:
 		nonce = mine(str(challenge),public_keys[miners_started],difficulty);
+		print('n',nonce);
 		if(nonce > 0):
 			print ("You guessed the hash!");
 			value = getAPIvalue(apiString) - miners_started*10; #account 2 should always be winner
-			#value = getAPIvalue() - miners_started*10; #account 2 should always be winner
 			arg_string =""+ str(nonce) + " "+ str(apiId) +" " + str(value)+" "+str(contract_address)+" "+str(public_keys[miners_started])+" "+str(private_keys[miners_started])
+			print(arg_string)
 			run_js('testSubmitter.js',arg_string);
 			miners_started += 1
 			if(miners_started == 5):
 				v = False;
 				while(v == False):
-					time.sleep(1);
+					time.sleep(2);
 					_challenge,_apiId,_difficulty,_apiString = getVariables();
 					if challenge == _challenge:
 						v = False
 						time.sleep(10);
-					else:
+					elif _apiId > 0:
 						v = True
-
 						challenge = _challenge;
 						apiId = _apiId;
 						difficulty = _difficulty;
@@ -106,14 +118,15 @@ def getVariables():
 	val = val['result'];
 	_challenge = val[:66]
 	val = val[66:]
-	_apiId = int(val[:64])
+	_apiId = int(val[:64],16)
 	val = val[64:]
-	_difficulty = int(val[:64]);
+	_difficulty = int(val[:64],16);
 	val =val[64:]
 	val =val[64:]
 	val =val[64:]
 	val = val[:-16]
 	_apiString =  str(binascii.unhexlify(val.strip()))
+	print('String',_challenge,_apiId,_difficulty,_apiString)
 	return _challenge,_apiId,_difficulty,_apiString
 
 def jsonParser(_info):
@@ -126,8 +139,8 @@ def getAddress():
 	global last_block, contract_address
 	payload = {"jsonrpc":"2.0","id":net_id,"method":"eth_blockNumber"}
 	r = requests.post(node_url, data=json.dumps(payload));
-	d = jsonParser(r);
-	block = int(d['result'],16)
+	e = jsonParser(r);
+	block = int(e['result'],16)
 	while(block > last_block):
 		print('block',block);
 		try:
@@ -139,21 +152,39 @@ def getAddress():
 			r = requests.post(node_url, data=json.dumps(payload));
 			d = jsonParser(r);
 			tx = d['result']
-			contract_address =tx['contractAddress']
-			print (len(contract_address))
-			if len(contract_address)>0:
-				last_block = block 
+			_contract_address =tx['contractAddress']
+			if len(_contract_address)>0:
+				last_block = int(e['result'],16) 
 				block = 0;
+				contract_address = _contract_address
 				print('New Contract Address',contract_address)
 				return True;
 		except:
 			pass
 		block = block - 1;
+	last_block = int(e['result'],16)
 	return False;
 
+from math import ceil
+def testHash():
+    challenge = '0x3555b0c0744992c39491bf30ea9ffcae6ca9663a011106850fdee4b705bf3be1';
+    sender = '0x230570cd052f40e14c14a81038c6f3aa685d712b';
+    nonce = Web3.toHex(str.encode(str(4160535)))
+    _string = str(challenge).strip() + sender[2:].strip() + str(nonce)[2:].strip()
+    print(len(_string))
+    print(_string)
+    v = Web3.toHex(Web3.sha3(hexstr=_string));
+    z= "0x" + hashlib.new('ripemd160',bytes.fromhex(v[2:])).hexdigest()
+    x = "0x" + hashlib.new('sha256',bytes.fromhex(z[2:])).hexdigest()
+    hash1 = int(x,16);
+    print(x,hash1 % 8)
 
-
+#testHash()
 #getVariables()
 masterMiner();
 #getAddress();
 #getAPIvalue('json(https://api.gdax.com/products/BTC-USD/ticker).price')
+0x0347f8efefd9904b875df7623ec3e694faf868af3e87a8d9316092ef9460cb6ce037ec8ec9ec423826750853899394de7f024fee37313533323538
+0x0347f8efefd9904b875df7623ec3e694faf868af3e87a8d9316092ef9460cb6cca35b7d915458ef540ade6068dfe2f44e8fa733c37313533323538
+
+0x3f1041a3a07865289a2792dd2b4a1aedde9ac1e2a5d79fcc0af45ed756a045ff

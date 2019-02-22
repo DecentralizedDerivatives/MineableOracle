@@ -12,6 +12,7 @@ var oracleAbi = Oracle.abi;
 var oracleByte = Oracle.bytecode;
 
 var api = 'json(https://api.gdax.com/products/BTC-USD/ticker).price';
+var api2 = 'json(https://api.gdax.com/products/ETH-USD/ticker).price';
 
 function promisifyLogWatch(_contract,_event) {
   return new Promise((resolve, reject) => {
@@ -19,9 +20,10 @@ function promisifyLogWatch(_contract,_event) {
       address: _contract.options.address,
       topics:  ['0xba11e319aee26e7bbac889432515ba301ec8f6d27bf6b94829c21a65c5f6ff25']
     }, (error, result) => {
-        if (error)
+        if (error){
           console.log('Error',error);
           reject(error);
+        }
         web3.eth.clearSubscriptions();
         resolve(result);
     })
@@ -40,19 +42,8 @@ contract('Mining Tests', function(accounts) {
         owner = accounts[0];
         oracle = await Oracle.new();
         oracle2 = await new web3.eth.Contract(oracleAbi,oracle.address);
-        console.log('Oracle Address ',oracle.address);
-        var tokens = await web3.utils.toWei('2', 'ether');
-        await oracle.transfer(accounts[1],tokens,{from:accounts[0]});
-        await oracle.transfer(accounts[2],tokens,{from:accounts[0]});
-        await oracle.transfer(accounts[3],tokens,{from:accounts[0]});
-        await oracle.transfer(accounts[4],tokens,{from:accounts[0]});
-        await oracle.transfer(accounts[5],tokens,{from:accounts[0]});
-        await oracle.depositStake({from:accounts[1]}); 
-        await oracle.depositStake({from:accounts[2]}); 
-        await oracle.depositStake({from:accounts[3]}); 
-        await oracle.depositStake({from:accounts[4]}); 
-        await oracle.depositStake({from:accounts[5]});
-        await oracle.requestData(api,1);
+        await oracle.initStake();
+        await oracle.requestData(api,0);
     });
 
     it("getStakersCount", async function(){
@@ -60,7 +51,7 @@ contract('Mining Tests', function(accounts) {
         assert(web3.utils.hexToNumberString(count)==5, "count is 5");
     });
 
-    it("getStakersInfo", async function(){
+   it("getStakersInfo", async function(){
         let info = await oracle.getStakerInfo(accounts[1]);
         let stake = web3.utils.hexToNumberString(info['0']);
         let state = web3.utils.hexToNumberString(info['1']);
@@ -79,12 +70,23 @@ contract('Mining Tests', function(accounts) {
         assert(difficulty == 1, "Difficulty should be 1");
         assert.equal(sapi,api, "sapi = api");
     }); 
-/****************Mining Tests******************/
-      it("Test miner", async function () {
+
+    it("Test miner", async function () {
+        console.log('Oracle Address ',oracle.address);
         console.log('START MINING RIG!!');
         var val = await oracle.getVariables();
-        await promisifyLogWatch(oracle2, 'NewValue');
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        res = web3.eth.abi.decodeParameters(['uint256','uint256','uint256'],logMineWatcher.data)
+        assert(res[2] > 0, "value should be positive")
    });
+   it("Test 5 Mines", async function () {
+        for(var i = 0;i < 5;i++){
+            logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+            await oracle.requestData(api,0);
+        }
+        res = web3.eth.abi.decodeParameters(['uint256','uint256','uint256'],logMineWatcher.data)
+        assert(res[2] > 0, "value should be positive")
+    });
 
   it("Test Total Supply Increase", async function () {
         initTotalSupply = await oracle.totalSupply();
@@ -92,58 +94,30 @@ contract('Mining Tests', function(accounts) {
         newTotalSupply = await oracle.totalSupply();
         payout = await oracle.payoutTotal.call();
         it= await web3.utils.fromWei(initTotalSupply, 'ether');
-        console.log('it',it);
         ts= await web3.utils.fromWei(newTotalSupply, 'ether');
-        console.log("ts", ts);
         pt= await web3.utils.fromWei(payout, 'ether');            
         assert((ts-it) == pt , "Difference should equal the payout");
     });
-
-
-    it("Test 10 Mines", async function () {
-        for(var i = 0;i < 10;i++){
-            logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-            //console.log('Mining...',i);
-        }
-        res = logMineWatcher.args._value;
-        assert(res > 0, "Ensure miners are working by checking the submitted value of 10 miners is not zero");
-    });
-
     it("Test Is Data", async function () {
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        res = logMineWatcher.args._time;
-        val = logMineWatcher.args._value;       
-        //data = await oracle.isData.call(res.c[0]);
-        data = await oracle.isData(res.c[0]);
+        res = web3.eth.abi.decodeParameters(['uint256','uint256','uint256'],logMineWatcher.data)
+        data = await oracle.isData(1,res[1]);
         assert(data == true, "Should be true if Data exist for that point in time");
     });
-
     it("Test Get Last Query", async function () {
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        res = logMineWatcher.args._time;
-        val = logMineWatcher.args._value;
-        await oracle.getLastQuery();       
-        res = await oracle.getLastQuery();
-        console.log("data", res.logs[0].args);
-        assert(res.logs[0].args._value > 0, "Ensure data exist for the last mine value");
+        res = web3.eth.abi.decodeParameters(['uint256','uint256','uint256'],logMineWatcher.data)     
+        res2 = await oracle.getLastQuery();
+        assert(res2 = res[2], "Ensure data exist for the last mine value");
     });
     
     it("Test Data Read", async function () {
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        res = logMineWatcher.args._time;
-        val = logMineWatcher.args._value;      
-        begbal_sender =await oracle.balanceOf(accounts[4]);
-        await oracle.requestData(res.c[0],accounts[4], {from:accounts[4]});
-        data = await oracle.retrieveData(res.c[0], {from:accounts[4]});
-        resValue = data.logs[0].args._value;
-        resSender = data.logs[0].args._sender;
-        assert((resValue- 0) == (val- 0));
-        endbal_sender =await oracle.balanceOf(accounts[4]);
-        assert(begbal_sender - endbal_sender == web3.toWei(1, 'ether'), "Should be equal to fee per read");
-        assert(begbal_sender - endbal_sender == readFee, "Should be equal to readfee per read");
+        res = web3.eth.abi.decodeParameters(['uint256','uint256','uint256'],logMineWatcher.data)     
+        res2 = await oracle.retrieveData(1,res[1]);
+        console.log("data", res2);
+        assert(res2 = res[2], "Ensure data exist for the last mine value");
     });
-
-//pass
    it("Test Miner Payout", async function () {
         balances = []
         for(var i = 0;i<6;i++){
@@ -167,11 +141,10 @@ contract('Mining Tests', function(accounts) {
    it("Test Difficulty Adjustment", async function () {
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         vars = await oracle.getVariables();
-        console.log("vars1", vars);
         assert(vars[2] = 2);//difficulty not changing.....
+        await oracle.requestData(api,0);
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         vars = await oracle.getVariables();
-        console.log("vars2", vars);
         assert(vars[2] = 3);
     });
     it("Test didMine ", async function () {
@@ -181,120 +154,66 @@ contract('Mining Tests', function(accounts) {
         assert(didMine);
     });
 
-     it("Test Get MinersbyValue ", async function () {
+    it("Test Get MinersbyValue ", async function () {
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        ///get the timestamp from the emit newValue log...
-        res = logMineWatcher.args._time;
-        console.log("res",res);
-        miners = await oracle.getMinersByValue(1, res);
+        res = web3.eth.abi.decodeParameters(['uint256','uint256','uint256'],logMineWatcher.data)     
+        miners = await oracle.getMinersByValue(1, res[1]);
         assert(miners = [accounts[4],accounts[3],accounts[2],accounts[1],accounts[5]])
     });
-
-/*
-
-    it("Test contract read no tokens", async function(){
-        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        res = logMineWatcher.args._time;
-        val = logMineWatcher.args._value;      
-        balance = await oracle.balanceOf(readcontract.address);
-        await helper.expectThrow(readcontract.getLastValue(oracle.address));
-        balance1 = await oracle.balanceOf(readcontract.address);
-    });
-
-    it("Test read request data", async function(){
-        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        res = logMineWatcher.args._time;  
-        await oracle.requestData(res.c[0],accounts[4], {from:accounts[4]});
-        info = await oracle.getRequest(res.c[0],accounts[4])
-        assert(info.toNumber() > 0, "request should work")
-    }); 
     it("Test dev Share", async function(){
         begbal = await oracle.balanceOf(accounts[0]);
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         endbal = await oracle.balanceOf(accounts[0]);
-        devshare = await oracle.devShare.call();
-        payout = await oracle.payoutTotal.call();
-        console.log('payoutdev',(endbal - begbal),payout.toNumber(),devshare.toNumber())
-        assert((endbal - begbal)/1e18  - (payout.toNumber() * devshare.toNumber())/1e18 < .1, "devShare")
+        assert((endbal - begbal)/1e18  == 2.2, "devShare")
     }); 
-    
     it("Test miner, alternating api request on Q and auto select", async function () {
-        await oracle.requestData(api,1);
-        await oracle.requestData(api2,10);
-        await oracle.requestData(api,11);
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        //console.log("value", logMineWatcher.args[0]._value);
-        //console.log("value", logMineWatcher.args[0]._time);
-        //console.log("value", logMineWatcher.args[0]._apiId);
-        //assert(logMineWatcher.args[1]._value > 0, "The value submitted by the miner should not be zero");
-        await oracle.requestData(api2,15);
+        await oracle.requestData(api,0);
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        //console.log("value", logMineWatcher.args[0]._value);
-        //console.log("value", logMineWatcher.args[0]._time);
-        //console.log("value", logMineWatcher.args[0]._apiId);
-        //assert(logMineWatcher.args[1]._value > 0, "The value submitted by the miner should not be zero");
-        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        //console.log("value", logMineWatcher.args[0]._value);
-        //console.log("value", logMineWatcher.args[0]._time);
-        //console.log("value", logMineWatcher.args[0]._apiId);
-        //assert(logMineWatcher.args[1]._value > 0, "The value submitted by the miner should not be zero");
+        await oracle.requestData(api,1,{from:accounts[2]});
+        data = await oracle.getVariablesOnQ();
+        assert(data[0] == 0, 'There should be no API on Q');
+        var vars = await oracle.getVariables();
+        assert(vars[1] == 1, "miningApiId should be 1");
+        await oracle.requestData(api2,5,{from:accounts[2]});
+        data = await oracle.getVariablesOnQ();
+        assert(data[0] == 2, "API on q should be #2");
+        await oracle.requestData(api,6,{from:accounts[2]});
+        data = await oracle.getVariablesOnQ();
+        assert(data[0] == 1, "API on q should be #1");
     });
-
     it("Test dispute", async function () {
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        res = web3.eth.abi.decodeParameters(['uint256','uint256','uint256'],logMineWatcher.data)     
         balance1 = await (oracle.balanceOf(accounts[2],{from:accounts[4]}));
-        //request two apis
-        await oracle.requestData(api,1);
-        await oracle.requestData(api2,10);
-        await oracle.requestData(api,11);
-
-        //mine and record for api request
-        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        _timestamp = web3.utils.hexToNumberString(logMineWatcher.args[0]._time);
-        //console.log("value", logMineWatcher.args[0]._value);
-        //console.log("value", logMineWatcher.args[0]._time);
-        //console.log("value", logMineWatcher.args[0]._apiId);
-        //assert(logMineWatcher.args[1]._value > 0, "The value submitted by the miner should not be zero");
-        
-        //mine and record for api2 request
-        await oracle.requestData(api2,15);
-        await helper.advanceTime(10 * 1);
-        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        //console.log("value", logMineWatcher.args[0]._value);
-        _timestamp2 = web3.utils.hexToNumberString(logMineWatcher.args[0]._time);
-        _apiId2 = web3.utils.hexToNumberString(logMineWatcher.args[0]._apiId);
-        //console.log("value", logMineWatcher.args[0]._time);
-        //console.log("value", logMineWatcher.args[0]._apiId);
-        //assert(logMineWatcher.args[1]._value > 0, "The value submitted by the miner should not be zero");
-        apid2value = await oracle.retrieveData(_apiId2, _timestamp2);
-        console.log("apid2value", apid2value);
-        await helper.advanceTime(30 * 1);
-
-        //getApiForTime
-        apiidt1 = await oracle.getApiForTime(_timestamp);
-        assert(apiidt1 == 1, "should be 1");
-        apiidt2 = await oracle.getApiForTime(_timestamp2);
-        assert(apiidt2 == _apiId2, "should be 2 or apiid2");
-        blocknum = awaot oracle.getMinedBlockNum(_apiId2, _timestamp2);
-
-        //intiate dispute on api2
-        await oracle.initDispute(_apiId2, _timestamp2, {from:accounts[5]});
+        blocknum = await oracle.getMinedBlockNum(res[0],res[1]);
+        await oracle.initDispute(res[0],res[1], {from:accounts[1]});
         count = await oracle.countDisputes();
-        console.log('dispute count:', web3.utils.hexToNumberString(count));
-        await oracle.vote(_apiId2, true, {from:accounts[5]});
-        await helper.timeTravel(86400 * 8);
-        await oracle.tallyVotes(_apiId2);
-        dispInfo = await oracle.getDisputeInfo(_apiId2);
-        console.log("dispInfo", dispInfo);
-        voted = await.didVote(1, accounts[0]);
-        assert(voted == true, "account 0 voted");
-        voted = await.didVote(1, accounts[5]);
+        await oracle.vote(1, true, {from:accounts[3]});
+        await helper.advanceTime(86400 * 22);
+        await oracle.tallyVotes(1);
+        dispInfo = await oracle.getDisputeInfo(1);
+        assert(dispInfo[0] == res[0])
+        assert(dispInfo[1] == res[1])
+        assert(dispInfo[2] == res[2])
+        assert(dispInfo[3] == true,"Dispute Vote passed")
+        voted = await oracle.didVote(1, accounts[3]);
+        assert(voted == true, "account 3 voted");
+        voted = await oracle.didVote(1, accounts[5]);
         assert(voted == false, "account 5 did not vote");
         alldisp = await oracle.getDisputesIds();
-        console.log("alldisp", alldisp);
-        apid2valueF = await oracle.retrieveData(_apiId2, _timestamp2);
-        console.log("apid2value", apid2valueF);
+        assert(alldisp.length == 1, "Dispute ids should be correct")
+        assert(alldisp[0] == 1, "Dispute ids should be correct")
+        apid2valueF = await oracle.retrieveData(res[0],res[1]);
         assert(apid2valueF == 0 ,"value should now be zero this checks updateDisputeValue-internal fx  works");
         balance2 = await (oracle.balanceOf(accounts[2],{from:accounts[4]}));
     });
+    /*
+    //Further tests
+    Test 55 API requests and proper booting of lowest fee
+    Test competing API requests - multiple switches in API on Query and proper selection
+    Test 51 equal API requests and proper booting
+    Test time travel in data -- really long timesincelastPoof and proper difficulty adjustment
+    Test a bunch of throws
     */
 });

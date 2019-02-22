@@ -1,7 +1,8 @@
 pragma solidity ^0.5.0;
 
 import "./libraries/SafeMath.sol";
-import "./OracleToken.sol";
+import "./Token.sol";
+import "./Ownable.sol";
 
 /**
  * @title Oracle Token
@@ -10,18 +11,22 @@ import "./OracleToken.sol";
  * values and get paid out from the master ProofOfWorkToken contract
  * TODO: Check miners are staked when submitting POW and add tipping at API level. 
  */
-contract Disputable is OracleToken{
+contract Disputable is Token,Ownable{
     using SafeMath for uint256;
 
+    string public constant name = "Proof-of-Work Oracle Token";
+    string public constant symbol = "POWO";
+    uint8 public constant decimals = 18;
+    uint constant public disputeFee = 1e18;
    /*Variables*/
     uint[] public disputesIds;
-    uint constant public disputeFee = 1e17;
+    
     mapping(uint => Dispute) public disputes;//disputeId=> Disputes
     mapping(bytes32 => uint) apiId;// api bytes32 gets an id = to count of requests array
     struct API{
         string apiString;//id to string api
         bytes32 apiHash;//hash of string
-        uint index; //index in apiIds'
+        uint index; //index in payoutPool
         uint payout;
         mapping(uint => uint) minedBlockNum;//[apiId][minedTimestamp]=>block.number
         mapping(uint => uint) values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
@@ -37,7 +42,6 @@ contract Disputable is OracleToken{
         uint value; //the value being disputed
         uint minExecutionDate; 
         uint numberOfVotes;
-        uint quorum;
         uint  blockNumber;
         uint index; //index in dispute array
         int tally;
@@ -50,7 +54,7 @@ contract Disputable is OracleToken{
     /*Events*/
     event NewDispute(uint _DisputeID, uint _apiId, uint _timestamp);
     event Voted(uint _disputeID, bool _position, address _voter);
-    event DisputeVoteTallied(uint _disputeID, int _result, uint _quorum, bool _active);
+    event DisputeVoteTallied(uint _disputeID, int _result, bool _active);
     event DisputeLost(address _reportingParty, uint);
     event StakeLost(address _reportedMiner,uint);
 
@@ -63,7 +67,7 @@ contract Disputable is OracleToken{
     * @param _timestamp being disputed
     * @return the dispute Id
     */
-    function initDispute(uint _apiId, uint _timestamp) external returns(uint){
+    function initDispute(uint _apiId, uint _timestamp) external{
         API storage _api = apiDetails[_apiId];
         require(block.number- _api.minedBlockNum[_timestamp]<= 144 && _api.minedBlockNum[_timestamp] > 0);
         doTransfer(msg.sender,address(this), disputeFee);
@@ -75,19 +79,16 @@ contract Disputable is OracleToken{
             apiId: _apiId,
             timestamp: _timestamp,
             value: _api.values[_timestamp],  
-            minExecutionDate: now + voteDuration * 1 days, 
+            minExecutionDate: now + 7 days, 
             numberOfVotes: 0,
             executed: false,
             disputeVotePassed: false,
             blockNumber: block.number,
-            quorum: 0,
             tally: 0,
             index:disputeId
             });
         disputesIds.push(disputeId);
-        StakeInfo memory stakes = staker[_miners[2]];
-        stakes.current_state = 3;
-        return disputeId;
+        staker[_miners[2]].current_state = 3;
         emit NewDispute(disputeId,_apiId,_timestamp );
     }
 
@@ -96,21 +97,18 @@ contract Disputable is OracleToken{
     * @param _disputeId is the dispute id
     * @param _supportsDispute is the vote (true=the dispute has basis false = vote against dispute)
     */
-    function vote(uint _disputeId, bool _supportsDispute) public returns (uint voteId) {
+    function vote(uint _disputeId, bool _supportsDispute) public{
         Dispute storage disp = disputes[_disputeId];
-        StakeInfo memory stakes = staker[msg.sender];
         uint voteWeight = balanceOfAt(msg.sender,disp.blockNumber);
-        require(disp.voted[msg.sender] != true && voteWeight > 0 && stakes.current_state != 3);
+        require(disp.voted[msg.sender] != true && voteWeight > 0 && staker[msg.sender].current_state != 3);
         disp.voted[msg.sender] = true;
         disp.numberOfVotes += 1;
-        disp.quorum +=  voteWeight;
         if (_supportsDispute) {
             disp.tally = disp.tally + int(voteWeight);
         } else {
             disp.tally = disp.tally - int(voteWeight);
         }
         emit Voted(_disputeId,_supportsDispute,msg.sender);
-        return voteId;
     }
 
 
@@ -122,14 +120,18 @@ contract Disputable is OracleToken{
         Dispute storage disp = disputes[_disputeId];
         API storage _api = apiDetails[disp.apiId];
         require(disp.executed == false);
-        require(now > disp.minExecutionDate && !disp.executed); //Uncomment for production-commented out for testing 
-        uint minQuorum = minimumQuorum;
-        StakeInfo memory stakes = staker[disp.reportedMiner];  
-         require(disp.quorum >= minQuorum); 
-          if (disp.tally > 0 ) { 
-            stakes.current_state = 1;
-            doTransfer(disp.reportedMiner,disp.reportingParty, stakeAmt);
+        require(now > disp.minExecutionDate); //Uncomment for production-commented out for testing 
+        StakeInfo storage stakes = staker[disp.reportedMiner];  
+          if (disp.tally != 0 ) { 
             stakes.current_state = 0;
+            stakes.startDate = now -(now % 86400);
+            uint _index = stakes.index;
+            uint _lastIndex = stakers.length - 1;
+            address _lastStaker = stakers[_lastIndex];
+            stakers[_index] = _lastStaker;
+            staker[_lastStaker].index = _index;
+            stakers.length--;
+            doTransfer(disp.reportedMiner,disp.reportingParty, stakeAmt);
             emit StakeLost(disp.reportedMiner, stakeAmt);
             disp.disputeVotePassed = true;
             _api.values[disp.timestamp] = 0;
@@ -141,7 +143,7 @@ contract Disputable is OracleToken{
             transfer(disp.reportedMiner, disputeFee);
             emit DisputeLost(disp.reportingParty, disputeFee);
         }
-        emit DisputeVoteTallied(_disputeId,disp.tally, disp.quorum, disp.disputeVotePassed); 
+        emit DisputeVoteTallied(_disputeId,disp.tally, disp.disputeVotePassed); 
     }
 
     /**
@@ -176,24 +178,24 @@ contract Disputable is OracleToken{
         return apiDetails[_apiId].minedBlockNum[_timestamp];
     }
 
-    /**
-    * @dev Gets the API struct variables that are not mappings
-    * @param _apiId to look up
-    */
-    function getApiVars(uint _apiId) external view returns(string memory, bytes32, uint, uint) {
-        API memory _api = apiDetails[_apiId]; 
-        return (_api.apiString, _api.apiHash, _api.index,_api.payout);
-    }
+    // /**
+    // * @dev Gets the API struct variables that are not mappings
+    // * @param _apiId to look up
+    // */
+    // function getApiVars(uint _apiId) external view returns(string memory, bytes32, uint, uint) {
+    //     API memory _api = apiDetails[_apiId]; 
+    //     return (_api.apiString, _api.apiHash, _api.index,_api.payout);
+    // }
 
-    /**
-    * @dev Gets the API struct variables that are mappings
-    * @param _apiId to look up
-    * @param _timestamp is the timestamp to look up
-    */
-    function getApiMappings(uint _apiId, uint _timestamp) external view returns(uint, address[5] memory){
-        API storage _api = apiDetails[_apiId]; 
-        return(_api.values[_timestamp],_api.minersbyvalue[_timestamp]);
-    }
+    // *
+    // * @dev Gets the API struct variables that are mappings
+    // * @param _apiId to look up
+    // * @param _timestamp is the timestamp to look up
+    
+    // function getApiMappings(uint _apiId, uint _timestamp) external view returns(uint, address[5] memory){
+    //     API storage _api = apiDetails[_apiId]; 
+    //     return(_api.values[_timestamp],_api.minersbyvalue[_timestamp]);
+    // }
 
     /**
     * @dev Gets the Dispute struct variables that are not mappings

@@ -3,14 +3,24 @@ pragma solidity ^0.5.0;
 //Slightly modified SafeMath library - includes a min function
 library Utilities{
   
-  function getMax(uint[50] memory data) internal pure returns(uint256 maximal,uint maxIndex) {
-        maximal = data[0];
-        for(uint i=1;i < data.length;i++) {
-            if(data[i] > maximal) {
-                maximal = data[i];
-                maxIndex = i;
+  function getSecond(uint[50] memory data) internal pure returns(uint256 second,uint secIndex) {
+            uint maximal = data[0];
+            uint maxIndex;
+            second = data[1];
+            for(uint i=1;i < data.length;i++){
+                if(data[i] > second) {
+                    if(data[i] > maximal){
+                      second = maximal;
+                      secIndex = maxIndex;
+                      maximal = data[i];
+                      maxIndex = i;
+                    }
+                    else{
+                      second = data[i];
+                      secIndex = i;
+                    }
+                }
             }
-        }
   }
 
   /// @dev Returns the minimum value in an array.
