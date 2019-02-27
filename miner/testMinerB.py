@@ -88,8 +88,10 @@ def masterMiner():
 			value = getAPIvalue(apiString) - miners_started*10; #account 2 should always be winner
 			arg_string =""+ str(nonce) + " "+ str(apiId) +" " + str(value)+" "+str(contract_address)+" "+str(public_keys[miners_started])+" "+str(private_keys[miners_started])
 			print(arg_string)
+			#success = execute_js('testSubmitter.js',arg_string)
+			#print('WE WERE SUCCESSFUL: ', success)
 			run_js('testSubmitter.js',arg_string);
-			miners_started += 1
+			miners_started += 1 
 			if(miners_started == 5):
 				v = False;
 				while(v == False):
@@ -166,25 +168,10 @@ def getAddress():
 	return False;
 
 from math import ceil
-def testHash():
-    challenge = '0x3555b0c0744992c39491bf30ea9ffcae6ca9663a011106850fdee4b705bf3be1';
-    sender = '0x230570cd052f40e14c14a81038c6f3aa685d712b';
-    nonce = Web3.toHex(str.encode(str(4160535)))
-    _string = str(challenge).strip() + sender[2:].strip() + str(nonce)[2:].strip()
-    print(len(_string))
-    print(_string)
-    v = Web3.toHex(Web3.sha3(hexstr=_string));
-    z= "0x" + hashlib.new('ripemd160',bytes.fromhex(v[2:])).hexdigest()
-    x = "0x" + hashlib.new('sha256',bytes.fromhex(z[2:])).hexdigest()
-    hash1 = int(x,16);
-    print(x,hash1 % 8)
 
-#testHash()
+
+
 #getVariables()
 masterMiner();
 #getAddress();
 #getAPIvalue('json(https://api.gdax.com/products/BTC-USD/ticker).price')
-0x0347f8efefd9904b875df7623ec3e694faf868af3e87a8d9316092ef9460cb6ce037ec8ec9ec423826750853899394de7f024fee37313533323538
-0x0347f8efefd9904b875df7623ec3e694faf868af3e87a8d9316092ef9460cb6cca35b7d915458ef540ade6068dfe2f44e8fa733c37313533323538
-
-0x3f1041a3a07865289a2792dd2b4a1aedde9ac1e2a5d79fcc0af45ed756a045ff
