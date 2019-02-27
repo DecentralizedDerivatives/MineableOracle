@@ -48,13 +48,14 @@ contract('Token and Staking Tests', function(accounts) {
   let reader;
   let logNewValueWatcher;
   let logMineWatcher;
+  let res0;
 
     beforeEach('Setup contract for each test', async function () {
         owner = accounts[0];
         oracle = await Oracle.new();
         oracle2 = await new web3.eth.Contract(oracleAbi,oracle.address);
         await oracle.initStake();
-        await oracle.requestData(api,0);
+        res0 = await oracle.requestData(api,0);
         await helper.advanceTime(86400 * 8);
         let withdrawreq = await oracle.requestWithdraw({from:accounts[2]});
         await helper.advanceTime(86400 * 8);
@@ -364,8 +365,27 @@ contract('Token and Staking Tests', function(accounts) {
         let vpapiOnQPayout = await addvaluePool.logs[1].args._apiOnQPayout;
         assert(web3.utils.fromWei(vpapiOnQPayout) == 40, "Current payout on Q should be 40");
         assert(web3.utils.hexToNumberString(vpApiOnQ) == web3.utils.hexToNumberString(resApiHash), "api on Q should be apiId");
-        assert(web3.utils.hexToNumberString(vpApiIdonQ) == web3.utils.hexToNumberString(resApiId), "timestamp on Q should be apiTimestamp");
-          
+        assert(web3.utils.hexToNumberString(vpApiIdonQ) == web3.utils.hexToNumberString(resApiId), "timestamp on Q should be apiTimestamp");        
     }); 
+
+    it("Test 51 request and lowest is kicked out", async function () {
+        apiHash = await oracle.getApiHash(1); 
+        apiId = await oracle.getApiId(apiHash);
+        assert(web3.utils.hexToNumberString(apiId) == 1, "timestamp on Q should be 1");
+    //      for(var i = 2;i <50 ;i++){
+   //      	api= ("api" + i);
+   //          await oracle.requestData(api,i, {from:accounts[2]});
+   //      }
+   //  var val1 = await oracle.getVariables();
+   //  console.log("var", var);  
+        //console.log("apiId from string",apiId);
+   });
+
+
+//    DataRequested(_sender: 0xe010aC6e0248790e08F42d5F697160DEDf97E024, 
+//_sapi: json(https://api.gdax.com/products/BTC-USD/ticker).price, 
+//_apiHash: 0x554a3914f3690ae5cf2479c68f2d4c2bad6180bc5dceb70f0d58782a0ab44dc1, 
+//_apiId: 1)
+
 
 });
