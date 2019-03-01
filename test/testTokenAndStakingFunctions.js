@@ -372,13 +372,53 @@ contract('Token and Staking Tests', function(accounts) {
         apiHash = await oracle.getApiHash(1); 
         apiId = await oracle.getApiId(apiHash);
         assert(web3.utils.hexToNumberString(apiId) == 1, "timestamp on Q should be 1");
-    //      for(var i = 2;i <50 ;i++){
-   //      	api= ("api" + i);
-   //          await oracle.requestData(api,i, {from:accounts[2]});
-   //      }
-   //  var val1 = await oracle.getVariables();
-   //  console.log("var", var);  
-        //console.log("apiId from string",apiId);
+        //cehck payoutpool[0] == 0
+        payoutp = await oracle.getValuePoolAt(1);
+        console.log("payoutp",payoutp);
+         for(var i = 1;i <=50 ;i++){
+        	apix= ("api" + i);
+        	console.log("api", apix);
+            res2 = await oracle.requestData(apix,i, {from:accounts[2]});
+            let resApihash2 = await res2.logs[2].args._apiHash;
+            let resApiId2 = await res2.logs[2].args._apiId;
+            let resSapi2 = await res2.logs[2].args._sapi;
+            console.log("has, id, string",resApihash2, resApiId2, resSapi2);
+            let valuePool2 = await oracle.getValuePoolAt(i);
+            let apionQ2 = await res2.logs[1].args._apiOnQ;
+            let sapi = await res2.logs[1].args._sapi;
+            let ApiIdonQ2 = await res2.logs[1].args._apiId;
+            let apiOnQPayout2 = await res2.logs[1].args._apiOnQPayout;
+            console.log("apionQ, id, payout",sapi, apionQ2, ApiIdonQ2, apiOnQPayout2);
+        }
+
+        //check payoutPoolIndexToApiId[index] = id or payoutPoolIndexToApiId[0] = 1 
+        //check payoutpool[0] == 50
+        payoutp2 = await oracle.getValuePoolAt(50);
+        console.log("payoutp apiId 50", web3.utils.hexToNumberString(payoutp2));
+        payoutp2 = await oracle.getValuePoolAt(2);
+        console.log("payoutp apiId 2", web3.utils.hexToNumberString(payoutp2));
+        apiIdforpayoutPoolIndex = await oracle.getpayoutPoolIndexToApiId(2);
+        console.log("what is the payout pool index 2", web3.utils.hexToNumberString(apiIdforpayoutPoolIndex));
+        apiIdforpayoutPoolIndex = await oracle.getpayoutPoolIndexToApiId(3);
+        console.log("what is the payout pool index 3", web3.utils.hexToNumberString(apiIdforpayoutPoolIndex));
+        payoutp2 = await oracle.getValuePoolAt(3);
+        console.log("payoutp apiId 3", web3.utils.hexToNumberString(payoutp2));
+        apiIdforpayoutPoolIndex = await oracle.getpayoutPoolIndexToApiId(4);
+        console.log("what is the payout pool index 4", web3.utils.hexToNumberString(apiIdforpayoutPoolIndex));
+         payoutp2 = await oracle.getValuePoolAt(4);
+        console.log("payoutp apiId 4", web3.utils.hexToNumberString(payoutp2));
+        apiIdforpayoutPoolIndex = await oracle.getpayoutPoolIndexToApiId(49);
+        console.log("what is the payout pool index 49", web3.utils.hexToNumberString(apiIdforpayoutPoolIndex));
+        payoutp2 = await oracle.getValuePoolAt(49);
+        console.log("payoutp apiId 49", web3.utils.hexToNumberString(payoutp2)); 
+        payoutp2 = await oracle.getValuePoolAt(0);
+        console.log("payoutp apiId 0", web3.utils.hexToNumberString(payoutp2));              
+
+        var val1 = await oracle.getVariables();
+        console.log("var", val1);  
+        apiHash1 = await oracle.getApiHash(50); 
+        apiId1 = await oracle.getApiId(apiHash1);
+        console.log("id and hash", apiId1, apiHash1);
    });
 
 
