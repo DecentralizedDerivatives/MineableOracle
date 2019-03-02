@@ -14,10 +14,11 @@ import "./Ownable.sol";
 contract Disputable is Token,Ownable{
     using SafeMath for uint256;
 
-    string public constant name = "Proof-of-Work Oracle Token";
-    string public constant symbol = "POWO";
     uint8 public constant decimals = 18;
     uint constant public disputeFee = 1e18;
+    string public constant name = "Proof-of-Work Oracle Token";
+    string public constant symbol = "POWO";
+    
    /*Variables*/
     uint[] public disputesIds;
     
@@ -35,6 +36,8 @@ contract Disputable is Token,Ownable{
     mapping(uint => API) apiDetails;
  
     struct Dispute {
+        bool executed;
+        bool disputeVotePassed; 
         address reportedMiner; //miner who alledgedly submitted the 'bad value' will get disputeFee if dispute vote fails
         address reportingParty;//miner reporting the 'bad value'-pay disputeFee will get reportedMiner's stake if dispute vote passes
         uint apiId;
@@ -44,9 +47,7 @@ contract Disputable is Token,Ownable{
         uint numberOfVotes;
         uint  blockNumber;
         uint index; //index in dispute array
-        int tally;
-        bool executed;
-        bool disputeVotePassed;       
+        int tally;      
         mapping (address => bool) voted;
     } 
 
@@ -97,7 +98,7 @@ contract Disputable is Token,Ownable{
     * @param _disputeId is the dispute id
     * @param _supportsDispute is the vote (true=the dispute has basis false = vote against dispute)
     */
-    function vote(uint _disputeId, bool _supportsDispute) public{
+    function vote(uint _disputeId, bool _supportsDispute) external {
         Dispute storage disp = disputes[_disputeId];
         uint voteWeight = balanceOfAt(msg.sender,disp.blockNumber);
         require(disp.voted[msg.sender] != true && voteWeight > 0 && staker[msg.sender].current_state != 3);
@@ -116,7 +117,7 @@ contract Disputable is Token,Ownable{
     * @dev tallies the votes and executes if minimum quorum is met or exceeded.
     * @param _disputeId is the dispute id
     */
-    function tallyVotes(uint _disputeId) public {
+    function tallyVotes(uint _disputeId) external {
         Dispute storage disp = disputes[_disputeId];
         API storage _api = apiDetails[disp.apiId];
         require(disp.executed == false);
@@ -150,7 +151,7 @@ contract Disputable is Token,Ownable{
     *@dev Get Dispute information
     *@param _disputeId is the dispute id to check the outcome of
     */
-    function getDisputeInfo(uint _disputeId) view public returns(uint, uint, uint,bool) {
+    function getDisputeInfo(uint _disputeId) view external returns(uint, uint, uint,bool) {
         Dispute memory disp = disputes[_disputeId];
         return(disp.apiId, disp.timestamp, disp.value, disp.disputeVotePassed);
     }
@@ -158,14 +159,14 @@ contract Disputable is Token,Ownable{
     /**
     * @dev Gets length of array containing all disputeIds
     */
-    function countDisputes() view public returns(uint) {
+    function countDisputes() view external returns(uint) {
         return disputesIds.length;
     }
 
     /**
     * @dev getter function to get all disputessIds
     */
-    function getDisputesIds() view public returns (uint[] memory){
+    function getDisputesIds() view external returns (uint[] memory){
         return disputesIds;
     }
 
@@ -174,7 +175,7 @@ contract Disputable is Token,Ownable{
     * @param _apiId to look up
     * @param _timestamp is the timestamp to look up blocknumber
     */
-    function getMinedBlockNum(uint _apiId, uint _timestamp) public view returns(uint){
+    function getMinedBlockNum(uint _apiId, uint _timestamp) external view returns(uint){
         return apiDetails[_apiId].minedBlockNum[_timestamp];
     }
 

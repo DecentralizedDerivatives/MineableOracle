@@ -368,6 +368,8 @@ contract('Token and Staking Tests', function(accounts) {
         assert(web3.utils.hexToNumberString(vpApiIdonQ) == web3.utils.hexToNumberString(resApiId), "timestamp on Q should be apiTimestamp");        
     }); 
 
+
+/////////////////////////not working
     it("Test 51 request and lowest is kicked out", async function () {
         apiHash = await oracle.getApiHash(1); 
         apiId = await oracle.getApiId(apiHash);
@@ -427,5 +429,20 @@ contract('Token and Staking Tests', function(accounts) {
 //_apiHash: 0x554a3914f3690ae5cf2479c68f2d4c2bad6180bc5dceb70f0d58782a0ab44dc1, 
 //_apiId: 1)
 
+
+    it("transferOwnership", async function () {
+        let checkowner = await oracle.owner();
+        console.log("init owner", checkowner);
+        assert(checkowner == accounts[0], "initial owner acct 0");
+        //why would the current owner have to pay to transfer ownership...
+        //shouldn't that be the newOwner?
+        //Does ownable need to emit an event for ownership transfer at deployment? 
+        console.log("1");
+        await oracle2.methods.transferOwnership(accounts[2]).send({from:accounts[0], value: web3.utils.toWei('1', 'ether')} );
+        console.log("2");
+        checkowner = await oracle.owner();
+        console.log("final owner", checkowner);
+        assert(checkowner == accounts[2], "initial owner acct 2");
+   });
 
 });

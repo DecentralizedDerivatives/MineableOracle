@@ -216,24 +216,24 @@
 //         balance2 = await (oracle.balanceOf(accounts[2],{from:accounts[4]}));
 //     });
 
-
-//     it("Test 51 Mines", async function () {
-//         for(var i = 1;i < 25;i++){
-//             await oracle.requestData(api,i);
-//         }
-//         for(var e = 25;e < 48;e++){
-//             await oracle.requestData(api2,e);
-//         }
+//     // /////////////////////////not working
+//     // it("Test 51 Mines", async function () {
+//     //     for(var i = 1;i < 25;i++){
+//     //         await oracle.requestData(api,i);
+//     //     }
+//     //     for(var e = 25;e < 48;e++){
+//     //         await oracle.requestData(api2,e);
+//     //     }
         
-//         for(var x = 0;x < 5;x++){
-//             logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-//             await oracle.requestData(api,x);
-//             res = web3.eth.abi.decodeParameters(['uint256','uint256','uint256'],logMineWatcher.data);
-//             console.log("res", x, res);
-//             assert(res[2] > 0, "value should be positive");
-//         }
+//     //     for(var x = 0;x < 5;x++){
+//     //         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+//     //         await oracle.requestData(api,x);
+//     //         res = web3.eth.abi.decodeParameters(['uint256','uint256','uint256'],logMineWatcher.data);
+//     //         console.log("res", x, res);
+//     //         assert(res[2] > 0, "value should be positive");
+//     //     }
 
-//     });
+//     // });
 //     /*
 //     //Further tests
 //     Test 55 API requests and proper booting of lowest fee
