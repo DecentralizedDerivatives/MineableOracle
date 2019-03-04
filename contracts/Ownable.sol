@@ -11,7 +11,7 @@ contract Ownable {
     */
     constructor ()  public{
         _owner = msg.sender;
-        emit OwnershipTransferred(address(0), _owner);
+        //emit OwnershipTransferred(address(0), _owner);
     }
     /**
      * @dev Allows the current owner to relinquish control of the contract.
@@ -23,7 +23,7 @@ contract Ownable {
      * @dev Allows the current owner to transfer control of the contract to a newOwner.
      * @param newOwner The address to transfer ownership to.
     */
-    function transferOwnership(address payable newOwner) public{
+    function transferOwnership(address payable newOwner) payable public{
         require(msg.sender == owner());
         require(newOwner != address(0));
         emit OwnershipTransferred(_owner, newOwner);

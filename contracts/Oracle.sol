@@ -259,7 +259,7 @@ contract Oracle is Disputable{
     * @param _apiId to look up
     * @param _timestamp is the timestampt to look up miners for
     */
-    function getMinersByValue(uint _apiId, uint _timestamp) public view returns(address[5] memory){
+    function getMinersByValue(uint _apiId, uint _timestamp) external view returns(address[5] memory){
         return apiDetails[_apiId].minersbyvalue[_timestamp];
     }
     /**
@@ -268,7 +268,7 @@ contract Oracle is Disputable{
     * @param _miner address that you want to know if they solved the challenge
     * @return true if the _miner address provided solved the 
     */
-    function didMine(bytes32 _challenge,address _miner) public view returns(bool){
+    function didMine(bytes32 _challenge,address _miner) external view returns(bool){
         return miners[_challenge][_miner];
     }
     
@@ -278,7 +278,7 @@ contract Oracle is Disputable{
     * @param _timestamp to look up/check
     * @return true if the value exists/is greater than zero
     */
-    function isData(uint _apiId, uint _timestamp) public view returns(bool){
+    function isData(uint _apiId, uint _timestamp) external view returns(bool){
         return (apiDetails[_apiId].values[_timestamp] > 0);
     }
 
