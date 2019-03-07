@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-//Slightly modified SafeMath library - includes a min function
+//Slightly modified SafeMath library - includes a min and max function
 library SafeMath {
   function mul(uint256 a, uint256 b) internal pure returns (uint256) {
     uint256 c = a * b;
@@ -9,9 +9,7 @@ library SafeMath {
   }
 
   function div(uint256 a, uint256 b) internal pure returns (uint256) {
-    // assert(b > 0); // Solidity automatically throws when dividing by 0
     uint256 c = a / b;
-    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
     return c;
   }
 
@@ -33,7 +31,8 @@ library SafeMath {
   function max(uint a, uint b) internal pure returns (uint256) {
     return a > b ? a : b;
   }
-    function max(int256 a, int256 b) internal pure returns (uint256) {
+
+  function max(int256 a, int256 b) internal pure returns (uint256) {
     return a > b ? uint(a) : uint(b);
   }
 }

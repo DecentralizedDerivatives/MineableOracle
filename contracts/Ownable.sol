@@ -4,7 +4,6 @@ contract Ownable {
     address payable public _owner;//Owner address
     /*Event*/
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    /*Modifiers*/
     /**
      * @dev The Ownable constructor sets the original `owner` of the contract to the sender
      * account.
@@ -12,12 +11,6 @@ contract Ownable {
     constructor ()  public{
         _owner = msg.sender;
     }
-    /**
-     * @dev Allows the current owner to relinquish control of the contract.
-     * @notice Renouncing to ownership will leave the contract without an owner.
-     * It will not be possible to call the functions with the `onlyOwner`
-     * modifier anymore.
-    */
     /**
      * @dev Allows the current owner to transfer control of the contract to a newOwner.
      * @param newOwner The address to transfer ownership to.

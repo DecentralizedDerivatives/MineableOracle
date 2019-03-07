@@ -6,20 +6,18 @@ import "./libraries/SafeMath.sol";
 * This contracts contains the ERC20 token functions
 */
 contract Token  {
-
     using SafeMath for uint256;
 
     /*Variables*/
-    uint public total_supply;
-    uint constant stakeAmt = 1000e18;
-    address[] public stakers;
-    mapping (address => Checkpoint[]) public balances;
-    mapping(address => mapping (address => uint)) internal allowed;
-    mapping(address => StakeInfo) public staker;
+    uint public total_supply; //total_supply of the token in circulation
+    uint constant stakeAmt = 1000e18;//stakeAmount for miners
+    uint public stakers; //number of parties currently staked
+    mapping (address => Checkpoint[]) public balances; //balances of a party given blocks
+    mapping(address => mapping (address => uint)) internal allowed; //allowance for a given party and approver
+    mapping(address => StakeInfo) public staker;//mapping from a persons address to their staking info
     struct StakeInfo {
         uint current_state;//1=started, 2=LockedForWithdraw 3= OnDispute
         uint startDate; //stake start date
-        uint index;
     }
     struct  Checkpoint {
         uint128 fromBlock;// fromBlock is the block number that the value was generated from
@@ -27,17 +25,16 @@ contract Token  {
     }
       
     /*Events*/
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event NewStake(address _sender);
-    event StakeWithdrawn(address _sender);
-    event StakeWithdrawRequested(address _sender);
+    event Approval(address indexed owner, address indexed spender, uint256 value);//ERC20 Approval event
+    event Transfer(address indexed from, address indexed to, uint256 value);//ERC20 Transfer Event
+    event NewStake(address _sender);//Emits upon new staker
+    event StakeWithdrawn(address _sender);//Emits when a staker is now no longer staked
+    event StakeWithdrawRequested(address _sender);//Emits when a staker begins the 7 day withdraw period
 
     /*Functions*/
     /**
     * @dev Constructor that sets the passed value as the token to be mineable.
     */
-    /**********************remove msg.sender balance for productions*****************/
     constructor() public{
         updateValueAtNow(balances[address(this)], 2**256-1 - 5000e18);
     }
@@ -139,7 +136,9 @@ contract Token  {
     * @param _amount to transfer 
     */
     function doTransfer(address _from, address _to, uint _amount) internal {
-        require(_amount > 0 && _to != address(0) && allowedToTrade(_from,_amount));
+        require(_amount > 0);
+        require(_to != address(0));
+        require(allowedToTrade(_from,_amount));
         uint previousBalance = balanceOfAt(_from, block.number);
         updateValueAtNow(balances[_from], previousBalance - _amount);
         previousBalance = balanceOfAt(_to, block.number);
@@ -155,8 +154,9 @@ contract Token  {
     * @param _amount to transfer 
     */
     function disputeTransfer(address _from, address _to, uint _amount) internal {
-        StakeInfo memory stakes = staker[_from];
-        require(_amount > 0 && _to != address(0) && stakes.current_state == 3);
+        require(_amount > 0);
+        require(_to != address(0));
+        require(staker[_from].current_state == 3);
         uint previousBalance = balanceOfAt(_from, block.number);
         require(previousBalance >= _amount);
         updateValueAtNow(balances[_from], previousBalance - _amount);
@@ -195,23 +195,22 @@ contract Token  {
        return total_supply;
     }
 
-
 /*****************Staking Functions***************/
-
-/**
-* @dev This function allows users to stake 
-*/
+    /**
+    * @dev This function allows users to stake 
+    */
     function depositStake() external {
         require( balanceOf(msg.sender) >= stakeAmt);
-        stakers.push(msg.sender);
+        stakers += 1;
         staker[msg.sender] = StakeInfo({
             current_state: 1,
             startDate: now - (now % 86400),
-            index:stakers.length-1
             });
         emit NewStake(msg.sender);
     }
-
+    /**
+    * @dev This function allows users to withdraw their stake after a 7 day waiting period from request 
+    */
     function withdrawStake() external {
         StakeInfo storage stakes = staker[msg.sender];
         uint _today = now - (now % 86400);
@@ -220,23 +219,25 @@ contract Token  {
         emit StakeWithdrawn(msg.sender);
     }
 
+    /**
+    * @dev This function allows stakers to request to withdraw their stake (no longer stake) 
+    */
     function requestWithdraw() external {
         StakeInfo storage stakes = staker[msg.sender];
         require(stakes.current_state == 1);
         stakes.current_state = 2;
         stakes.startDate = now -(now % 86400);
-        uint _index = stakes.index;
-        uint _lastIndex = stakers.length - 1;
-        address _lastStaker = stakers[_lastIndex];
-        stakers[_index] = _lastStaker;
-        staker[_lastStaker].index = _index;
-        stakers.length--;
+        stakers -= 1;
         emit StakeWithdrawRequested(msg.sender);
     }
 
+    /**
+     *@dev This function returns whether or not a given user is allowed to trade a given amount  
+     *@param address of user
+     *@param address of amount
+    */
     function allowedToTrade(address _user,uint _amount) public view returns(bool){
-        StakeInfo memory stakes = staker[_user];
-        if(stakes.current_state >0){
+        if(staker[_user].current_state >0){
             if(balanceOf(_user).sub(stakeAmt).sub(_amount) >= 0){
                 return true;
             }
@@ -247,15 +248,22 @@ contract Token  {
         return false;
     }
 
+    /**
+     *@dev This function tells user is a given address is staked 
+     *@param address of staker enquiring about
+     *@return bool is the staker is currently staked
+    */
     function isStaked(address _staker) public view returns(bool){
         return (staker[_staker].current_state == 1);
     }
 
-    function getStakersCount() external view returns(uint){
-        return stakers.length;
-    }
-
-    function getStakerInfo(address _staker) public view returns(uint,uint,uint){
-        return (staker[_staker].current_state,staker[_staker].startDate,staker[_staker].index);
+    /**
+     *@dev This function allows users to retireve all information about a staker
+     *@param address of staker enquiring about
+     *@return uint current state of staker
+     *@return uint startDate of staking
+    */
+    function getStakerInfo(address _staker) public view returns(uint,uint){
+        return (staker[_staker].current_state,staker[_staker].startDate);
     }
 }

@@ -53,7 +53,7 @@ contract('Further Tests', function(accounts) {
         await helper.advanceTime(86400 * 8);
         await oracle.withdrawStake({from:accounts[2]});
    });  
-    /*it("transferOwnership", async function () {
+    it("transferOwnership", async function () {
         let checkowner = await oracle.owner();
         console.log("init owner", checkowner);
         assert(checkowner == accounts[0], "initial owner acct 0");
@@ -212,7 +212,6 @@ contract('Further Tests', function(accounts) {
         apiIdforpayoutPoolIndex = await oracle.getpayoutPoolIndexToApiId(0);
         apiId = await oracle.getApiId(apiHash);
         assert(web3.utils.hexToNumberString(apiId) == 1, "timestamp on Q should be 1");
-        assert(await oracle.getpayoutPoolIndexToApiId(49) == 1, "position 1 should be booted"); 
         payoutp = await oracle.getValuePoolAt(1);
         console.log("51 requests....");
          for(var i = 1;i <=51 ;i++){
@@ -260,5 +259,5 @@ contract('Further Tests', function(accounts) {
         assert(apiPayout == 6, "API on Q payout should be 4"); 
         assert(apiOnQ == 2, "API on Q should be 2"); 
     });
-    */
+    
 });

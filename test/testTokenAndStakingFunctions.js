@@ -127,8 +127,8 @@
 //         var tokens2 = web3.utils.toWei('3', 'ether');
 //         await oracle.transfer(accounts[1],tokens,{from:accounts[2]});
 //         balance1 = await (oracle.balanceOf(accounts[1],{from:accounts[2]}));
-//         await helper.expectThrow(oracle.approve(accounts[6],tokens,{from:accounts[1]}));
-//         await helper.expectThrow(oracle.transferFrom(accounts[1], accounts[8],tokens,{from:accounts[6]}));
+//         await helper.expectThrow(oracle.approve(accounts[6],tokens2,{from:accounts[1]}));
+//         await helper.expectThrow(oracle.transferFrom(accounts[1], accounts[8],tokens2,{from:accounts[6]}));
 //         balance1b = await (oracle.balanceOf(accounts[1],{from:accounts[2]})); 
 //         assert((1000 + web3.utils.fromWei(tokens)*1) == web3.utils.fromWei(balance1)*1, "Balance for acct 1 should == 1000 + transferred amt ");
 //     });
