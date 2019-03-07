@@ -237,11 +237,11 @@ contract Token  {
     function allowedToTrade(address _user,uint _amount) public view returns(bool){
         StakeInfo memory stakes = staker[_user];
         if(stakes.current_state >0){
-            if(balanceOf(_user).sub(stakeAmt).sub(_amount) > 0){
+            if(balanceOf(_user).sub(stakeAmt).sub(_amount) >= 0){
                 return true;
             }
         }
-        else if(balanceOf(_user).sub(_amount) > 0){
+        else if(balanceOf(_user).sub(_amount) >= 0){
                 return true;
         }
         return false;

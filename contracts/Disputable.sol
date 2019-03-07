@@ -70,7 +70,8 @@ contract Disputable is Token,Ownable{
     */
     function initDispute(uint _apiId, uint _timestamp) external{
         API storage _api = apiDetails[_apiId];
-        require(block.number- _api.minedBlockNum[_timestamp]<= 144 && _api.minedBlockNum[_timestamp] > 0);
+        require(block.number- _api.minedBlockNum[_timestamp]<= 144);
+        require(_api.minedBlockNum[_timestamp] > 0);
         doTransfer(msg.sender,address(this), disputeFee);
         uint disputeId = disputesIds.length + 1;
         address[5] memory _miners = _api.minersbyvalue[_timestamp];
@@ -101,7 +102,9 @@ contract Disputable is Token,Ownable{
     function vote(uint _disputeId, bool _supportsDispute) external {
         Dispute storage disp = disputes[_disputeId];
         uint voteWeight = balanceOfAt(msg.sender,disp.blockNumber);
-        require(disp.voted[msg.sender] != true && voteWeight > 0 && staker[msg.sender].current_state != 3);
+        require(disp.voted[msg.sender] != true);
+        require(voteWeight > 0);
+        require(staker[msg.sender].current_state != 3);
         disp.voted[msg.sender] = true;
         disp.numberOfVotes += 1;
         if (_supportsDispute) {

@@ -2,7 +2,6 @@ pragma solidity ^0.5.0;
 
 import "./libraries/SafeMath.sol";
 import "./libraries/Utilities.sol";
-
 import "./Disputable.sol";
 
 
@@ -18,26 +17,26 @@ contract Oracle is Disputable{
 
     /*Variables*/
     bytes32 public currentChallenge; //current challenge to be solved
-    bytes32 public apiOnQ; //string of current api with highest PayoutPool
+    bytes32 public apiOnQ; //string of current api with highest PayoutPool not currently being mined
     uint public timeOfLastProof; // time of last challenge solved
     uint256 public difficulty_level; // Difficulty of current block
-    uint public apiIdOnQ;
+    uint public apiIdOnQ; // apiId of the on queue request
     uint public apiOnQPayout; //value of highest api/timestamp PayoutPool
     uint public miningApiId; //API being mined--updates with the ApiOnQ Id 
-    uint private requests;
+    uint private requests; // total number of requests through the system
     uint private count;//Number of miners who have mined this value so far
     uint  constant public payoutTotal = 22e18;//Mining Reward in PoWo tokens given to all miners per value
     uint constant public timeTarget = 10 * 60; //The time between blocks (mined Oracle values)
     uint[5] payoutStructure =  [1e18,5e18,10e18,5e18,1e18];//The structure of the payout (how much uncles vs winner recieve)
-    uint[50] public payoutPool;
-    uint[] public timestamps;
+    uint[51] public payoutPool; //uint50 array of the top50 requests by payment amount
+    uint[] public timestamps; //array of all timestamps requested
 
     //challenge to miner address to yes/no--where yes if they completed the channlenge
     mapping(bytes32 => mapping(address=>bool)) public miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
     mapping(uint => uint) public timeToApiId;//minedTimestamp to apiId 
-    mapping(uint => uint) public payoutPoolIndexToApiId;
+    mapping(uint => uint) public payoutPoolIndexToApiId; //link from payoutPoolIndex (position in payout pool array) to apiId
 
-    Details[5] first_five;
+    Details[5] first_five; //This struct is for organizing the five mined values to find the median
     struct Details {
         uint value;
         address miner;
@@ -50,15 +49,19 @@ contract Oracle is Disputable{
     event DataRequested(address _sender,string _sapi, bytes32 _apiHash, uint _apiId);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
     event NonceSubmitted(address _miner, string _nonce, uint _apiId, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
     event NewAPIonQinfo(uint _apiId, string _sapi, bytes32 _apiOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
-    event NewChallenge(bytes32 _currentChallenge,uint _miningApiId,uint _difficulty_level,string _api);
+    event NewChallenge(bytes32 _currentChallenge,uint _miningApiId,uint _difficulty_level,string _api); //emits when a new challenge is created (either on mined block or when a new request is pushed forward on waiting system)
 
     /*Constructor*/
     constructor() public{
         timeOfLastProof = now - now  % timeTarget;
-        currentChallenge = keccak256(abi.encodePacked(timeOfLastProof,currentChallenge, blockhash(block.number - 1)));
         difficulty_level = 1;
     }
 
+    /*Functions*/
+    /*
+     *This function gives 5 miners the inital staked tokens in the system.  
+     * It would run with the constructor, but throws on too much gas
+    */
     function initStake() public{
         require(requests == 0);
         address payable[5] memory _initalMiners = [address(0xE037EC8EC9ec423826750853899394dE7F024fee),
@@ -76,10 +79,11 @@ contract Oracle is Disputable{
                 });
             emit NewStake(_initalMiners[i]);
         }
+        total_supply += 5000e18;
+        for(uint i = 49;i > 0;i--) {
+            payoutPool[i] = 0;
+        }
     }
-
-
-    /*Functions*/
     /**
     * @dev Proof of work is called by the miner when they submit the solution (proof of work and value)
     * @param nonce uint submitted by miner
@@ -88,9 +92,11 @@ contract Oracle is Disputable{
     * @return count of values sumbitted so far and the time of the last successful mine
     */
     function proofOfWork(string calldata nonce, uint _apiId, uint value) external{
-        require(isStaked(msg.sender) && _apiId == miningApiId);
+        require(isStaked(msg.sender));
+        require(_apiId == miningApiId);
         bytes32 n = sha256(abi.encodePacked(ripemd160(abi.encodePacked(keccak256(abi.encodePacked(currentChallenge,msg.sender,nonce))))));
-        require(uint(n) % difficulty_level == 0 && value > 0 && miners[currentChallenge][msg.sender] == false); //can we say > 0? I like it forces them to enter a valueS  
+        require(uint(n) % difficulty_level == 0);
+        require(miners[currentChallenge][msg.sender] == false); 
         first_five[count].value = value;
         first_five[count].miner = msg.sender;
         count++;
@@ -101,6 +107,9 @@ contract Oracle is Disputable{
             uint[3] memory nums; //reusable number array -- _amount,_paid,payoutMultiplier
             if(int(difficulty_level) + (int(timeTarget) - int(now - timeOfLastProof))/60 > 0){
                 difficulty_level = uint(int(difficulty_level) + (int(timeTarget) - int(now - timeOfLastProof))/60);
+            }
+            else{
+                difficulty_level = 1;
             }
             timeOfLastProof = now - (now % timeTarget);
             if(_api.payout >= payoutTotal) {
@@ -131,78 +140,37 @@ contract Oracle is Disputable{
                 doTransfer(address(this),a[i].miner,nums[1]);
                 nums[0] = nums[0] + nums[1];
             }
-            emit Mine(timeOfLastProof,msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner],nums[0]);
+            //emit Mine(timeOfLastProof,msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner],nums[0]);
             _api.payout = 0;      
             total_supply += nums[0];
             doTransfer(address(this),owner(),(payoutTotal * 10 / 100));//The ten there is the devshare
             _api.values[timeOfLastProof] = a[2].value;
-            _api.minersbyvalue[timeOfLastProof ] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
+            _api.minersbyvalue[timeOfLastProof] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
             _api.minedBlockNum[timeOfLastProof] = block.number;
             miningApiId = apiId[apiOnQ]; 
             timeToApiId[timeOfLastProof] = _apiId;
             timestamps.push(timeOfLastProof);
             count = 0;
-            payoutPool[_api.index] = 0;
-            payoutPoolIndexToApiId[_api.index] = 0;
-            _api.index = 0;
+            payoutPool[apiDetails[apiIdOnQ].index] = 0;
+            payoutPoolIndexToApiId[apiDetails[apiIdOnQ].index] = 0;
+            apiDetails[apiIdOnQ].index = 0;
             if(miningApiId > 0){
-                (nums[0],nums[1]) = Utilities.getSecond(payoutPool);
-                if(nums[0] > 0){
-                    apiIdOnQ = payoutPoolIndexToApiId[nums[1]];
-                    apiOnQ = apiDetails[apiIdOnQ].apiHash;
-                    apiOnQPayout = nums[0];
-                }
-                else{
-                    apiIdOnQ = 0;
-                }
+                (nums[0],nums[1]) = Utilities.getMax(payoutPool);
+                apiIdOnQ = payoutPoolIndexToApiId[nums[1]];
+                apiOnQ = apiDetails[apiIdOnQ].apiHash;
+                apiOnQPayout = nums[0];
                 currentChallenge = keccak256(abi.encodePacked(nonce, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
-                emit NewChallenge(currentChallenge,miningApiId,difficulty_level,apiDetails[miningApiId].apiString);       
+                emit NewChallenge(currentChallenge,miningApiId,difficulty_level,apiDetails[miningApiId].apiString);   
+                emit NewAPIonQinfo(apiIdOnQ,apiDetails[apiIdOnQ].apiString,apiOnQ,apiOnQPayout);    
             }
             emit NewValue(_apiId,timeOfLastProof,a[2].value);
         }
     }
-
-    /**
-    @dev This contract uses this function to update APIonQ when requestData or addToValuePool are ran
-    @param _apiId being requested
-    */
-    function updateAPIonQ (uint _apiId) internal {
-        API storage _api = apiDetails[_apiId];
-        uint _payout = _api.payout;
-        if (_payout > apiOnQPayout || apiIdOnQ == 0) {
-            if(miningApiId == 0){
-                miningApiId = _apiId;
-                currentChallenge = keccak256(abi.encodePacked(_payout, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
-                emit NewChallenge(currentChallenge,miningApiId,difficulty_level,apiDetails[miningApiId].apiString);
-            }
-            else{
-                apiIdOnQ = _apiId;
-                apiOnQ = _api.apiHash;
-                apiOnQPayout = _payout;
-                emit NewAPIonQinfo(_apiId,_api.apiString,apiOnQ,apiOnQPayout);
-            }
-        }
-        if(_api.index == 0){
-            uint _min;
-            uint _index;
-            (_min,_index) = Utilities.getMin(payoutPool);
-            if(_payout > _min || _min == 0){
-                payoutPool[_index] = _payout;
-                payoutPoolIndexToApiId[_index] = _apiId;
-                _api.index = _index;
-            }
-        }
-        else{
-            payoutPool[_api.index] = _payout;
-        }
-    }
-    
     /**
     * @dev Adds the _tip to the valuePool that pays the miners
     * @param _apiId the api Id the user want to add to the value pool.
     * @param _tip amount to add to value pool
-    * It should be the time stamp the user wants to ensure gets mined. They can do that 
-    * by adding a _tip to insentivize the miners to submit a value for the time stamp. 
+    * By adding a _tip to insentivize the miners to submit a value
     */
     function addToValuePool (uint _apiId, uint _tip) public {      
         if(_tip > 0){
@@ -239,7 +207,7 @@ contract Oracle is Disputable{
                 index: 0
                 });
             apiId[_apiHash] = _apiId;
-            updateAPIonQ (_apiId);
+            updateAPIonQ(_apiId);
             emit DataRequested(msg.sender,_sapi,_apiHash,_apiId);
         }
     }
@@ -316,9 +284,9 @@ contract Oracle is Disputable{
     }
 
     /**
-    * @dev Getter function for api based on apiID
+    * @dev Getter function for hash of the api based on apiID
     * @param _apiId the apiId to look up the api string
-    * @return api string/bytes32
+    * @return api hash - bytes32
     */
     function getApiHash(uint _apiId) external view returns(bytes32){    
         return apiDetails[_apiId].apiHash;
@@ -350,5 +318,37 @@ contract Oracle is Disputable{
     function getpayoutPoolIndexToApiId(uint _payoutPoolIndexToApiId) external view returns(uint){
         return payoutPoolIndexToApiId[_payoutPoolIndexToApiId];
     }
-
+    /**
+    @dev This function updates APIonQ and the payoutPool when requestData or addToValuePool are ran
+    @param _apiId being requested
+    */
+    function updateAPIonQ (uint _apiId) internal {
+        API storage _api = apiDetails[_apiId];
+        uint _payout = _api.payout;
+        if(miningApiId == 0){
+            miningApiId = _apiId;
+            currentChallenge = keccak256(abi.encodePacked(_payout, currentChallenge, blockhash(block.number - 1))); // Save hash for next proof
+            emit NewChallenge(currentChallenge,miningApiId,difficulty_level,apiDetails[miningApiId].apiString);
+            return;
+        }
+        if (_payout > apiOnQPayout || apiIdOnQ == 0) {
+                apiIdOnQ = _apiId;
+                apiOnQ = _api.apiHash;
+                apiOnQPayout = _payout;
+                emit NewAPIonQinfo(_apiId,_api.apiString,apiOnQ,apiOnQPayout);
+        }
+        if(_api.index == 0){
+            uint _min;
+            uint _index;
+            (_min,_index) = Utilities.getMin(payoutPool);
+            if(_payout > _min || _min == 0){
+                payoutPool[_index] = _payout;
+                payoutPoolIndexToApiId[_index] = _apiId;
+                _api.index = _index;
+            }
+        }
+        else{
+            payoutPool[_api.index] = _payout;
+        }
+    }
 }
