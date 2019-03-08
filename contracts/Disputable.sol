@@ -52,11 +52,9 @@ contract Disputable is Token,Ownable{
 
 
     /*Events*/
-    event NewDispute(uint _DisputeID, uint _apiId, uint _timestamp);
-    event Voted(uint _disputeID, bool _position, address _voter);
-    event DisputeVoteTallied(uint _disputeID, int _result, bool _active);
-    event DisputeLost(address _reportingParty, uint);
-    event StakeLost(address _reportedMiner,uint);
+    event NewDispute(uint _DisputeID, uint _apiId, uint _timestamp);//emitted when a new dispute is initialized
+    event Voted(uint _disputeID, bool _position, address _voter);//emitted when a new vote happens
+    event DisputeVoteTallied(uint _disputeID, int _result,address _reportedMiner,address _reportingParty, bool _active);//emitted upon dispute tally
 
     /*****************Disputes and Voting Functions***************/
     /**
@@ -128,14 +126,8 @@ contract Disputable is Token,Ownable{
           if (disp.tally != 0 ) { 
             stakes.current_state = 0;
             stakes.startDate = now -(now % 86400);
-            uint _index = stakes.index;
-            uint _lastIndex = stakers.length - 1;
-            address _lastStaker = stakers[_lastIndex];
-            stakers[_index] = _lastStaker;
-            staker[_lastStaker].index = _index;
-            stakers.length--;
+            stakers--;
             doTransfer(disp.reportedMiner,disp.reportingParty, stakeAmt);
-            emit StakeLost(disp.reportedMiner, stakeAmt);
             disp.disputeVotePassed = true;
             _api.values[disp.timestamp] = 0;
         } 
@@ -144,9 +136,8 @@ contract Disputable is Token,Ownable{
             disp.executed = true;
             disp.disputeVotePassed = false;
             transfer(disp.reportedMiner, disputeFee);
-            emit DisputeLost(disp.reportingParty, disputeFee);
         }
-        emit DisputeVoteTallied(_disputeId,disp.tally, disp.disputeVotePassed); 
+        emit DisputeVoteTallied(_disputeId,disp.tally,disp.reportedMiner,disp.reportingParty,disp.disputeVotePassed); 
     }
 
     /**
@@ -158,7 +149,7 @@ contract Disputable is Token,Ownable{
      *@return bool of whether or not vote passed (false until vote is over)
     */
     function getDisputeInfo(uint _disputeId) view external returns(uint, uint, uint,bool) {
-        Dispute memory disp = disputes[_disputeId];
+        Dispute storage disp = disputes[_disputeId];
         return(disp.apiId, disp.timestamp, disp.value, disp.disputeVotePassed);
     }
 
@@ -197,7 +188,7 @@ contract Disputable is Token,Ownable{
      *@return uint of current payout for this api
     */
     function getApiVars(uint _apiId) external view returns(string memory, bytes32, uint, uint) {
-        API memory _api = apiDetails[_apiId]; 
+        API storage _api = apiDetails[_apiId]; 
         return (_api.apiString, _api.apiHash, _api.index,_api.payout);
     }
 
@@ -215,7 +206,7 @@ contract Disputable is Token,Ownable{
      *@return bool of whether vote has been tallied
     */
     function getAllDisputeVars(uint _disputeId) external view returns(address, address, uint, uint, uint ,uint, uint, int, bool){
-        Dispute memory disp = disputes[_disputeId];
+        Dispute storage disp = disputes[_disputeId];
         return(disp.reportedMiner, disp.reportingParty, disp.apiId, disp.minExecutionDate, 
             disp.numberOfVotes, disp.blockNumber, disp.index,disp.tally,disp.executed); 
     }

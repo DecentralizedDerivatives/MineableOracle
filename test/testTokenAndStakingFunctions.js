@@ -51,7 +51,6 @@
 //         await helper.advanceTime(86400 * 8);
 //         await oracle.withdrawStake({from:accounts[2]});
 //    });  
-
 //     it("Token transfer", async function(){
 //         balance2 = await oracle.balanceOf(accounts[2]);
 //         t = web3.utils.toWei('5', 'ether');
@@ -134,8 +133,7 @@
 //     });
 
 //     it("Attempt to withdraw before stake time is up", async function(){ 
-//         balance1b = await (oracle.balanceOf(accounts[1],{from:accounts[0]}));
-//         await oracle.depositStake({from:accounts[1]}); 
+//         balance1b = await (oracle.balanceOf(accounts[1]));
 //         await helper.expectThrow(oracle.withdrawStake({from:accounts[1]}));
 //         assert(await oracle.isStaked(accounts[1]) == true, "still isStaked" );
 //         assert(web3.utils.fromWei(balance1b) == 1000, "Balance should equal transferred amt");

@@ -6,11 +6,8 @@ import "./Disputable.sol";
 
 
 /**
- * @title Oracle Token
+ * @title Tellor Oracle System
  * @dev Oracle contract where miners can submit the proof of work along with the value.
- * Includes functions for users to read data from, tip the miners and for miners to submit
- * values and get paid out from the master ProofOfWorkToken contract
- * TODO: Check miners are staked when submitting POW and add tipping at API level. 
  */
 contract Oracle is Disputable{
     using SafeMath for uint256;
@@ -71,14 +68,13 @@ contract Oracle is Disputable{
         address(0x3233afA02644CCd048587F8ba6e99b3C00A34DcC)];
         for(uint i=0;i<5;i++){
             updateValueAtNow(balances[_initalMiners[i]],1000e18);
-            stakers.push(_initalMiners[i]);
             staker[_initalMiners[i]] = StakeInfo({
                 current_state: 1,
-                startDate: now - (now % 86400),
-                index:stakers.length-1
+                startDate: now - (now % 86400)
                 });
             emit NewStake(_initalMiners[i]);
         }
+        stakers += 5;
         total_supply += 5000e18;
         for(uint i = 49;i > 0;i--) {
             payoutPool[i] = 0;

@@ -10,7 +10,7 @@ contract Token  {
 
     /*Variables*/
     uint public total_supply; //total_supply of the token in circulation
-    uint constant stakeAmt = 1000e18;//stakeAmount for miners
+    uint constant stakeAmt = 1000e18;//stakeAmount for miners (we can cut gas if we just hardcode it in...or should it be variable?)
     uint public stakers; //number of parties currently staked
     mapping (address => Checkpoint[]) public balances; //balances of a party given blocks
     mapping(address => mapping (address => uint)) internal allowed; //allowance for a given party and approver
@@ -90,83 +90,6 @@ contract Token  {
     }
 
     /**
-    * @dev Getter for balance for owner on the specified _block number
-    * @param checkpoints gets the mapping for the balances[owner]
-    * @param _block is the block number to search the balance on
-    */
-    function getValueAt(Checkpoint[] storage checkpoints, uint _block) view internal returns (uint) {
-        if (checkpoints.length == 0) return 0;
-        if (_block >= checkpoints[checkpoints.length-1].fromBlock)
-            return checkpoints[checkpoints.length-1].value;
-        if (_block < checkpoints[0].fromBlock) return 0;
-        // Binary search of the value in the array
-        uint min = 0;
-        uint max = checkpoints.length-1;
-        while (max > min) {
-            uint mid = (max + min + 1)/ 2;
-            if (checkpoints[mid].fromBlock<=_block) {
-                min = mid;
-            } else {
-                max = mid-1;
-            }
-        }
-        return checkpoints[min].value;
-    }
-
-    /**
-    * @dev Updates balance for from and to on the current block number via doTransfer
-    * @param checkpoints gets the mapping for the balances[owner]
-    * @param _value is the new balance
-    */
-    function updateValueAtNow(Checkpoint[] storage checkpoints, uint _value) internal  {
-        if ((checkpoints.length == 0) || (checkpoints[checkpoints.length -1].fromBlock < block.number)) {
-               Checkpoint storage newCheckPoint = checkpoints[ checkpoints.length++ ];
-               newCheckPoint.fromBlock =  uint128(block.number);
-               newCheckPoint.value = uint128(_value);
-        } else {
-               Checkpoint storage oldCheckPoint = checkpoints[checkpoints.length-1];
-               oldCheckPoint.value = uint128(_value);
-        }
-    }
-    
-    /** 
-    * @dev Completes POWO transfers by updating the balances on the current block number
-    * @param _from address to transfer from
-    * @param _to addres to transfer to
-    * @param _amount to transfer 
-    */
-    function doTransfer(address _from, address _to, uint _amount) internal {
-        require(_amount > 0);
-        require(_to != address(0));
-        require(allowedToTrade(_from,_amount));
-        uint previousBalance = balanceOfAt(_from, block.number);
-        updateValueAtNow(balances[_from], previousBalance - _amount);
-        previousBalance = balanceOfAt(_to, block.number);
-        require(previousBalance + _amount >= previousBalance); // Check for overflow
-        updateValueAtNow(balances[_to], previousBalance + _amount);
-        emit Transfer(_from, _to, _amount);
-    }
-
-    /** 
-    * @dev Completes dispute transfer by updating the balances
-    * @param _from address to transfer from
-    * @param _to addres to transfer to
-    * @param _amount to transfer 
-    */
-    function disputeTransfer(address _from, address _to, uint _amount) internal {
-        require(_amount > 0);
-        require(_to != address(0));
-        require(staker[_from].current_state == 3);
-        uint previousBalance = balanceOfAt(_from, block.number);
-        require(previousBalance >= _amount);
-        updateValueAtNow(balances[_from], previousBalance - _amount);
-        previousBalance = balanceOfAt(_to, block.number);
-        require(previousBalance + _amount >= previousBalance); // Check for overflow
-        updateValueAtNow(balances[_to], previousBalance + _amount);
-        emit Transfer(_from, _to, _amount);
-    }
-
-    /**
     * @dev This function approves a _spender an _amount of tokens to use
     * @param _spender address
     * @param _amount amount the spender is being approved for
@@ -201,10 +124,11 @@ contract Token  {
     */
     function depositStake() external {
         require( balanceOf(msg.sender) >= stakeAmt);
+        require(staker[msg.sender].current_state == 0 || staker[msg.sender].current_state == 2);
         stakers += 1;
         staker[msg.sender] = StakeInfo({
             current_state: 1,
-            startDate: now - (now % 86400),
+            startDate: now - (now % 86400)
             });
         emit NewStake(msg.sender);
     }
@@ -265,5 +189,63 @@ contract Token  {
     */
     function getStakerInfo(address _staker) public view returns(uint,uint){
         return (staker[_staker].current_state,staker[_staker].startDate);
+    }
+
+    /**
+    * @dev Updates balance for from and to on the current block number via doTransfer
+    * @param checkpoints gets the mapping for the balances[owner]
+    * @param _value is the new balance
+    */
+    function updateValueAtNow(Checkpoint[] storage checkpoints, uint _value) internal  {
+        if ((checkpoints.length == 0) || (checkpoints[checkpoints.length -1].fromBlock < block.number)) {
+               Checkpoint storage newCheckPoint = checkpoints[ checkpoints.length++ ];
+               newCheckPoint.fromBlock =  uint128(block.number);
+               newCheckPoint.value = uint128(_value);
+        } else {
+               Checkpoint storage oldCheckPoint = checkpoints[checkpoints.length-1];
+               oldCheckPoint.value = uint128(_value);
+        }
+    }
+    
+    /** 
+    * @dev Completes POWO transfers by updating the balances on the current block number
+    * @param _from address to transfer from
+    * @param _to addres to transfer to
+    * @param _amount to transfer 
+    */
+    function doTransfer(address _from, address _to, uint _amount) internal {
+        require(_amount > 0);
+        require(_to != address(0));
+        require(allowedToTrade(_from,_amount));
+        uint previousBalance = balanceOfAt(_from, block.number);
+        updateValueAtNow(balances[_from], previousBalance - _amount);
+        previousBalance = balanceOfAt(_to, block.number);
+        require(previousBalance + _amount >= previousBalance); // Check for overflow
+        updateValueAtNow(balances[_to], previousBalance + _amount);
+        emit Transfer(_from, _to, _amount);
+    }
+    
+    /**
+    * @dev Getter for balance for owner on the specified _block number
+    * @param checkpoints gets the mapping for the balances[owner]
+    * @param _block is the block number to search the balance on
+    */
+    function getValueAt(Checkpoint[] storage checkpoints, uint _block) view internal returns (uint) {
+        if (checkpoints.length == 0) return 0;
+        if (_block >= checkpoints[checkpoints.length-1].fromBlock)
+            return checkpoints[checkpoints.length-1].value;
+        if (_block < checkpoints[0].fromBlock) return 0;
+        // Binary search of the value in the array
+        uint min = 0;
+        uint max = checkpoints.length-1;
+        while (max > min) {
+            uint mid = (max + min + 1)/ 2;
+            if (checkpoints[mid].fromBlock<=_block) {
+                min = mid;
+            } else {
+                max = mid-1;
+            }
+        }
+        return checkpoints[min].value;
     }
 }
