@@ -22,7 +22,7 @@ contract Disputable is Token,Ownable{
     uint[] public disputesIds; //array of all disputes
     
     mapping(uint => Dispute) public disputes;//disputeId=> Dispute details
-    mapping(bytes32 => uint) apiId;// api bytes32 gets an id = to count of requests array
+    mapping(bytes32 => uint) public apiId;// api bytes32 gets an id = to count of requests array
     struct API{
         string apiString;//id to string api
         bytes32 apiHash;//hash of string
@@ -32,7 +32,7 @@ contract Disputable is Token,Ownable{
         mapping(uint => uint) values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
         mapping(uint => address[5]) minersbyvalue;  
     }
-    mapping(uint => API) apiDetails;//mapping of apiID to details
+    mapping(uint => API) public apiDetails;//mapping of apiID to details
  
     struct Dispute {
         bool executed;//is the dispute settled

@@ -24,7 +24,7 @@ contract Oracle is Disputable{
     uint private count;//Number of miners who have mined this value so far
     uint  constant public payoutTotal = 22e18;//Mining Reward in PoWo tokens given to all miners per value
     uint constant public timeTarget = 10 * 60; //The time between blocks (mined Oracle values)
-    uint[5] payoutStructure =  [1e18,5e18,10e18,5e18,1e18];//The structure of the payout (how much uncles vs winner recieve)
+    uint[5] public payoutStructure =  [1e18,5e18,10e18,5e18,1e18];//The structure of the payout (how much uncles vs winner recieve)
     uint[51] public payoutPool; //uint50 array of the top50 requests by payment amount
     uint[] public timestamps; //array of all timestamps requested
 
@@ -33,7 +33,7 @@ contract Oracle is Disputable{
     mapping(uint => uint) public timeToApiId;//minedTimestamp to apiId 
     mapping(uint => uint) public payoutPoolIndexToApiId; //link from payoutPoolIndex (position in payout pool array) to apiId
 
-    Details[5] first_five; //This struct is for organizing the five mined values to find the median
+    Details[5] public first_five; //This struct is for organizing the five mined values to find the median
     struct Details {
         uint value;
         address miner;
@@ -182,6 +182,7 @@ contract Oracle is Disputable{
     * @param c_sapi being requested be mined
     * @param _tip amount the requester is willing to pay to be get on queue. Miners
     * mine the apiOnQ, or the api with the highest payout pool
+    * @return _apiId for the request
     */
     function requestData(string calldata c_sapi, uint _tip) external returns(uint _apiId){
         string memory _sapi = c_sapi;
@@ -205,6 +206,7 @@ contract Oracle is Disputable{
             apiId[_apiHash] = _apiId;
             updateAPIonQ(_apiId);
             emit DataRequested(msg.sender,_sapi,_apiHash,_apiId);
+            return _apiId;
         }
     }
 

@@ -10,7 +10,7 @@ contract Token  {
 
     /*Variables*/
     uint public total_supply; //total_supply of the token in circulation
-    uint constant stakeAmt = 1000e18;//stakeAmount for miners (we can cut gas if we just hardcode it in...or should it be variable?)
+    uint constant public stakeAmt = 1000e18;//stakeAmount for miners (we can cut gas if we just hardcode it in...or should it be variable?)
     uint public stakers; //number of parties currently staked
     mapping (address => Checkpoint[]) public balances; //balances of a party given blocks
     mapping(address => mapping (address => uint)) internal allowed; //allowance for a given party and approver

@@ -79,7 +79,7 @@ contract('Mining Tests', function(accounts) {
         res = web3.eth.abi.decodeParameters(['uint256','uint256','uint256'],logMineWatcher.data);
         assert(res[2] > 0, "value should be positive");
    });
-   /*it("Test 5 Mines", async function () {
+   it("Test 5 Mines", async function () {
         for(var i = 0;i < 5;i++){
             logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
             await oracle.requestData(api,0);
@@ -137,7 +137,7 @@ contract('Mining Tests', function(accounts) {
         assert((web3.utils.hexToNumberString(new_balances[4]) - web3.utils.hexToNumberString(balances[4])) == web3.utils.toWei('1', 'ether'));
         //assert((web3.utils.hexToNumberString(new_balances[4]) - web3.utils.hexToNumberString(balances[4])) == web3.utils.toWei('1.1', 'ether'));
     });
-    */
+    
    it("Test Difficulty Adjustment", async function () {
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         vars = await oracle.getVariables();
@@ -147,7 +147,7 @@ contract('Mining Tests', function(accounts) {
         vars = await oracle.getVariables();
         assert(vars[2] > 2, "difficulty should continue to move up");
     });
-    /*it("Test didMine ", async function () {
+    it("Test didMine ", async function () {
         vars = await oracle.getVariables();
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         didMine = oracle.didMine(vars[0],accounts[1]);
@@ -291,7 +291,7 @@ contract('Mining Tests', function(accounts) {
         assert(payoutP == 50, "value at position 52 should have correct value"); 
         assert(apiIdforpayoutPoolIndex2 == 54, "position 2 should be in same place"); 
     });
-    */
+    
     it("Test 404 api request", async function () {
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         await oracle.requestData("api2",41, {from:accounts[2]});
