@@ -109,27 +109,6 @@
 //        assert(web3.utils.hexToNumberString(onQ) == 4, "should be 4");
 //     });
 
-    // it("addToValuePool throw", async function () {
-    //    test1 = "https://api.gdax.com/products/ETH-USD/ticker";
-    //    test2 = "https://api.gdax.com/products/BTC-USD/ticker";
-    //    req1 = await oracle.requestData(test1, 20, {from:accounts[2]});
-    //    //console.log('req1');
-    //    //variables = await oracle.getVariablesOnQ();
-    //    onQ = await oracle.apiIdOnQ.call();
-    //    //console.log("q1",onQ);
-    //    assert(web3.utils.hexToNumberString(onQ) == 2, "should be 2");
-    //    req2 = await oracle.requestData(api2, 40, {from:accounts[2]});
-    //    //console.log('req2');
-    //    //variables2 = await oracle.getVariablesOnQ();
-    //    onQ = await oracle.apiIdOnQ.call();
-    //    //console.log("q2",onQ);
-    //    assert(web3.utils.hexToNumberString(onQ) == 3, "should be 3");
-    //    req3 = await oracle.addToValuePool(2, 31, {from:accounts[2]});
-    //    console.log("req3", req3);
-    //    //variables3 = await oracle.getVariablesOnQ();
-    //    helper.expectThrow(await oracle.addToValuePool(2, 31, {from:accounts[3]}));
-    // });
-
 //     it("Request data and change on queue with another request", async function () {
 //         balance1 = await (oracle.balanceOf(accounts[2],{from:accounts[1]}));
 //         test1 = 'test';
