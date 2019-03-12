@@ -4,7 +4,7 @@ const Web3 = require("web3");
 const fs = require('fs');
 const Tx = require('ethereumjs-tx')
 var web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545/'))
-var json = require('../build/contracts/Oracle.json');
+var json = require('../build/contracts/Tellor.json');
 
 solution = process.argv[2]
 apiId = process.argv[3] - 0

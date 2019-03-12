@@ -2,10 +2,11 @@ pragma solidity ^0.5.0;
 
 import "./libraries/SafeMath.sol";
 /**
-* @title Token
-* This contracts contains the ERC20 token functions
+* @title TokenAndStaking
+* @dev This contracts contains the ERC20 token functions and staking functions for 
+* Tellor Tributes
 */
-contract Token  {
+contract TokenAndStaking  {
     using SafeMath for uint256;
 
     /*Variables*/
@@ -118,7 +119,7 @@ contract Token  {
        return total_supply;
     }
 
-/*****************Staking Functions***************/
+    /*****************Staking Functions***************/
     /**
     * @dev This function allows users to stake 
     */

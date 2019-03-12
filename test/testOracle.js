@@ -6,7 +6,7 @@ const web3 = new Web3(new Web3.providers.WebsocketProvider('ws://localhost:8545'
 const BN = require('bn.js');
 const helper = require("./helpers/test_helpers");
 
-const Oracle = artifacts.require("./Oracle.sol"); // globally injected artifacts helper
+const Oracle = artifacts.require("./Tellor.sol"); // globally injected artifacts helper
 var Reader = artifacts.require("Reader.sol");
 var oracleAbi = Oracle.abi;
 var oracleByte = Oracle.bytecode;
@@ -140,12 +140,14 @@ contract('Mining Tests', function(accounts) {
     
    it("Test Difficulty Adjustment", async function () {
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-        vars = await oracle.getVariables();
-        assert(vars[2] > 1);//difficulty not changing.....
+        diff1 = await oracle.getVariables();
+        console.log("diff1", vars[2]);
+        assert(diff1[2] > 1);//difficulty not changing.....
         await oracle.requestData(api,0);
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         vars = await oracle.getVariables();
-        assert(vars[2] > 2, "difficulty should continue to move up");
+        console.log("diff2", vars[2]);
+        assert(vars[2] > diff1[2], "difficulty should continue to move up");
     });
     it("Test didMine ", async function () {
         vars = await oracle.getVariables();

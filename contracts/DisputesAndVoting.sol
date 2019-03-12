@@ -1,17 +1,15 @@
 pragma solidity ^0.5.0;
 
 import "./libraries/SafeMath.sol";
-import "./Token.sol";
+import "./TokenAndStaking.sol";
 import "./Ownable.sol";
 
 /**
- * @title Oracle Token
- * @dev Oracle contract where miners can submit the proof of work along with the value.
- * Includes functions for users to read data from, tip the miners and for miners to submit
- * values and get paid out from the master ProofOfWorkToken contract
- * TODO: Check miners are staked when submitting POW and add tipping at API level. 
- */
-contract Disputable is Token,Ownable{
+* @title Disputes and Voting
+* @dev This contract contains the functions to initiate disputes, vote and execute
+* the tally(which will slash the stake or provide the dispute fee to the miner) 
+*/
+contract DisputesAndVoting is TokenAndStaking,Ownable{
     using SafeMath for uint256;
     
     /*Variables*/
@@ -59,11 +57,10 @@ contract Disputable is Token,Ownable{
     /*****************Disputes and Voting Functions***************/
     /**
     * @dev Helps initialize a dispute by assigning it a disputeId 
-    * when a miner returns a false on the validate array(in oracle.ProofOfWork) it sends the 
+    * when a miner returns a false on the validate array(in Tellor.ProofOfWork) it sends the 
     * invalidated value information to POS voting
     * @param _apiId being disputed
     * @param _timestamp being disputed
-    * @return the dispute Id
     */
     function initDispute(uint _apiId, uint _timestamp) external{
         API storage _api = apiDetails[_apiId];
@@ -141,12 +138,12 @@ contract Disputable is Token,Ownable{
     }
 
     /**
-     *@dev Get Dispute information
-     *@param _disputeId is the dispute id to check the outcome of
-     *@return uint of the API id being disputed
-     *@return uint of the timestamp being disputed
-     *@return uint disputed value
-     *@return bool of whether or not vote passed (false until vote is over)
+    * @dev Get Dispute information
+    * @param _disputeId is the dispute id to check the outcome of
+    * @return uint of the API id being disputed
+    * @return uint of the timestamp being disputed
+    * @return uint disputed value
+    * @return bool of whether or not vote passed (false until vote is over)
     */
     function getDisputeInfo(uint _disputeId) view external returns(uint, uint, uint,bool) {
         Dispute storage disp = disputes[_disputeId];
@@ -154,38 +151,38 @@ contract Disputable is Token,Ownable{
     }
 
     /**
-     *@dev Gets length of array containing all disputeIds
-     *@return number of disputes through system
+    * @dev Gets length of array containing all disputeIds
+    * @return number of disputes through system
     */
     function countDisputes() view external returns(uint) {
         return disputesIds.length;
     }
 
     /**
-     *@dev getter function to get all disputessIds
-     *@return uint array of all disputeIds;
+    * @dev getter function to get all disputessIds
+    * @return uint array of all disputeIds;
     */
     function getDisputesIds() view external returns (uint[] memory){
         return disputesIds;
     }
 
     /**
-     *@dev Gets blocknumber for mined timestamp 
-     *@param _apiId to look up
-     *@param _timestamp is the timestamp to look up blocknumber
-     *@return uint of the blocknumber which the dispute was mined
+    * @dev Gets blocknumber for mined timestamp 
+    * @param _apiId to look up
+    * @param _timestamp is the timestamp to look up blocknumber
+    * @return uint of the blocknumber which the dispute was mined
     */
     function getMinedBlockNum(uint _apiId, uint _timestamp) external view returns(uint){
         return apiDetails[_apiId].minedBlockNum[_timestamp];
     }
 
     /**
-     *@dev Gets the API struct variables that are not mappings
-     *@param _apiId to look up
-     *@return string of api to query
-     *@return bytes32 hash of string
-     *@return uint of index in PayoutPool array
-     *@return uint of current payout for this api
+    * @dev Gets the API struct variables that are not mappings
+    * @param _apiId to look up
+    * @return string of api to query
+    * @return bytes32 hash of string
+    * @return uint of index in PayoutPool array
+    * @return uint of current payout for this api
     */
     function getApiVars(uint _apiId) external view returns(string memory, bytes32, uint, uint) {
         API storage _api = apiDetails[_apiId]; 
@@ -193,17 +190,17 @@ contract Disputable is Token,Ownable{
     }
 
     /**
-     *@dev Gets all dispute variables
-     *@param _disputeId to look up
-     *@return address of reported miner
-     *@return address of reporting party
-     *@return disputed apiId
-     *@return disputed minimum execution date
-     *@return uint number of votes
-     *@return uint blockNumber of vote
-     *@return uint index in disputeId array
-     *@return int count of the current tally
-     *@return bool of whether vote has been tallied
+    * @dev Gets all dispute variables
+    * @param _disputeId to look up
+    * @return address of reported miner
+    * @return address of reporting party
+    * @return disputed apiId
+    * @return disputed minimum execution date
+    * @return uint number of votes
+    * @return uint blockNumber of vote
+    * @return uint index in disputeId array
+    * @return int count of the current tally
+    * @return bool of whether vote has been tallied
     */
     function getAllDisputeVars(uint _disputeId) external view returns(address, address, uint, uint, uint ,uint, uint, int, bool){
         Dispute storage disp = disputes[_disputeId];
@@ -212,10 +209,10 @@ contract Disputable is Token,Ownable{
     }
     
     /**
-     *@dev Checks if an address voted in a dispute
-     *@param _disputeId to look up
-     *@param _address to look up
-     *@return bool of whether or not party voted
+    * @dev Checks if an address voted in a dispute
+    * @param _disputeId to look up
+    * @param _address to look up
+    * @return bool of whether or not party voted
     */
     function didVote(uint _disputeId, address _address) external view returns(bool){
         return disputes[_disputeId].voted[_address];

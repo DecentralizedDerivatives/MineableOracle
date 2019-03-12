@@ -2,14 +2,14 @@ pragma solidity ^0.5.0;
 
 import "./libraries/SafeMath.sol";
 import "./libraries/Utilities.sol";
-import "./Disputable.sol";
+import "./DisputesAndVoting.sol";
 
 
 /**
  * @title Tellor Oracle System
  * @dev Oracle contract where miners can submit the proof of work along with the value.
  */
-contract Oracle is Disputable{
+contract Tellor is DisputesAndVoting{
     using SafeMath for uint256;
 
     /*Variables*/
@@ -162,20 +162,6 @@ contract Oracle is Disputable{
             emit NewValue(_apiId,timeOfLastProof,a[2].value);
         }
     }
-    /**
-    * @dev Adds the _tip to the valuePool that pays the miners
-    * @param _apiId the api Id the user want to add to the value pool.
-    * @param _tip amount to add to value pool
-    * By adding a _tip to insentivize the miners to submit a value
-    */
-    function addToValuePool (uint _apiId, uint _tip) public {      
-        if(_tip > 0){
-                doTransfer(msg.sender,address(this),_tip);
-        }
-        apiDetails[_apiId].payout = apiDetails[_apiId].payout.add(_tip);
-        updateAPIonQ(_apiId);
-        emit ValueAddedToPool(msg.sender,_apiId,_tip);
-    }
 
    /**
     * @dev Request to retreive value from oracle based on timestamp
@@ -208,16 +194,6 @@ contract Oracle is Disputable{
             emit DataRequested(msg.sender,_sapi,_apiHash,_apiId);
             return _apiId;
         }
-    }
-
-    /**
-    * @dev Retreive value from oracle based on timestamp
-    * @param _apiId being requested
-    * @param _timestamp to retreive data/value from
-    * @return value for timestamp submitted
-    */
-    function retrieveData(uint _apiId, uint _timestamp) public view returns (uint) {
-        return apiDetails[_apiId].values[_timestamp];
     }
 
     /**
@@ -316,6 +292,32 @@ contract Oracle is Disputable{
     function getpayoutPoolIndexToApiId(uint _payoutPoolIndexToApiId) external view returns(uint){
         return payoutPoolIndexToApiId[_payoutPoolIndexToApiId];
     }
+
+    /**
+    * @dev Retreive value from oracle based on timestamp
+    * @param _apiId being requested
+    * @param _timestamp to retreive data/value from
+    * @return value for timestamp submitted
+    */
+    function retrieveData(uint _apiId, uint _timestamp) public view returns (uint) {
+        return apiDetails[_apiId].values[_timestamp];
+    }
+    
+    /**
+    * @dev Adds the _tip to the valuePool that pays the miners
+    * @param _apiId the api Id the user want to add to the value pool.
+    * @param _tip amount to add to value pool
+    * By adding a _tip to insentivize the miners to submit a value
+    */
+    function addToValuePool (uint _apiId, uint _tip) public {      
+        if(_tip > 0){
+                doTransfer(msg.sender,address(this),_tip);
+        }
+        apiDetails[_apiId].payout = apiDetails[_apiId].payout.add(_tip);
+        updateAPIonQ(_apiId);
+        emit ValueAddedToPool(msg.sender,_apiId,_tip);
+    }
+
     /**
     @dev This function updates APIonQ and the payoutPool when requestData or addToValuePool are ran
     @param _apiId being requested
