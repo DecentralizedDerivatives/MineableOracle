@@ -40,7 +40,6 @@ contract Tellor is DisputesAndVoting{
     }
 
     /*Events*/
-    event Mine(uint timeOfLastProof,address sender,address[5] _miners, uint _paid);//Emits upon a succesful value mine, indicates the msg.sender, 5 miners included in block, and the mined value
     event NewValue(uint _apiId, uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
     event ValueAddedToPool(address sender, uint _apiId, uint _value);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
     event DataRequested(address _sender,string _sapi, bytes32 _apiHash, uint _apiId);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
@@ -136,7 +135,6 @@ contract Tellor is DisputesAndVoting{
                 doTransfer(address(this),a[i].miner,nums[1]);
                 nums[0] = nums[0] + nums[1];
             }
-            //emit Mine(timeOfLastProof,msg.sender,[a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner],nums[0]);
             _api.payout = 0;      
             total_supply += nums[0];
             doTransfer(address(this),owner(),(payoutTotal * 10 / 100));//The ten there is the devshare
@@ -170,7 +168,7 @@ contract Tellor is DisputesAndVoting{
     * mine the apiOnQ, or the api with the highest payout pool
     * @return _apiId for the request
     */
-    function requestData(string calldata c_sapi, uint _tip) external returns(uint _apiId){
+    function requestData(string calldata c_sapi, uint _tip) external {
         string memory _sapi = c_sapi;
         require(bytes(_sapi).length > 0);
         bytes32 _apiHash = sha256(abi.encodePacked(_sapi));
@@ -182,6 +180,7 @@ contract Tellor is DisputesAndVoting{
                 doTransfer(msg.sender,address(this),_tip);
             }
             requests++;
+            uint _apiId;
             _apiId=requests;
             apiDetails[_apiId] = API({
                 apiString : _sapi, 
@@ -192,7 +191,6 @@ contract Tellor is DisputesAndVoting{
             apiId[_apiHash] = _apiId;
             updateAPIonQ(_apiId);
             emit DataRequested(msg.sender,_sapi,_apiHash,_apiId);
-            return _apiId;
         }
     }
 
@@ -311,7 +309,7 @@ contract Tellor is DisputesAndVoting{
     */
     function addToValuePool (uint _apiId, uint _tip) public {      
         if(_tip > 0){
-                doTransfer(msg.sender,address(this),_tip);
+            doTransfer(msg.sender,address(this),_tip);
         }
         apiDetails[_apiId].payout = apiDetails[_apiId].payout.add(_tip);
         updateAPIonQ(_apiId);

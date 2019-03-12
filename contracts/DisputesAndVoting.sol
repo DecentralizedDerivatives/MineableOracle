@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-import "./libraries/SafeMath.sol";
+//import "./libraries/SafeMath.sol";
 import "./TokenAndStaking.sol";
 import "./Ownable.sol";
 
@@ -10,7 +10,7 @@ import "./Ownable.sol";
 * the tally(which will slash the stake or provide the dispute fee to the miner) 
 */
 contract DisputesAndVoting is TokenAndStaking,Ownable{
-    using SafeMath for uint256;
+    //using SafeMath for uint256;
     
     /*Variables*/
     uint8 public constant decimals = 18;//18 decimal standard ERC20

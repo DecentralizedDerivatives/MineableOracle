@@ -40,6 +40,80 @@ contract TokenAndStaking  {
         updateValueAtNow(balances[address(this)], 2**256-1 - 5000e18);
     }
     
+    /*****************Staking Functions***************/
+    /**
+    * @dev This function allows users to stake 
+    */
+    function depositStake() external {
+        require( balanceOf(msg.sender) >= stakeAmt);
+        require(staker[msg.sender].current_state == 0 || staker[msg.sender].current_state == 2);
+        stakers += 1;
+        staker[msg.sender] = StakeInfo({
+            current_state: 1,
+            startDate: now - (now % 86400)
+            });
+        emit NewStake(msg.sender);
+    }
+    /**
+    * @dev This function allows users to withdraw their stake after a 7 day waiting period from request 
+    */
+    function withdrawStake() external {
+        StakeInfo storage stakes = staker[msg.sender];
+        uint _today = now - (now % 86400);
+        require(_today - stakes.startDate >= 7 days && stakes.current_state == 2);
+        stakes.current_state = 0;
+        emit StakeWithdrawn(msg.sender);
+    }
+
+    /**
+    * @dev This function allows stakers to request to withdraw their stake (no longer stake) 
+    */
+    function requestWithdraw() external {
+        StakeInfo storage stakes = staker[msg.sender];
+        require(stakes.current_state == 1);
+        stakes.current_state = 2;
+        stakes.startDate = now -(now % 86400);
+        stakers -= 1;
+        emit StakeWithdrawRequested(msg.sender);
+    }
+
+    /**
+     *@dev This function returns whether or not a given user is allowed to trade a given amount  
+     *@param address of user
+     *@param address of amount
+    */
+    function allowedToTrade(address _user,uint _amount) public view returns(bool){
+        if(staker[_user].current_state >0){
+            if(balanceOf(_user).sub(stakeAmt).sub(_amount) >= 0){
+                return true;
+            }
+        }
+        else if(balanceOf(_user).sub(_amount) >= 0){
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     *@dev This function tells user is a given address is staked 
+     *@param address of staker enquiring about
+     *@return bool is the staker is currently staked
+    */
+    function isStaked(address _staker) public view returns(bool){
+        return (staker[_staker].current_state == 1);
+    }
+
+    /**
+     *@dev This function allows users to retireve all information about a staker
+     *@param address of staker enquiring about
+     *@return uint current state of staker
+     *@return uint startDate of staking
+    */
+    function getStakerInfo(address _staker) public view returns(uint,uint){
+        return (staker[_staker].current_state,staker[_staker].startDate);
+    }
+
+    /*****************ERC20 Functions***************/
     /**
     * @dev Gets balance of owner specified
     * @param _owner is the owner address used to look up the balance
@@ -117,79 +191,6 @@ contract TokenAndStaking  {
     */
     function totalSupply() public view returns (uint) {
        return total_supply;
-    }
-
-    /*****************Staking Functions***************/
-    /**
-    * @dev This function allows users to stake 
-    */
-    function depositStake() external {
-        require( balanceOf(msg.sender) >= stakeAmt);
-        require(staker[msg.sender].current_state == 0 || staker[msg.sender].current_state == 2);
-        stakers += 1;
-        staker[msg.sender] = StakeInfo({
-            current_state: 1,
-            startDate: now - (now % 86400)
-            });
-        emit NewStake(msg.sender);
-    }
-    /**
-    * @dev This function allows users to withdraw their stake after a 7 day waiting period from request 
-    */
-    function withdrawStake() external {
-        StakeInfo storage stakes = staker[msg.sender];
-        uint _today = now - (now % 86400);
-        require(_today - stakes.startDate >= 7 days && stakes.current_state == 2);
-        stakes.current_state = 0;
-        emit StakeWithdrawn(msg.sender);
-    }
-
-    /**
-    * @dev This function allows stakers to request to withdraw their stake (no longer stake) 
-    */
-    function requestWithdraw() external {
-        StakeInfo storage stakes = staker[msg.sender];
-        require(stakes.current_state == 1);
-        stakes.current_state = 2;
-        stakes.startDate = now -(now % 86400);
-        stakers -= 1;
-        emit StakeWithdrawRequested(msg.sender);
-    }
-
-    /**
-     *@dev This function returns whether or not a given user is allowed to trade a given amount  
-     *@param address of user
-     *@param address of amount
-    */
-    function allowedToTrade(address _user,uint _amount) public view returns(bool){
-        if(staker[_user].current_state >0){
-            if(balanceOf(_user).sub(stakeAmt).sub(_amount) >= 0){
-                return true;
-            }
-        }
-        else if(balanceOf(_user).sub(_amount) >= 0){
-                return true;
-        }
-        return false;
-    }
-
-    /**
-     *@dev This function tells user is a given address is staked 
-     *@param address of staker enquiring about
-     *@return bool is the staker is currently staked
-    */
-    function isStaked(address _staker) public view returns(bool){
-        return (staker[_staker].current_state == 1);
-    }
-
-    /**
-     *@dev This function allows users to retireve all information about a staker
-     *@param address of staker enquiring about
-     *@return uint current state of staker
-     *@return uint startDate of staking
-    */
-    function getStakerInfo(address _staker) public view returns(uint,uint){
-        return (staker[_staker].current_state,staker[_staker].startDate);
     }
 
     /**
