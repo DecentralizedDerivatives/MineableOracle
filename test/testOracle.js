@@ -138,17 +138,17 @@ contract('Mining Tests', function(accounts) {
         //assert((web3.utils.hexToNumberString(new_balances[4]) - web3.utils.hexToNumberString(balances[4])) == web3.utils.toWei('1.1', 'ether'));
     });
     
-   // it("Test Difficulty Adjustment", async function () {
-   //      logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-   //      diff1 = await oracle.getVariables();
-   //      console.log("diff1", web3.utils.hexToNumberString(diff1[2]));
-   //      assert((web3.utils.hexToNumberString(diff1[2])*1) > 1, "difficulty greater than 1");//difficulty not changing.....
-   //      await oracle.requestData(api,0);
-   //      logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
-   //      vars = await oracle.getVariables();
-   //      console.log("diff2", web3.utils.hexToNumberString(vars[2]));
-   //      assert((web3.utils.hexToNumberString(vars[2])*1) > (web3.utils.hexToNumberString(diff1[2])*1), "difficulty should continue to move up");
-   //  });
+   it("Test Difficulty Adjustment", async function () {
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        diff1 = await oracle.getVariables();
+        console.log("diff1", web3.utils.hexToNumberString(diff1[2]));
+        assert((web3.utils.hexToNumberString(diff1[2])*1) > 1, "difficulty greater than 1");//difficulty not changing.....
+        await oracle.requestData(api,0);
+        logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+        vars = await oracle.getVariables();
+        console.log("diff2", web3.utils.hexToNumberString(vars[2]));
+        assert((web3.utils.hexToNumberString(vars[2])*1) > (web3.utils.hexToNumberString(diff1[2])*1), "difficulty should continue to move up");
+    });
     it("Test didMine ", async function () {
         vars = await oracle.getVariables();
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
@@ -214,12 +214,13 @@ contract('Mining Tests', function(accounts) {
     it("Test time travel in data -- really long timesincelastPoof and proper difficulty adjustment", async function () {
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         vars = await oracle.getVariables();
-        assert(vars[2] > 1, "difficulty should be greater than 1");//difficulty not changing.....
+        console.log("vars", web3.utils.hexToNumberString(vars[2]));
+        assert((web3.utils.hexToNumberString(vars[2])*1) > 1, "difficulty should be greater than 1");//difficulty not changing.....
         await oracle.requestData(api,0);
         await helper.advanceTime(86400 * 20);
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
         vars = await oracle.getVariables();
-        assert(vars[2] == 1,"difficulty should be 1 now");
+        assert((web3.utils.hexToNumberString(vars[2])*1) == 1,"difficulty should be 1 now");
     });
     it("Test 50 requests, proper booting, and mining of 5", async function () {
         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');
