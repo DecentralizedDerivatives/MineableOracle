@@ -302,7 +302,10 @@ contract Tellor is DisputesAndVoting{
     }
     
     /**
-    * @dev Adds the _tip to the valuePool that pays the miners
+    * @dev Adds the _tip to the valuePool that pays the miners. The if statement is 
+    * necessary instead of a require statment to allow for the first initial dataRequest
+    * to be executed and initiate mining. Do not remove the if statment or move the 
+    * adding to payout line into the if statment. 
     * @param _apiId the api Id the user want to add to the value pool.
     * @param _tip amount to add to value pool
     * By adding a _tip to insentivize the miners to submit a value
