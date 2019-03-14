@@ -46,6 +46,12 @@ contract('Further Tests', function(accounts) {
         owner = accounts[0];
         oracle = await Oracle.new();
         oracle2 = await new web3.eth.Contract(oracleAbi,oracle.address);
+
+        //Deploy tellorStorage
+        tellorStorage= await TellorStorage.new();
+        //set tellorContract on tellor storage
+        await tellorStorage.setTellorContract(oracle.address); 
+
         await oracle.initStake();
         res0 = await oracle.requestData(api,0);
         await helper.advanceTime(86400 * 8);

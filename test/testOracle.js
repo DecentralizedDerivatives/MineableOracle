@@ -42,9 +42,17 @@ contract('Mining Tests', function(accounts) {
         owner = accounts[0];
         oracle = await Oracle.new();
         oracle2 = await new web3.eth.Contract(oracleAbi,oracle.address);
+
+        //Deploy tellorStorage
+        tellorStorage= await TellorStorage.new();
+        //set tellorContract on tellor storage
+        await tellorStorage.setTellorContract(oracle.address);
+
         await oracle.initStake();
         await oracle.requestData(api,0);
     });
+
+    
     it("getStakersCount", async function(){
         let count = await oracle.stakers.call();
         assert(web3.utils.hexToNumberString(count)==5, "count is 5");

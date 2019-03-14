@@ -1,29 +1,31 @@
 pragma solidity ^0.5.0;
 
 import "./libraries/SafeMath.sol";
+import "./Ownable.sol";
+
 /**
 * @title TokenAndStaking
 * @dev This contracts contains the ERC20 token functions and staking functions for 
 * Tellor Tributes
 */
-contract TokenAndStaking  {
+contract TokenAndStaking is Ownable{
     using SafeMath for uint256;
 
-    /*Variables*/
-    uint public total_supply; //total_supply of the token in circulation
-    uint constant public stakeAmt = 1000e18;//stakeAmount for miners (we can cut gas if we just hardcode it in...or should it be variable?)
-    uint public stakers; //number of parties currently staked
-    mapping (address => Checkpoint[]) public balances; //balances of a party given blocks
-    mapping(address => mapping (address => uint)) internal allowed; //allowance for a given party and approver
-    mapping(address => StakeInfo) public staker;//mapping from a persons address to their staking info
-    struct StakeInfo {
-        uint current_state;//1=started, 2=LockedForWithdraw 3= OnDispute
-        uint startDate; //stake start date
-    }
-    struct  Checkpoint {
-        uint128 fromBlock;// fromBlock is the block number that the value was generated from
-        uint128 value;// value is the amount of tokens at a specific block number
-    }
+    // /*Variables*/
+    // uint public total_supply; //total_supply of the token in circulation
+    // uint constant public stakeAmt = 1000e18;//stakeAmount for miners (we can cut gas if we just hardcode it in...or should it be variable?)
+    // uint public stakers; //number of parties currently staked
+    // mapping (address => Checkpoint[]) public balances; //balances of a party given blocks
+    // mapping(address => mapping (address => uint)) internal allowed; //allowance for a given party and approver
+    // mapping(address => StakeInfo) public staker;//mapping from a persons address to their staking info
+    // struct StakeInfo {
+    //     uint current_state;//1=started, 2=LockedForWithdraw 3= OnDispute
+    //     uint startDate; //stake start date
+    // }
+    // struct  Checkpoint {
+    //     uint128 fromBlock;// fromBlock is the block number that the value was generated from
+    //     uint128 value;// value is the amount of tokens at a specific block number
+    // }
       
     /*Events*/
     event Approval(address indexed owner, address indexed spender, uint256 value);//ERC20 Approval event

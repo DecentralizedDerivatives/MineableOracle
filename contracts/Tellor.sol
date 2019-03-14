@@ -12,32 +12,32 @@ import "./DisputesAndVoting.sol";
 contract Tellor is DisputesAndVoting{
     using SafeMath for uint256;
 
-    /*Variables*/
-    bytes32 public currentChallenge; //current challenge to be solved
-    bytes32 public apiOnQ; //string of current api with highest PayoutPool not currently being mined
-    uint public timeOfLastProof; // time of last challenge solved
-    uint256 public difficulty_level; // Difficulty of current block
-    uint public apiIdOnQ; // apiId of the on queue request
-    uint public apiOnQPayout; //value of highest api/timestamp PayoutPool
-    uint public miningApiId; //API being mined--updates with the ApiOnQ Id 
-    uint private requests; // total number of requests through the system
-    uint private count;//Number of miners who have mined this value so far
-    uint  constant public payoutTotal = 22e18;//Mining Reward in PoWo tokens given to all miners per value
-    uint constant public timeTarget = 10 * 60; //The time between blocks (mined Oracle values)
-    uint[5] public payoutStructure =  [1e18,5e18,10e18,5e18,1e18];//The structure of the payout (how much uncles vs winner recieve)
-    uint[51] public payoutPool; //uint50 array of the top50 requests by payment amount
-    uint[] public timestamps; //array of all timestamps requested
+    // /*Variables*/
+    // bytes32 public currentChallenge; //current challenge to be solved
+    // bytes32 public apiOnQ; //string of current api with highest PayoutPool not currently being mined
+    // uint public timeOfLastProof; // time of last challenge solved
+    // uint256 public difficulty_level; // Difficulty of current block
+    // uint public apiIdOnQ; // apiId of the on queue request
+    // uint public apiOnQPayout; //value of highest api/timestamp PayoutPool
+    // uint public miningApiId; //API being mined--updates with the ApiOnQ Id 
+    // uint public requests; // total number of requests through the system
+    // uint public count;//Number of miners who have mined this value so far
+    // uint  constant public payoutTotal = 22e18;//Mining Reward in PoWo tokens given to all miners per value
+    // uint constant public timeTarget = 10 * 60; //The time between blocks (mined Oracle values)
+    // uint[5] public payoutStructure =  [1e18,5e18,10e18,5e18,1e18];//The structure of the payout (how much uncles vs winner recieve)
+    // uint[51] public payoutPool; //uint50 array of the top50 requests by payment amount
+    // uint[] public timestamps; //array of all timestamps requested
 
-    //challenge to miner address to yes/no--where yes if they completed the channlenge
-    mapping(bytes32 => mapping(address=>bool)) public miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
-    mapping(uint => uint) public timeToApiId;//minedTimestamp to apiId 
-    mapping(uint => uint) public payoutPoolIndexToApiId; //link from payoutPoolIndex (position in payout pool array) to apiId
+    // //challenge to miner address to yes/no--where yes if they completed the channlenge
+    // mapping(bytes32 => mapping(address=>bool)) public miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
+    // mapping(uint => uint) public timeToApiId;//minedTimestamp to apiId 
+    // mapping(uint => uint) public payoutPoolIndexToApiId; //link from payoutPoolIndex (position in payout pool array) to apiId
 
-    Details[5] public first_five; //This struct is for organizing the five mined values to find the median
-    struct Details {
-        uint value;
-        address miner;
-    }
+    // Details[5] public first_five; //This struct is for organizing the five mined values to find the median
+    // struct Details {
+    //     uint value;
+    //     address miner;
+    // }
 
     /*Events*/
     event NewValue(uint _apiId, uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
@@ -48,9 +48,50 @@ contract Tellor is DisputesAndVoting{
     event NewChallenge(bytes32 _currentChallenge,uint _miningApiId,uint _difficulty_level,string _api); //emits when a new challenge is created (either on mined block or when a new request is pushed forward on waiting system)
 
     /*Constructor*/
-    constructor() public{
+    /**
+    * @dev constructor
+    * @param _propForkFee;
+    * @param _disputeFee is the fee for initiating a dispute
+    * @param _stakeAmt is the amount of Tributes that need to be staked by miners to be allowed to mine
+    * @param _payoutStructure for miners
+    * @param _devShare from mining
+    */    
+    constructor(uint _propForkFee,uint _disputeFee, uint _stakeAmt, uint[5] _payoutStructure, uint _devShare) public{
         timeOfLastProof = now - now  % timeTarget;
         difficulty_level = 1;
+        propForkFee = _propForkFee;
+        disputeFee = _disputeFee;
+        stakeAmt = _stakeAmt;
+        devShare = _devShare;
+        payoutStructure = _payoutStructure;
+        for(uint i = 0;i<5;i++){
+            payoutTotal += _payoutStructure[i];
+        }
+        //timeTarget = _timeTarget;?//_timeTarget for the dificulty adjustment
+        //requestFee = _requestFee;? //_requestFee is the minimum fee to requestData
+    }
+
+    /**
+    * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
+    * @param _propForkFee;
+    * @param _disputeFee is the fee for initiating a dispute
+    * @param _stakeAmt is the amount of Tributes that need to be staked by miners to be allowed to mine
+    * @param _payoutStructure for miners
+    * @param _devShare from mining
+    */  
+    function init(uint _propForkFee,uint _disputeFee, uint _stakeAmt, uint[5] _payoutStructure, uint _devShare) public{
+        timeOfLastProof = now - now  % timeTarget;
+        difficulty_level = 1;
+        propForkFee = _propForkFee;
+        disputeFee = _disputeFee;
+        stakeAmt = _stakeAmt;
+        devShare = _devShare;
+        payoutStructure = _payoutStructure;
+        for(uint i = 0;i<5;i++){
+            payoutTotal += _payoutStructure[i];
+        }
+        //timeTarget = _timeTarget;?//_timeTarget for the dificulty adjustment
+        //requestFee = _requestFee;? //_requestFee is the minimum fee to requestData
     }
 
     /*Functions*/

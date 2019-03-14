@@ -1,7 +1,10 @@
 pragma solidity ^0.5.0;
-contract Ownable {
+
+import "./TellorData.sol";
+
+contract Ownable is TellorData{
     /*Variables*/
-    address public _owner;//Owner address
+    // address public _owner;//Tellor Owner address
     /*Event*/
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     /**

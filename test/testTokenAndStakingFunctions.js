@@ -7,6 +7,7 @@ const web3 = new Web3(new Web3.providers.WebsocketProvider('ws://localhost:8545'
 const BN = require('bn.js');
 const helper = require("./helpers/test_helpers");
 
+const TellorStorage = artifacts.require("./TellorStorage.sol");
 const Oracle = artifacts.require("./Tellor.sol"); // globally injected artifacts helper
 var Reader = artifacts.require("Reader.sol");
 var oracleAbi = Oracle.abi;
@@ -34,6 +35,7 @@ function promisifyLogWatch(_contract,_event) {
 contract('Token and Staking Tests', function(accounts) {
   let oracle;
   let oracle2;
+  let tellorStorage;
   let owner;
   let reader;
   let logNewValueWatcher;
@@ -42,8 +44,15 @@ contract('Token and Staking Tests', function(accounts) {
 
     beforeEach('Setup contract for each test', async function () {
         owner = accounts[0];
+        //deploy tellor
         oracle = await Oracle.new();
-        oracle2 = await new web3.eth.Contract(oracleAbi,oracle.address);
+        oracle2 = await new web3.eth.Contract(oracleAbi,oracle.address);///will this instance work for logWatch? hopefully...
+        
+        //Deploy tellorStorage
+        tellorStorage= await TellorStorage.new();
+        //set tellorContract on tellor storage
+        await tellorStorage.setTellorContract(oracle.address);
+
         await oracle.initStake();
         res0 = await oracle.requestData(api,0);
         await helper.advanceTime(86400 * 8);

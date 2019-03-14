@@ -1,59 +1,67 @@
 pragma solidity ^0.5.0;
 
-//import "./libraries/SafeMath.sol";
+
 import "./TokenAndStaking.sol";
-import "./Ownable.sol";
+
 
 /**
 * @title Disputes and Voting
 * @dev This contract contains the functions to initiate disputes, vote and execute
 * the tally(which will slash the stake or provide the dispute fee to the miner) 
 */
-contract DisputesAndVoting is TokenAndStaking,Ownable{
-    //using SafeMath for uint256;
+contract DisputesAndVoting is TokenAndStaking {
     
-    /*Variables*/
-    uint8 public constant decimals = 18;//18 decimal standard ERC20
-    uint constant public disputeFee = 1e18;//cost to dispute a mined value
-    string public constant name = "Tellor Tributes"; //name of the Token
-    string public constant symbol = "TT";//Token Symbol
-    uint[] public disputesIds; //array of all disputes
+    // /*Variables*/
+    // uint8 public constant decimals = 18;//18 decimal standard ERC20
+    // uint constant public disputeFee = 1e18;//cost to dispute a mined value
+    // string public constant name = "Tellor Tributes"; //name of the Token
+    // string public constant symbol = "TT";//Token Symbol
+    // uint[] public disputesIds; //array of all disputes
     
-    mapping(uint => Dispute) public disputes;//disputeId=> Dispute details
-    mapping(bytes32 => uint) public apiId;// api bytes32 gets an id = to count of requests array
-    struct API{
-        string apiString;//id to string api
-        bytes32 apiHash;//hash of string
-        uint index; //index in payoutPool
-        uint payout;//current payout of the api, zeroed once mined
-        mapping(uint => uint) minedBlockNum;//[apiId][minedTimestamp]=>block.number
-        mapping(uint => uint) values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
-        mapping(uint => address[5]) minersbyvalue;  
-    }
-    mapping(uint => API) public apiDetails;//mapping of apiID to details
+    // mapping(uint => Dispute) public disputes;//disputeId=> Dispute details
+    // mapping(bytes32 => uint) public apiId;// api bytes32 gets an id = to count of requests array
+    //  struct API{
+    //     string apiString;//id to string api
+    //     bytes32 apiHash;//hash of string
+    //     uint index; //index in payoutPool
+    //     uint payout;//current payout of the api, zeroed once mined
+    //     mapping(uint => uint) minedBlockNum;//[apiId][minedTimestamp]=>block.number
+    //     mapping(uint => uint) values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
+    //     mapping(uint => address[5]) minersbyvalue;  
+    // }
+    // mapping(uint => API) public apiDetails;//mapping of apiID to details
  
-    struct Dispute {
-        bool executed;//is the dispute settled
-        bool disputeVotePassed;//did the vote pass?
-        address reportedMiner; //miner who alledgedly submitted the 'bad value' will get disputeFee if dispute vote fails
-        address reportingParty;//miner reporting the 'bad value'-pay disputeFee will get reportedMiner's stake if dispute vote passes
-        uint apiId;//apiID of disputed value
-        uint timestamp;//timestamp of distputed value
-        uint value; //the value being disputed
-        uint minExecutionDate;//7 days from when dispute initialized
-        uint numberOfVotes;//the number of parties who have voted on the measure
-        uint  blockNumber;// the blocknumber for which votes will be calculated from
-        uint index; //index in dispute array
-        int tally;//current tally of votes for - against measure
-        mapping (address => bool) voted; //mapping of address to whether or not they voted
-    } 
+    // struct Dispute {
+    //     bool executed;//is the dispute settled
+    //     bool disputeVotePassed;//did the vote pass?
+    //     address reportedMiner; //miner who alledgedly submitted the 'bad value' will get disputeFee if dispute vote fails
+    //     address reportingParty;//miner reporting the 'bad value'-pay disputeFee will get reportedMiner's stake if dispute vote passes
+    //     uint apiId;//apiID of disputed value
+    //     uint timestamp;//timestamp of distputed value
+    //     uint value; //the value being disputed
+    //     uint minExecutionDate;//7 days from when dispute initialized
+    //     uint numberOfVotes;//the number of parties who have voted on the measure
+    //     uint  blockNumber;// the blocknumber for which votes will be calculated from
+    //     uint index; //index in dispute array
+    //     uint quorum; //quorum for dispute vote 
+    //     int tally;//current tally of votes for - against measure
+    //     mapping (address => bool) voted; //mapping of address to whether or not they voted
+    // } 
 
+    // uint public propForkFee;
+    // struct propFork {
+    //     uint propForkFee;
+    //     uint disputeFee;
+    //     uint stakeAmt;
+    //     uint[5] payoutStructure;
+    // }
+    // mapping(uint => propFork) propFork;//maps proposalID to struct propFork
 
     /*Events*/
     event NewDispute(uint _DisputeID, uint _apiId, uint _timestamp);//emitted when a new dispute is initialized
     event Voted(uint _disputeID, bool _position, address _voter);//emitted when a new vote happens
     event DisputeVoteTallied(uint _disputeID, int _result,address _reportedMiner,address _reportingParty, bool _active);//emitted upon dispute tally
-
+    event NewOracleDeployed(address _new_oracle); //emmited when new oracle is deployed
     /*****************Disputes and Voting Functions***************/
     /**
     * @dev Helps initialize a dispute by assigning it a disputeId 
@@ -70,6 +78,7 @@ contract DisputesAndVoting is TokenAndStaking,Ownable{
         uint disputeId = disputesIds.length + 1;
         address[5] memory _miners = _api.minersbyvalue[_timestamp];
         disputes[disputeId] = Dispute({
+            isPropFork: false,
             reportedMiner: _miners[2], 
             reportingParty: msg.sender,
             apiId: _apiId,
@@ -88,6 +97,30 @@ contract DisputesAndVoting is TokenAndStaking,Ownable{
         emit NewDispute(disputeId,_apiId,_timestamp );
     }
 
+    function propFork(uint _propForkFee,uint _disputeFee, uint _stakeAmt, uint[5] _payoutStructure, uint _devShare) external {
+        doTransfer(msg.sender,address(this), disputeFee);
+        uint disputeId = disputesIds.length + 1;
+        disputes[disputeId] = Dispute({
+            isPropFork: true,
+            reportingParty: msg.sender,
+            minExecutionDate: now + 7 days, 
+            numberOfVotes: 0,
+            executed: false,
+            disputeVotePassed: false,
+            blockNumber: block.number,
+            tally: 0
+            });
+        disputesIds.push(disputeId);
+        staker[_miners[2]].current_state = 3;    
+        propForks[disputeId] = propFork ({
+        propForkFee: _propForkFee,
+        disputeFee: _disputeFee,
+        stakeAmt: _stakeAmt,
+        payoutStructure:_payoutStructure,
+        devShare: _devShare
+        });    
+    }
+
     /**
     * @dev Allows token holders to vote
     * @param _disputeId is the dispute id
@@ -101,6 +134,7 @@ contract DisputesAndVoting is TokenAndStaking,Ownable{
         require(staker[msg.sender].current_state != 3);
         disp.voted[msg.sender] = true;
         disp.numberOfVotes += 1;
+        disp.quorum += voteWeight;
         if (_supportsDispute) {
             disp.tally = disp.tally + int(voteWeight);
         } else {
@@ -119,22 +153,29 @@ contract DisputesAndVoting is TokenAndStaking,Ownable{
         API storage _api = apiDetails[disp.apiId];
         require(disp.executed == false);
         require(now > disp.minExecutionDate); //Uncomment for production-commented out for testing 
+        if (isPropFork== false){
         StakeInfo storage stakes = staker[disp.reportedMiner];  
-          if (disp.tally != 0 ) { 
-            stakes.current_state = 0;
-            stakes.startDate = now -(now % 86400);
-            stakers--;
-            doTransfer(disp.reportedMiner,disp.reportingParty, stakeAmt);
-            disp.disputeVotePassed = true;
-            _api.values[disp.timestamp] = 0;
-        } 
-        else {
-            stakes.current_state = 1;
-            disp.executed = true;
-            disp.disputeVotePassed = false;
-            transfer(disp.reportedMiner, disputeFee);
-        }
+            if (disp.tally != 0 ) { 
+                stakes.current_state = 0;
+                stakes.startDate = now -(now % 86400);
+                stakers--;
+                doTransfer(disp.reportedMiner,disp.reportingParty, stakeAmt);
+                disp.disputeVotePassed = true;
+                _api.values[disp.timestamp] = 0;
+            } else {
+                stakes.current_state = 1;
+                disp.executed = true;
+                disp.disputeVotePassed = false;
+                transfer(disp.reportedMiner, disputeFee);
+            }
         emit DisputeVoteTallied(_disputeId,disp.tally,disp.reportedMiner,disp.reportingParty,disp.disputeVotePassed); 
+        } else {
+            uint minQuorum = (totalSupply * 75 / 100);
+            require(disp.quorum > minQuorum);
+            propFork storage fork = propFork[_disputeId];
+            deployNewOracle(fork.propForkFee,fork.disputeFee, fork.stakeAmt, fork.payoutStructure, for.devShare);
+        }
+
     }
 
     /**
@@ -218,4 +259,37 @@ contract DisputesAndVoting is TokenAndStaking,Ownable{
         return disputes[_disputeId].voted[_address];
     }
 
+    /**
+    * @dev Deploys a new Tellor 
+    * @param _propForkFee;
+    * @param _disputeFee is the fee for initiating a dispute
+    * @param _stakeAmt is the amount of Tributes that need to be staked by miners to be allowed to mine
+    * @param _payoutStructure for miners
+    * @param _devShare from mining
+    */
+    function deployNewOracle(uint _propForkFee,uint _disputeFee, uint _stakeAmt, uint[5] _payoutStructure, uint _devShare) internal returns(address){
+        address new_oracle = createClone(dud_Oracle);
+        Tellor(new_oracle).init(_propForkFee,_disputeFee, _stakeAmt, _payoutStructure, _devShare); 
+        emit NewOracleDeployed(new_oracle);
+        return new_oracle;
+    }
+
+
+    /**
+    * @dev Creates oracle clone
+    * @param target is the address being cloned
+    * @return address for clone
+    */
+    function createClone(address target) internal returns (address result) {
+        bytes memory clone = hex"600034603b57603080600f833981f36000368180378080368173bebebebebebebebebebebebebebebebebebebebe5af43d82803e15602c573d90f35b3d90fd";
+        bytes20 targetBytes = bytes20(target);
+        for (uint i = 0; i < 20; i++) {
+            clone[26 + i] = targetBytes[i];
+        }
+        assembly {
+            let len := mload(clone)
+            let data := add(clone, 0x20)
+            result := create(0, data, len)
+        }
+    }
 }
