@@ -46,18 +46,25 @@ contract('Token and Staking Tests', function(accounts) {
         owner = accounts[0];
         //deploy tellor
         oracle = await Oracle.new();
+        console.log("1");
         oracle2 = await new web3.eth.Contract(oracleAbi,oracle.address);///will this instance work for logWatch? hopefully...
-        
+        console.log("2");
         //Deploy tellorStorage
         tellorStorage= await TellorStorage.new();
+        console.log("3");
         //set tellorContract on tellor storage
         await tellorStorage.setTellorContract(oracle.address);
-
+        console.log("4");
         await oracle.initStake();
+        console.log("5");
         res0 = await oracle.requestData(api,0);
+        console.log("6");
         await helper.advanceTime(86400 * 8);
+        console.log("7");
         let withdrawreq = await oracle.requestWithdraw({from:accounts[2]});
+        console.log("8");
         await helper.advanceTime(86400 * 8);
+        console.log("9");
         await oracle.withdrawStake({from:accounts[2]});
    });  
     it("Token transfer", async function(){
