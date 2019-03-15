@@ -9,17 +9,18 @@ contract TellorData {
     /*Variables ownable*/
     /*Ownable*/ address public _owner;//Tellor Owner address
 
+
     /*Variables Tellor*/
     /*Tellor*/ bytes32 public currentChallenge; //current challenge to be solved
     /*Tellor*/ bytes32 public apiOnQ; //string of current api with highest PayoutPool not currently being mined
 
     /*DisputesAndVoting*/ uint8 public constant decimals = 18;//18 decimal standard ERC20
     /*DisputesAndVoting*/ uint constant public disputeFee = 1e18;//cost to dispute a mined value
+    /*DisputesAndVoting*/ uint public forkFee;
     /*TokenAndStaking*/ uint public total_supply; //total_supply of the token in circulation
     /*TokenAndStaking*/ uint constant public stakeAmt = 1000e18;//stakeAmount for miners (we can cut gas if we just hardcode it in...or should it be variable?)
     /*TokenAndStaking*/ uint public stakers; //number of parties currently staked
     /*Tellor*/ uint public devShare;
-    /*Tellor*/ //uint public requestFee;/************needs to be added to code*******/
     /*Tellor*/ uint public timeOfLastProof; // time of last challenge solved
     /*Tellor*/ uint256 public difficulty_level; // Difficulty of current block
     /*Tellor*/ uint public apiIdOnQ; // apiId of the on queue request
@@ -43,6 +44,7 @@ contract TellorData {
     /*TokenAndStaking*/ mapping(address => mapping (address => uint)) internal allowed; //allowance for a given party and approver
     /*TokenAndStaking*/ mapping(address => StakeInfo) public staker;//mapping from a persons address to their staking info
     /*DisputesAndVoting*/ mapping(uint => API) public apiDetails;//mapping of apiID to details
+    /*DisputesAndVoting*/mapping(uint => address) propForkAddress;//maps proposalID to struct propFork
 
     /*DisputesAndVoting*/ string public constant name = "Tellor Tributes"; //name of the Token
     /*DisputesAndVoting*/ string public constant symbol = "TT";//Token Symbol
@@ -57,7 +59,7 @@ contract TellorData {
     /*DisputesAndVoting*/ struct Dispute {
         bool executed;//is the dispute settled
         bool disputeVotePassed;//did the vote pass?
-        bool isPropFork; //true for fork proposal
+        bool isPropFork; //true for fork proposal NEW
         address reportedMiner; //miner who alledgedly submitted the 'bad value' will get disputeFee if dispute vote fails
         address reportingParty;//miner reporting the 'bad value'-pay disputeFee will get reportedMiner's stake if dispute vote passes
         uint apiId;//apiID of disputed value
@@ -67,7 +69,7 @@ contract TellorData {
         uint numberOfVotes;//the number of parties who have voted on the measure
         uint  blockNumber;// the blocknumber for which votes will be calculated from
         uint index; //index in dispute array
-        uint quorum; //quorum for dispute vote 
+        uint quorum; //quorum for dispute vote NEW
         int tally;//current tally of votes for - against measure
         mapping (address => bool) voted; //mapping of address to whether or not they voted
     } 
@@ -91,12 +93,5 @@ contract TellorData {
         mapping(uint => address[5]) minersbyvalue;  
     }    
 
-    /*DisputesAndVoting*/ struct propFork {
-        uint propForkFee;
-        uint disputeFee;
-        uint stakeAmt;
-        uint[5] payoutStructure;
-    }
-    /*DisputesAndVoting*/mapping(uint => propFork) propForks;//maps proposalID to struct propFork
 
 }

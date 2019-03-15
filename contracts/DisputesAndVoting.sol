@@ -61,7 +61,7 @@ contract DisputesAndVoting is TokenAndStaking {
     event NewDispute(uint _DisputeID, uint _apiId, uint _timestamp);//emitted when a new dispute is initialized
     event Voted(uint _disputeID, bool _position, address _voter);//emitted when a new vote happens
     event DisputeVoteTallied(uint _disputeID, int _result,address _reportedMiner,address _reportingParty, bool _active);//emitted upon dispute tally
-    event NewOracleDeployed(address _new_oracle); //emmited when new oracle is deployed
+    event NewTellorAddress(address _newTellor); //emmited when a proposed fork is voted true
     /*****************Disputes and Voting Functions***************/
     /**
     * @dev Helps initialize a dispute by assigning it a disputeId 
@@ -70,7 +70,7 @@ contract DisputesAndVoting is TokenAndStaking {
     * @param _apiId being disputed
     * @param _timestamp being disputed
     */
-    function initDispute(uint _apiId, uint _timestamp) external{
+    function initDispute(uint _apiId, uint _timestamp) external {
         API storage _api = apiDetails[_apiId];
         require(block.number- _api.minedBlockNum[_timestamp]<= 144);
         require(_api.minedBlockNum[_timestamp] > 0);
@@ -90,35 +90,39 @@ contract DisputesAndVoting is TokenAndStaking {
             disputeVotePassed: false,
             blockNumber: block.number,
             tally: 0,
-            index:disputeId
+            index:disputeId,
+            quorum: 0
             });
         disputesIds.push(disputeId);
         staker[_miners[2]].current_state = 3;
         emit NewDispute(disputeId,_apiId,_timestamp );
     }
 
-    function propFork(uint _propForkFee,uint _disputeFee, uint _stakeAmt, uint[5] _payoutStructure, uint _devShare) external {
-        doTransfer(msg.sender,address(this), disputeFee);
+    /**
+    * @dev propose fork
+    * @param _propNewTellorAddress address for new proposed Tellor
+    */
+    function propFork(address _propNewTellorAddress) public {
+        doTransfer(msg.sender,address(this), forkFee);
         uint disputeId = disputesIds.length + 1;
         disputes[disputeId] = Dispute({
             isPropFork: true,
+            reportedMiner: msg.sender, 
             reportingParty: msg.sender,
+            apiId: 0,
+            timestamp: 0,
+            value: 0,  
             minExecutionDate: now + 7 days, 
             numberOfVotes: 0,
             executed: false,
             disputeVotePassed: false,
             blockNumber: block.number,
-            tally: 0
+            tally: 0,
+            index:disputeId,
+            quorum: 0
             });
-        disputesIds.push(disputeId);
-        staker[_miners[2]].current_state = 3;    
-        propForks[disputeId] = propFork ({
-        propForkFee: _propForkFee,
-        disputeFee: _disputeFee,
-        stakeAmt: _stakeAmt,
-        payoutStructure:_payoutStructure,
-        devShare: _devShare
-        });    
+        disputesIds.push(disputeId);    
+        propForkAddress[disputeId] = _propNewTellorAddress;
     }
 
     /**
@@ -134,7 +138,7 @@ contract DisputesAndVoting is TokenAndStaking {
         require(staker[msg.sender].current_state != 3);
         disp.voted[msg.sender] = true;
         disp.numberOfVotes += 1;
-        disp.quorum += voteWeight;
+        disp.quorum += voteWeight; //NEW
         if (_supportsDispute) {
             disp.tally = disp.tally + int(voteWeight);
         } else {
@@ -148,12 +152,12 @@ contract DisputesAndVoting is TokenAndStaking {
     * @dev tallies the votes.
     * @param _disputeId is the dispute id
     */
-    function tallyVotes(uint _disputeId) external {
+    function tallyVotes(uint _disputeId) public {
         Dispute storage disp = disputes[_disputeId];
         API storage _api = apiDetails[disp.apiId];
         require(disp.executed == false);
         require(now > disp.minExecutionDate); //Uncomment for production-commented out for testing 
-        if (isPropFork== false){
+        if (disp.isPropFork== false){
         StakeInfo storage stakes = staker[disp.reportedMiner];  
             if (disp.tally != 0 ) { 
                 stakes.current_state = 0;
@@ -170,12 +174,10 @@ contract DisputesAndVoting is TokenAndStaking {
             }
         emit DisputeVoteTallied(_disputeId,disp.tally,disp.reportedMiner,disp.reportingParty,disp.disputeVotePassed); 
         } else {
-            uint minQuorum = (totalSupply * 75 / 100);
+            uint minQuorum = (total_supply * 75 / 100);
             require(disp.quorum > minQuorum);
-            propFork storage fork = propFork[_disputeId];
-            deployNewOracle(fork.propForkFee,fork.disputeFee, fork.stakeAmt, fork.payoutStructure, for.devShare);
+            emit NewTellorAddress(propForkAddress[_disputeId]);
         }
-
     }
 
     /**
@@ -259,37 +261,5 @@ contract DisputesAndVoting is TokenAndStaking {
         return disputes[_disputeId].voted[_address];
     }
 
-    /**
-    * @dev Deploys a new Tellor 
-    * @param _propForkFee;
-    * @param _disputeFee is the fee for initiating a dispute
-    * @param _stakeAmt is the amount of Tributes that need to be staked by miners to be allowed to mine
-    * @param _payoutStructure for miners
-    * @param _devShare from mining
-    */
-    function deployNewOracle(uint _propForkFee,uint _disputeFee, uint _stakeAmt, uint[5] _payoutStructure, uint _devShare) internal returns(address){
-        address new_oracle = createClone(dud_Oracle);
-        Tellor(new_oracle).init(_propForkFee,_disputeFee, _stakeAmt, _payoutStructure, _devShare); 
-        emit NewOracleDeployed(new_oracle);
-        return new_oracle;
-    }
 
-
-    /**
-    * @dev Creates oracle clone
-    * @param target is the address being cloned
-    * @return address for clone
-    */
-    function createClone(address target) internal returns (address result) {
-        bytes memory clone = hex"600034603b57603080600f833981f36000368180378080368173bebebebebebebebebebebebebebebebebebebebe5af43d82803e15602c573d90f35b3d90fd";
-        bytes20 targetBytes = bytes20(target);
-        for (uint i = 0; i < 20; i++) {
-            clone[26 + i] = targetBytes[i];
-        }
-        assembly {
-            let len := mload(clone)
-            let data := add(clone, 0x20)
-            result := create(0, data, len)
-        }
-    }
 }

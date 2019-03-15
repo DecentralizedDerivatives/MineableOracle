@@ -50,49 +50,12 @@ contract Tellor is DisputesAndVoting{
     /*Constructor*/
     /**
     * @dev constructor
-    * @param _propForkFee;
-    * @param _disputeFee is the fee for initiating a dispute
-    * @param _stakeAmt is the amount of Tributes that need to be staked by miners to be allowed to mine
-    * @param _payoutStructure for miners
-    * @param _devShare from mining
     */    
-    constructor(uint _propForkFee,uint _disputeFee, uint _stakeAmt, uint[5] _payoutStructure, uint _devShare) public{
+    constructor() public{
         timeOfLastProof = now - now  % timeTarget;
         difficulty_level = 1;
-        propForkFee = _propForkFee;
-        disputeFee = _disputeFee;
-        stakeAmt = _stakeAmt;
-        devShare = _devShare;
-        payoutStructure = _payoutStructure;
-        for(uint i = 0;i<5;i++){
-            payoutTotal += _payoutStructure[i];
-        }
-        //timeTarget = _timeTarget;?//_timeTarget for the dificulty adjustment
-        //requestFee = _requestFee;? //_requestFee is the minimum fee to requestData
     }
 
-    /**
-    * @dev Constructor for cloned oracle that sets the passed value as the token to be mineable.
-    * @param _propForkFee;
-    * @param _disputeFee is the fee for initiating a dispute
-    * @param _stakeAmt is the amount of Tributes that need to be staked by miners to be allowed to mine
-    * @param _payoutStructure for miners
-    * @param _devShare from mining
-    */  
-    function init(uint _propForkFee,uint _disputeFee, uint _stakeAmt, uint[5] _payoutStructure, uint _devShare) public{
-        timeOfLastProof = now - now  % timeTarget;
-        difficulty_level = 1;
-        propForkFee = _propForkFee;
-        disputeFee = _disputeFee;
-        stakeAmt = _stakeAmt;
-        devShare = _devShare;
-        payoutStructure = _payoutStructure;
-        for(uint i = 0;i<5;i++){
-            payoutTotal += _payoutStructure[i];
-        }
-        //timeTarget = _timeTarget;?//_timeTarget for the dificulty adjustment
-        //requestFee = _requestFee;? //_requestFee is the minimum fee to requestData
-    }
 
     /*Functions*/
     /*
