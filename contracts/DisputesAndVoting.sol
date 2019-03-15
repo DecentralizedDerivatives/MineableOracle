@@ -102,7 +102,7 @@ contract DisputesAndVoting is TokenAndStaking {
     * @dev propose fork
     * @param _propNewTellorAddress address for new proposed Tellor
     */
-    function propFork(address _propNewTellorAddress) public {
+    function propFork(address _propNewTellorAddress) external {
         doTransfer(msg.sender,address(this), forkFee);
         uint disputeId = disputesIds.length + 1;
         disputes[disputeId] = Dispute({

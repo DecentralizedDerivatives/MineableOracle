@@ -16,11 +16,11 @@ contract TellorData {
 
     /*DisputesAndVoting*/ uint8 public constant decimals = 18;//18 decimal standard ERC20
     /*DisputesAndVoting*/ uint constant public disputeFee = 1e18;//cost to dispute a mined value
-    /*DisputesAndVoting*/ uint public forkFee;
+    /*DisputesAndVoting*/ uint public forkFee = 10000e18;
     /*TokenAndStaking*/ uint public total_supply; //total_supply of the token in circulation
     /*TokenAndStaking*/ uint constant public stakeAmt = 1000e18;//stakeAmount for miners (we can cut gas if we just hardcode it in...or should it be variable?)
     /*TokenAndStaking*/ uint public stakers; //number of parties currently staked
-    /*Tellor*/ uint public devShare;
+
     /*Tellor*/ uint public timeOfLastProof; // time of last challenge solved
     /*Tellor*/ uint256 public difficulty_level; // Difficulty of current block
     /*Tellor*/ uint public apiIdOnQ; // apiId of the on queue request
