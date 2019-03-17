@@ -8,7 +8,7 @@
 // const helper = require("./helpers/test_helpers");
 // //const ethers = require('ethers');
 
-// const Oracle = artifacts.require("./Oracle.sol"); // globally injected artifacts helper
+// const Oracle = artifacts.require("./Tellor.sol"); // globally injected artifacts helper
 // var Reader = artifacts.require("Reader.sol");
 // var oracleAbi = Oracle.abi;
 // var oracleByte = Oracle.bytecode;
@@ -46,6 +46,12 @@
 //         owner = accounts[0];
 //         oracle = await Oracle.new();
 //         oracle2 = await new web3.eth.Contract(oracleAbi,oracle.address);
+
+//         //Deploy tellorStorage
+//         tellorStorage= await TellorStorage.new();
+//         //set tellorContract on tellor storage
+//         await tellorStorage.setTellorContract(oracle.address); 
+
 //         await oracle.initStake();
 //         res0 = await oracle.requestData(api,0);
 //         await helper.advanceTime(86400 * 8);
@@ -56,8 +62,9 @@
 //     it("transferOwnership", async function () {
 //         let checkowner = await oracle.owner();
 //         console.log("init owner", checkowner);
+//         console.log("acct 0", accounts[0] );
 //         assert(checkowner == accounts[0], "initial owner acct 0");
-//         await oracle2.methods.transferOwnership(accounts[2]).send({from:accounts[0]} );
+//         await oracle.transferOwnership(accounts[2], {from:accounts[0] } );
 //         checkowner = await oracle.owner();
 //         assert(checkowner == accounts[2], "initial owner acct 2");
 //    });

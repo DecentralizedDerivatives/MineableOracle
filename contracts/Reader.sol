@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-import './Oracle.sol';
+import './Tellor.sol';
 /**
 * @title Reader
 * This contracts tests for authorized and unauthorized access to data
@@ -12,10 +12,10 @@ contract Reader{
 
     /**
     @dev Getter function to get value for last mined _timestamp
-    @param _oracle_add OracleToken Address
+    @param _oracle_add Tellor Address
     */
 	function getLastValue(address _oracle_add) public {
-		Oracle doracle = Oracle(_oracle_add);
+		Tellor doracle = Tellor(_oracle_add);
 		(value,ifRetrieve) = doracle.getLastQuery();
 	}
 }
