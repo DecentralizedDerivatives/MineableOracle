@@ -1,6 +1,7 @@
 pragma solidity ^0.5.0;
 
 import "./libraries/SafeMath.sol";
+import "./TellorData.sol";
 import "./Ownable.sol";
 
 /**
@@ -8,7 +9,7 @@ import "./Ownable.sol";
 * @dev This contracts contains the ERC20 token functions and staking functions for 
 * Tellor Tributes
 */
-contract TokenAndStaking is Ownable{
+contract TokenAndStaking is TellorData,Ownable{
     using SafeMath for uint256;
 
     // /*Variables*/
