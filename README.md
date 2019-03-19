@@ -124,9 +124,9 @@ December 10, 2018 -- This project has been revised to improve security.
 
 #### Contributors<a name="contributors"> </a>
 
-Nicholas Fett (nfett@daxia.us), Brenda Loya (bloya@daxia.us), Kevin Leffew (kleffew94@gmail.com), Sam Everett (severett29@gmail.com),  Lucian Stroie (luciandstroie@gmail.com)
+This repository is maintained by the Tellor team - [www.tellor.io](https://www.tellor.io)
 
 
 #### Copyright
 
-DDA Inc. 2018
+Tellor Inc. 2019

@@ -12,50 +12,12 @@ import "./DisputesAndVoting.sol";
 contract Tellor is DisputesAndVoting{
     using SafeMath for uint256;
 
-    // /*Variables*/
-    // bytes32 public currentChallenge; //current challenge to be solved
-    // bytes32 public apiOnQ; //string of current api with highest PayoutPool not currently being mined
-    // uint public timeOfLastProof; // time of last challenge solved
-    // uint256 public difficulty_level; // Difficulty of current block
-    // uint public apiIdOnQ; // apiId of the on queue request
-    // uint public apiOnQPayout; //value of highest api/timestamp PayoutPool
-    // uint public miningApiId; //API being mined--updates with the ApiOnQ Id 
-    // uint public requests; // total number of requests through the system
-    // uint public count;//Number of miners who have mined this value so far
-    // uint  constant public payoutTotal = 22e18;//Mining Reward in PoWo tokens given to all miners per value
-    // uint constant public timeTarget = 10 * 60; //The time between blocks (mined Oracle values)
-    // uint[5] public payoutStructure =  [1e18,5e18,10e18,5e18,1e18];//The structure of the payout (how much uncles vs winner recieve)
-    // uint[51] public payoutPool; //uint50 array of the top50 requests by payment amount
-    // uint[] public timestamps; //array of all timestamps requested
-
-    // //challenge to miner address to yes/no--where yes if they completed the channlenge
-    // mapping(bytes32 => mapping(address=>bool)) public miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
-    // mapping(uint => uint) public timeToApiId;//minedTimestamp to apiId 
-    // mapping(uint => uint) public payoutPoolIndexToApiId; //link from payoutPoolIndex (position in payout pool array) to apiId
-
-    // Details[5] public first_five; //This struct is for organizing the five mined values to find the median
-    // struct Details {
-    //     uint value;
-    //     address miner;
-    // }
-
     /*Events*/
     event NewValue(uint _apiId, uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
-    event ValueAddedToPool(address sender, uint _apiId, uint _value);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
-    event DataRequested(address _sender,string _sapi, bytes32 _apiHash, uint _apiId);//Emits when someone retireves data, this shows the msg.sender, the party who gets the read, and the timestamp requested
+    event DataRequested(address sender, string _sapi,uint _apiId, uint _value);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
     event NonceSubmitted(address _miner, string _nonce, uint _apiId, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
     event NewAPIonQinfo(uint _apiId, string _sapi, bytes32 _apiOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
     event NewChallenge(bytes32 _currentChallenge,uint _miningApiId,uint _difficulty_level,string _api); //emits when a new challenge is created (either on mined block or when a new request is pushed forward on waiting system)
-
-    /*Constructor*/
-    /**
-    * @dev constructor
-    */    
-    constructor() public{
-        timeOfLastProof = now - now  % timeTarget;
-        difficulty_level = 1;
-    }
-
 
     /*Functions*/
     /*
@@ -172,30 +134,33 @@ contract Tellor is DisputesAndVoting{
     * mine the apiOnQ, or the api with the highest payout pool
     * @return _apiId for the request
     */
-    function requestData(string calldata c_sapi, uint _tip) external {
-        string memory _sapi = c_sapi;
-        require(bytes(_sapi).length > 0);
-        bytes32 _apiHash = sha256(abi.encodePacked(_sapi));
-        if(apiId[_apiHash] > 0){
-            addToValuePool(apiId[_apiHash],_tip);
-        }
-        else{
-            if(_tip > 0){
-                doTransfer(msg.sender,address(this),_tip);
+    function requestData(string calldata c_sapi,uint c_apiId, uint _tip) external {
+        uint _apiId = c_apiId;
+        if(_apiId == 0){
+            string memory _sapi = c_sapi;
+            require(bytes(_sapi).length > 0);
+            bytes32 _apiHash = sha256(abi.encodePacked(_sapi));
+            if(apiId[_apiHash] == 0){
+                requests++;
+                _apiId=requests;
+                apiDetails[_apiId] = API({
+                    apiString : _sapi, 
+                    apiHash: _apiHash,
+                    payout: 0,
+                    index: 0
+                    });
+                apiId[_apiHash] = _apiId;
             }
-            requests++;
-            uint _apiId;
-            _apiId=requests;
-            apiDetails[_apiId] = API({
-                apiString : _sapi, 
-                apiHash: _apiHash,
-                payout: _tip,
-                index: 0
-                });
-            apiId[_apiHash] = _apiId;
-            updateAPIonQ(_apiId);
-            emit DataRequested(msg.sender,_sapi,_apiHash,_apiId);
+            else{
+                _apiId = apiId[_apiHash];
+            }
         }
+        if(_tip > 0){
+            doTransfer(msg.sender,address(this),_tip);
+            apiDetails[_apiId].payout = apiDetails[_apiId].payout.add(_tip);
+        }
+        updateAPIonQ(_apiId);
+        emit DataRequested(msg.sender,apiDetails[_apiId].apiString,_apiId,_tip);
     }
 
     /**
@@ -303,24 +268,6 @@ contract Tellor is DisputesAndVoting{
     */
     function retrieveData(uint _apiId, uint _timestamp) public view returns (uint) {
         return apiDetails[_apiId].values[_timestamp];
-    }
-    
-    /**
-    * @dev Adds the _tip to the valuePool that pays the miners. The if statement is 
-    * necessary instead of a require statment to allow for the first initial dataRequest
-    * to be executed and initiate mining. Do not remove the if statment or move the 
-    * adding to payout line into the if statment. 
-    * @param _apiId the api Id the user want to add to the value pool.
-    * @param _tip amount to add to value pool
-    * By adding a _tip to insentivize the miners to submit a value
-    */
-    function addToValuePool (uint _apiId, uint _tip) public {      
-        if(_tip > 0){
-            doTransfer(msg.sender,address(this),_tip);
-        }
-        apiDetails[_apiId].payout = apiDetails[_apiId].payout.add(_tip);
-        updateAPIonQ(_apiId);
-        emit ValueAddedToPool(msg.sender,_apiId,_tip);
     }
 
     /**

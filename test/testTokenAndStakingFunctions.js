@@ -1,5 +1,6 @@
 /** 
 * This contract tests the Oracle functions
+*To write - testing forks, adding only owner to forks?
 */ 
 
 const Web3 = require('web3')
@@ -77,7 +78,7 @@ contract('Token and Staking Tests', function(accounts) {
         assert(web3.utils.fromWei(balance5) == 1005, "balance for acct 5 is 1005");
     });
 
-    it("Approve and transferFrom", async function(){
+   /* it("Approve and transferFrom", async function(){
     	t = web3.utils.toWei('7', 'ether');
         await oracle.approve(accounts[1], t, {from:accounts[2]});
         balance0a = await (oracle.balanceOf(accounts[2],{from:accounts[1]}));
@@ -191,5 +192,5 @@ contract('Token and Staking Tests', function(accounts) {
         let resApiHash = await res.logs[2].args._apiHash;
         apiHash = await oracle.getApiHash(2); 
         assert(web3.utils.hexToNumberString(apiHash) == web3.utils.hexToNumberString(resApiHash), "api on Q should be apiId");
-    });
+    });*/
 });

@@ -6,9 +6,6 @@ contract TellorData {
 
     /*TellorStorage*/ address public tellorStorageOwner;//TellorStorage Owner address
     /*TellorStorage*/ address public tellorContract;//Tellor address
-    /*Variables ownable*/
-    /*Ownable*/ address public _owner;//Tellor Owner address
-
 
     /*Variables Tellor*/
     /*Tellor*/ bytes32 public currentChallenge; //current challenge to be solved
@@ -16,13 +13,13 @@ contract TellorData {
 
     /*DisputesAndVoting*/ uint8 public constant decimals = 18;//18 decimal standard ERC20
     /*DisputesAndVoting*/ uint constant public disputeFee = 1e18;//cost to dispute a mined value
-    /*DisputesAndVoting*/ uint public forkFee = 10000e18;
     /*TokenAndStaking*/ uint public total_supply; //total_supply of the token in circulation
     /*TokenAndStaking*/ uint constant public stakeAmt = 1000e18;//stakeAmount for miners (we can cut gas if we just hardcode it in...or should it be variable?)
     /*TokenAndStaking*/ uint public stakers; //number of parties currently staked
 
-    /*Tellor*/ uint public timeOfLastProof; // time of last challenge solved
-    /*Tellor*/ uint256 public difficulty_level; // Difficulty of current block
+
+    /*Tellor*/ uint public timeOfLastProof = now - now  % timeTarget; // time of last challenge solved
+    /*Tellor*/ uint256 public difficulty_level = 1; // Difficulty of current block
     /*Tellor*/ uint public apiIdOnQ; // apiId of the on queue request
     /*Tellor*/ uint public apiOnQPayout; //value of highest api/timestamp PayoutPool
     /*Tellor*/ uint public miningApiId; //API being mined--updates with the ApiOnQ Id 
@@ -35,15 +32,15 @@ contract TellorData {
     /*Tellor*/ uint[] public timestamps; //array of all timestamps requested
     /*DisputesAndVoting*/ uint[] public disputesIds; //array of all disputes
 
-    /*Tellor*/ mapping(bytes32 => mapping(address=>bool)) public miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
-    /*Tellor*/ mapping(uint => uint) public timeToApiId;//minedTimestamp to apiId 
-    /*Tellor*/ mapping(uint => uint) public payoutPoolIndexToApiId; //link from payoutPoolIndex (position in payout pool array) to apiId
-    /*DisputesAndVoting*/ mapping(uint => Dispute) public disputes;//disputeId=> Dispute details
-    /*DisputesAndVoting*/ mapping(bytes32 => uint) public apiId;// api bytes32 gets an id = to count of requests array
-    /*TokenAndStaking*/ mapping (address => Checkpoint[]) public balances; //balances of a party given blocks
+    /*Tellor*/ mapping(bytes32 => mapping(address=>bool)) miners;//This is a boolean that tells you if a given challenge has been completed by a given miner
+    /*Tellor*/ mapping(uint => uint) timeToApiId;//minedTimestamp to apiId 
+    /*Tellor*/ mapping(uint => uint) payoutPoolIndexToApiId; //link from payoutPoolIndex (position in payout pool array) to apiId
+    /*DisputesAndVoting*/ mapping(uint => Dispute) disputes;//disputeId=> Dispute details
+    /*DisputesAndVoting*/ mapping(bytes32 => uint) apiId;// api bytes32 gets an id = to count of requests array
+    /*TokenAndStaking*/ mapping (address => Checkpoint[]) balances; //balances of a party given blocks
     /*TokenAndStaking*/ mapping(address => mapping (address => uint)) internal allowed; //allowance for a given party and approver
-    /*TokenAndStaking*/ mapping(address => StakeInfo) public staker;//mapping from a persons address to their staking info
-    /*DisputesAndVoting*/ mapping(uint => API) public apiDetails;//mapping of apiID to details
+    /*TokenAndStaking*/ mapping(address => StakeInfo)  staker;//mapping from a persons address to their staking info
+    /*DisputesAndVoting*/ mapping(uint => API) apiDetails;//mapping of apiID to details
     /*DisputesAndVoting*/mapping(uint => address) propForkAddress;//maps proposalID to struct propFork
 
     /*DisputesAndVoting*/ string public constant name = "Tellor Tributes"; //name of the Token
@@ -93,5 +90,7 @@ contract TellorData {
         mapping(uint => address[5]) minersbyvalue;  
     }    
 
+    /*Variables ownable*/
+    /*Ownable*/ address private _owner;//Tellor Owner address
 
 }

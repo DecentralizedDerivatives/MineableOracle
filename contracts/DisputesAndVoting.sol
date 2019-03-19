@@ -11,52 +11,6 @@ import "./TokenAndStaking.sol";
 */
 contract DisputesAndVoting is TokenAndStaking {
     
-    // /*Variables*/
-    // uint8 public constant decimals = 18;//18 decimal standard ERC20
-    // uint constant public disputeFee = 1e18;//cost to dispute a mined value
-    // string public constant name = "Tellor Tributes"; //name of the Token
-    // string public constant symbol = "TT";//Token Symbol
-    // uint[] public disputesIds; //array of all disputes
-    
-    // mapping(uint => Dispute) public disputes;//disputeId=> Dispute details
-    // mapping(bytes32 => uint) public apiId;// api bytes32 gets an id = to count of requests array
-    //  struct API{
-    //     string apiString;//id to string api
-    //     bytes32 apiHash;//hash of string
-    //     uint index; //index in payoutPool
-    //     uint payout;//current payout of the api, zeroed once mined
-    //     mapping(uint => uint) minedBlockNum;//[apiId][minedTimestamp]=>block.number
-    //     mapping(uint => uint) values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
-    //     mapping(uint => address[5]) minersbyvalue;  
-    // }
-    // mapping(uint => API) public apiDetails;//mapping of apiID to details
- 
-    // struct Dispute {
-    //     bool executed;//is the dispute settled
-    //     bool disputeVotePassed;//did the vote pass?
-    //     address reportedMiner; //miner who alledgedly submitted the 'bad value' will get disputeFee if dispute vote fails
-    //     address reportingParty;//miner reporting the 'bad value'-pay disputeFee will get reportedMiner's stake if dispute vote passes
-    //     uint apiId;//apiID of disputed value
-    //     uint timestamp;//timestamp of distputed value
-    //     uint value; //the value being disputed
-    //     uint minExecutionDate;//7 days from when dispute initialized
-    //     uint numberOfVotes;//the number of parties who have voted on the measure
-    //     uint  blockNumber;// the blocknumber for which votes will be calculated from
-    //     uint index; //index in dispute array
-    //     uint quorum; //quorum for dispute vote 
-    //     int tally;//current tally of votes for - against measure
-    //     mapping (address => bool) voted; //mapping of address to whether or not they voted
-    // } 
-
-    // uint public propForkFee;
-    // struct propFork {
-    //     uint propForkFee;
-    //     uint disputeFee;
-    //     uint stakeAmt;
-    //     uint[5] payoutStructure;
-    // }
-    // mapping(uint => propFork) propFork;//maps proposalID to struct propFork
-
     /*Events*/
     event NewDispute(uint _DisputeID, uint _apiId, uint _timestamp);//emitted when a new dispute is initialized
     event Voted(uint _disputeID, bool _position, address _voter);//emitted when a new vote happens
@@ -103,7 +57,7 @@ contract DisputesAndVoting is TokenAndStaking {
     * @param _propNewTellorAddress address for new proposed Tellor
     */
     function propFork(address _propNewTellorAddress) external {
-        doTransfer(msg.sender,address(this), forkFee);
+        doTransfer(msg.sender,address(this), 10000e18);//This is the fork fee
         uint disputeId = disputesIds.length + 1;
         disputes[disputeId] = Dispute({
             isPropFork: true,
