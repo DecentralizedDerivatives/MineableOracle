@@ -6,7 +6,8 @@ contract TellorData {
 
     /*TellorStorage*/ address public tellorStorageOwner;//TellorStorage Owner address
     /*TellorStorage*/ address public tellorContract;//Tellor address
-
+    /*Variables ownable*/
+    /*Ownable*/ address public _owner;//Tellor Owner address
     /*Variables Tellor*/
     /*Tellor*/ bytes32 public currentChallenge; //current challenge to be solved
     /*Tellor*/ bytes32 public apiOnQ; //string of current api with highest PayoutPool not currently being mined
@@ -89,8 +90,23 @@ contract TellorData {
         mapping(uint => uint) values;//This the time series of values stored by the contract where uint UNIX timestamp is mapped to value
         mapping(uint => address[5]) minersbyvalue;  
     }    
+    event NewValue(uint _apiId, uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
+    event DataRequested(address sender, string _sapi,uint _apiId, uint _value);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
+    event NonceSubmitted(address _miner, string _nonce, uint _apiId, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
+    event NewAPIonQinfo(uint _apiId, string _sapi, bytes32 _apiOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
+    event NewChallenge(bytes32 _currentChallenge,uint _miningApiId,uint _difficulty_level,string _api); //emits when a new challenge is created (either on mined block or when a new request is pushed forward on waiting system)
 
-    /*Variables ownable*/
-    /*Ownable*/ address private _owner;//Tellor Owner address
+    event Approval(address indexed owner, address indexed spender, uint256 value);//ERC20 Approval event
+    event Transfer(address indexed from, address indexed to, uint256 value);//ERC20 Transfer Event
+    event NewStake(address _sender);//Emits upon new staker
+    event StakeWithdrawn(address _sender);//Emits when a staker is now no longer staked
+    event StakeWithdrawRequested(address _sender);//Emits when a staker begins the 7 day withdraw period
+    event NewDispute(uint _DisputeID, uint _apiId, uint _timestamp);//emitted when a new dispute is initialized
+    event Voted(uint _disputeID, bool _position, address _voter);//emitted when a new vote happens
+    event DisputeVoteTallied(uint _disputeID, int _result,address _reportedMiner,address _reportingParty, bool _active);//emitted upon dispute tally
+    event NewTellorAddress(address _newTellor); //emmited when a proposed fork is voted true
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event newTellorContract(address indexed _tellorContract);
+    
 
 }

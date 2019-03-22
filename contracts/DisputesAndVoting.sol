@@ -12,10 +12,14 @@ import "./TokenAndStaking.sol";
 contract DisputesAndVoting is TokenAndStaking {
     
     /*Events*/
-    event NewDispute(uint _DisputeID, uint _apiId, uint _timestamp);//emitted when a new dispute is initialized
-    event Voted(uint _disputeID, bool _position, address _voter);//emitted when a new vote happens
-    event DisputeVoteTallied(uint _disputeID, int _result,address _reportedMiner,address _reportingParty, bool _active);//emitted upon dispute tally
-    event NewTellorAddress(address _newTellor); //emmited when a proposed fork is voted true
+
+
+    // event NewDispute(uint _DisputeID, uint _apiId, uint _timestamp);//emitted when a new dispute is initialized
+    // event Voted(uint _disputeID, bool _position, address _voter);//emitted when a new vote happens
+    // event DisputeVoteTallied(uint _disputeID, int _result,address _reportedMiner,address _reportingParty, bool _active);//emitted upon dispute tally
+    // event NewTellorAddress(address _newTellor); //emmited when a proposed fork is voted true
+    
+
     /*****************Disputes and Voting Functions***************/
     /**
     * @dev Helps initialize a dispute by assigning it a disputeId 
@@ -130,6 +134,7 @@ contract DisputesAndVoting is TokenAndStaking {
         } else {
             uint minQuorum = (total_supply * 75 / 100);
             require(disp.quorum > minQuorum);
+            /*Change new address*/
             emit NewTellorAddress(propForkAddress[_disputeId]);
         }
     }

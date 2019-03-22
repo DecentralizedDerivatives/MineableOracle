@@ -13,11 +13,11 @@ contract Tellor is DisputesAndVoting{
     using SafeMath for uint256;
 
     /*Events*/
-    event NewValue(uint _apiId, uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
-    event DataRequested(address sender, string _sapi,uint _apiId, uint _value);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
-    event NonceSubmitted(address _miner, string _nonce, uint _apiId, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
-    event NewAPIonQinfo(uint _apiId, string _sapi, bytes32 _apiOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
-    event NewChallenge(bytes32 _currentChallenge,uint _miningApiId,uint _difficulty_level,string _api); //emits when a new challenge is created (either on mined block or when a new request is pushed forward on waiting system)
+    // event NewValue(uint _apiId, uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
+    // event DataRequested(address sender, string _sapi,uint _apiId, uint _value);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
+    // event NonceSubmitted(address _miner, string _nonce, uint _apiId, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
+    // event NewAPIonQinfo(uint _apiId, string _sapi, bytes32 _apiOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
+    // event NewChallenge(bytes32 _currentChallenge,uint _miningApiId,uint _difficulty_level,string _api); //emits when a new challenge is created (either on mined block or when a new request is pushed forward on waiting system)
 
     /*Functions*/
     /*
@@ -65,7 +65,6 @@ contract Tellor is DisputesAndVoting{
         emit NonceSubmitted(msg.sender,nonce,_apiId,value);
         if(count == 5) { 
             API storage _api = apiDetails[_apiId];
-            uint[3] memory nums; //reusable number array -- _amount,_paid,payoutMultiplier
             if(int(difficulty_level) + (int(timeTarget) - int(now - timeOfLastProof))/60 > 0){
                 difficulty_level = uint(int(difficulty_level) + (int(timeTarget) - int(now - timeOfLastProof))/60);
             }
@@ -73,13 +72,6 @@ contract Tellor is DisputesAndVoting{
                 difficulty_level = 1;
             }
             timeOfLastProof = now - (now % timeTarget);
-            if(_api.payout >= payoutTotal) {
-                nums[2] = (_api.payout + payoutTotal) / payoutTotal; //solidity should always round down
-                _api.payout = _api.payout % payoutTotal;
-            }
-            else{
-                nums[2] = 1;
-            }
             Details[5] memory a = first_five;
             uint i;
             for (i = 1;i <5;i++){
@@ -97,12 +89,10 @@ contract Tellor is DisputesAndVoting{
                 }
             }
             for (i = 0;i <5;i++){
-                nums[1] = payoutStructure[i]*nums[2] + _api.payout/5;
-                doTransfer(address(this),a[i].miner,nums[1]);
-                nums[0] = nums[0] + nums[1];
+                doTransfer(address(this),a[i].miner,payoutStructure[i] + _api.payout/22 * payoutStructure[i] / 1e18);
             }
-            _api.payout = 0;      
-            total_supply += nums[0];
+            _api.payout = 0; 
+            total_supply += payoutTotal + payoutTotal*10/100;
             doTransfer(address(this),owner(),(payoutTotal * 10 / 100));//The ten there is the devshare
             _api.values[timeOfLastProof] = a[2].value;
             _api.minersbyvalue[timeOfLastProof] = [a[0].miner,a[1].miner,a[2].miner,a[3].miner,a[4].miner];
@@ -114,6 +104,7 @@ contract Tellor is DisputesAndVoting{
             payoutPool[apiDetails[apiIdOnQ].index] = 0;
             payoutPoolIndexToApiId[apiDetails[apiIdOnQ].index] = 0;
             apiDetails[apiIdOnQ].index = 0;
+            uint[2] memory nums; //reusable number array -- _amount,_paid,payoutMultiplier
             if(miningApiId > 0){
                 (nums[0],nums[1]) = Utilities.getMax(payoutPool);
                 apiIdOnQ = payoutPoolIndexToApiId[nums[1]];

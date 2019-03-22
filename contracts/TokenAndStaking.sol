@@ -1,7 +1,6 @@
 pragma solidity ^0.5.0;
 
 import "./libraries/SafeMath.sol";
-import "./TellorData.sol";
 import "./Ownable.sol";
 
 /**
@@ -9,7 +8,7 @@ import "./Ownable.sol";
 * @dev This contracts contains the ERC20 token functions and staking functions for 
 * Tellor Tributes
 */
-contract TokenAndStaking is TellorData,Ownable{
+contract TokenAndStaking is Ownable{
     using SafeMath for uint256;
 
     // /*Variables*/
@@ -29,11 +28,12 @@ contract TokenAndStaking is TellorData,Ownable{
     // }
       
     /*Events*/
-    event Approval(address indexed owner, address indexed spender, uint256 value);//ERC20 Approval event
+    /*event Approval(address indexed owner, address indexed spender, uint256 value);//ERC20 Approval event
     event Transfer(address indexed from, address indexed to, uint256 value);//ERC20 Transfer Event
     event NewStake(address _sender);//Emits upon new staker
     event StakeWithdrawn(address _sender);//Emits when a staker is now no longer staked
     event StakeWithdrawRequested(address _sender);//Emits when a staker begins the 7 day withdraw period
+    */
 
     /*Functions*/
     /**

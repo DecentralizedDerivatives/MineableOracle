@@ -8,8 +8,6 @@ contract TellorStorage is TellorData{
     //address public tellorContract;//Tellor address
     
     /*Event*/
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event newTellorContract(address indexed _tellorContract);
 
     /*Modifiers*/
     modifier onlyOwner() {
