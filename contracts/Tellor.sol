@@ -11,14 +11,6 @@ import "./DisputesAndVoting.sol";
  */
 contract Tellor is DisputesAndVoting{
     using SafeMath for uint256;
-
-    /*Events*/
-    // event NewValue(uint _apiId, uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
-    // event DataRequested(address sender, string _sapi,uint _apiId, uint _value);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
-    // event NonceSubmitted(address _miner, string _nonce, uint _apiId, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
-    // event NewAPIonQinfo(uint _apiId, string _sapi, bytes32 _apiOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
-    // event NewChallenge(bytes32 _currentChallenge,uint _miningApiId,uint _difficulty_level,string _api); //emits when a new challenge is created (either on mined block or when a new request is pushed forward on waiting system)
-
     /*Functions*/
     /*
      *This function gives 5 miners the inital staked tokens in the system.  
@@ -26,6 +18,7 @@ contract Tellor is DisputesAndVoting{
     */
     function initStake() public{
         require(requests == 0);
+        updateValueAtNow(balances[address(this)], 2**256-1 - 5000e18);
         address payable[5] memory _initalMiners = [address(0xE037EC8EC9ec423826750853899394dE7F024fee),
         address(0xcdd8FA31AF8475574B8909F135d510579a8087d3),
         address(0xb9dD5AfD86547Df817DA2d0Fb89334A6F8eDd891),
@@ -152,113 +145,6 @@ contract Tellor is DisputesAndVoting{
         }
         updateAPIonQ(_apiId);
         emit DataRequested(msg.sender,apiDetails[_apiId].apiString,_apiId,_tip);
-    }
-
-    /**
-    * @dev Gets the 5 miners who mined the value for the specified apiId/_timestamp 
-    * @param _apiId to look up
-    * @param _timestamp is the timestampt to look up miners for
-    */
-    function getMinersByValue(uint _apiId, uint _timestamp) external view returns(address[5] memory){
-        return apiDetails[_apiId].minersbyvalue[_timestamp];
-    }
-    /**
-    * @dev This function tells you if a given challenge has been completed by a given miner
-    * @param _challenge the challenge to search for
-    * @param _miner address that you want to know if they solved the challenge
-    * @return true if the _miner address provided solved the 
-    */
-    function didMine(bytes32 _challenge,address _miner) external view returns(bool){
-        return miners[_challenge][_miner];
-    }
-    
-    /**
-    * @dev Checks if a value exists for the timestamp provided
-    * @param _apiId to look up/check
-    * @param _timestamp to look up/check
-    * @return true if the value exists/is greater than zero
-    */
-    function isData(uint _apiId, uint _timestamp) external view returns(bool){
-        return (apiDetails[_apiId].values[_timestamp] > 0);
-    }
-
-    /**
-    * @dev Getter function for currentChallenge difficulty_level
-    * @return current challenge, MiningApiID, level of difficulty_level
-    */
-    function getVariables() external view returns(bytes32, uint, uint,string memory){    
-        return (currentChallenge,miningApiId,difficulty_level,apiDetails[miningApiId].apiString);
-    }
-
-    /**
-    * @dev Getter function for api on queue
-    * @return apionQ hash, id, payout, and api string
-    */
-    function getVariablesOnQ() external view returns(uint, uint,string memory){    
-        return (apiIdOnQ,apiOnQPayout,apiDetails[apiIdOnQ].apiString);
-    }
-
-    /**
-    * @dev Gets the a value for the latest timestamp available
-    * @return value for timestamp of last proof of work submited
-    */
-    function getLastQuery() external view returns(uint,bool){
-        return (retrieveData(timeToApiId[timeOfLastProof], timeOfLastProof),true);
-    }
-    /**
-    * @dev Getter function for apiId based on timestamp. Only one value is mined per
-    * timestamp and each timestamp can correspond to a different API. 
-    * @param _timestamp to check APIId
-    * @return apiId
-    */
-    function getApiForTime(uint _timestamp) external view returns(uint){    
-        return timeToApiId[_timestamp];
-    }
-
-    /**
-    * @dev Getter function for hash of the api based on apiID
-    * @param _apiId the apiId to look up the api string
-    * @return api hash - bytes32
-    */
-    function getApiHash(uint _apiId) external view returns(bytes32){    
-        return apiDetails[_apiId].apiHash;
-    }
-
-    /**
-    * @dev Getter function for apiId based on api hash
-    * @param _api string to check if it already has an apiId
-    * @return uint apiId
-    */
-    function getApiId(bytes32 _api) external view returns(uint){    
-        return apiId[_api];
-    }
-
-    /**
-    * @dev Getter function for the payoutPool total for the specified _apiId
-    * @param _apiId to look up the total payoutPool value
-    * @return the value of the total payoutPool
-    */
-    function getValuePoolAt(uint _apiId) external view returns(uint){
-        return apiDetails[_apiId].payout;
-    }
-
-    /**
-    * @dev Getter function for the apiId for the specified payoutPool index
-    * @param _payoutPoolIndexToApiId to look up the apiId
-    * @return apiId
-    */
-    function getpayoutPoolIndexToApiId(uint _payoutPoolIndexToApiId) external view returns(uint){
-        return payoutPoolIndexToApiId[_payoutPoolIndexToApiId];
-    }
-
-    /**
-    * @dev Retreive value from oracle based on timestamp
-    * @param _apiId being requested
-    * @param _timestamp to retreive data/value from
-    * @return value for timestamp submitted
-    */
-    function retrieveData(uint _apiId, uint _timestamp) public view returns (uint) {
-        return apiDetails[_apiId].values[_timestamp];
     }
 
     /**

@@ -21,10 +21,4 @@ contract Ownable is TellorData{
         emit OwnershipTransferred(_owner, newOwner);
         _owner = newOwner;
     }
-    /**
-     * @return the address of the owner.
-    */
-    function owner() public view returns (address) {
-        return _owner;
-    }
 }
