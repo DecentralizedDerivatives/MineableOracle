@@ -300,4 +300,14 @@
 //         data = await oracle.isData(1,res[1]);
 //         assert(res['2'] == 0, "Data should be zero");
 //     });
+//     it("Test Granularity in Data", async function () {
+//         await web3.eth.sendTransaction({to: oracle.address,from:accounts[2],gas:7000000,data:oracle2.methods.requestData(api,0,1000,0).encodeABI()})
+//         var vars = await oracle.getVariables()
+//         console.log(vars);
+//         assert(vars['4'] == 1000);
+//         await web3.eth.sendTransaction({to: oracle.address,from:accounts[2],gas:7000000,data:oracle2.methods.requestData(api2,0,1,2).encodeABI()})
+//         logMineWatcher = await promisifyLogWatch(oracle2, 'NewValue');//or Event Mine?
+//         vars = await oracle.getVariables()
+//         assert(vars['4']==1);
+//     });
 // });

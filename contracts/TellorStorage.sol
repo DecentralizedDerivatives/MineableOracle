@@ -7,29 +7,10 @@ contract TellorStorage is TellorData{
      * @dev The constructor sets the original `tellorStorageOwner` of the contract to the sender
      * account.
     */
-    constructor ()  public{
-        tellorStorageOwner = msg.sender;
-         _owner = msg.sender;
-    }
-
-    /**
-    *@dev Sets the Tellor contract address
-    *@param _memberContract The new membership address
-    */
-    function setTellorContract(address _tellorContract) public {
-        require(msg.sender == tellorStorageOwner);
+    constructor (address _tellorContract)  public{
+        _owner = msg.sender;
         tellorContract = _tellorContract;
-        emit newTellorContract(_tellorContract);
-    }
-
-    /**
-     * @dev Allows the current owner to transfer control of the contract to a newOwner.
-     * @param newOwner The address to transfer ownership to.
-    */
-    function transferStorage(address newOwner) external {
-        require(msg.sender == tellorStorageOwner);
-        emit OwnershipTransferred(tellorStorageOwner, newOwner);
-        tellorStorageOwner = newOwner;
+        emit NewTellorAddress(_tellorContract);
     }
 
     function () external payable {

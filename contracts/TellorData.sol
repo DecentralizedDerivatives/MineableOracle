@@ -4,7 +4,6 @@ import "./libraries/SafeMath.sol";
 
 contract TellorData {
     using SafeMath for uint256;
-    /*TellorStorage*/ address public tellorStorageOwner;//TellorStorage Owner address
     /*TellorStorage*/ address public tellorContract;//Tellor address
     /*Variables ownable*/
     /*Ownable*/ address public _owner;//Tellor Owner address
@@ -84,6 +83,7 @@ contract TellorData {
     /*DisputesAndVoting*/ struct API{
         string apiString;//id to string api
         bytes32 apiHash;//hash of string
+        uint granularity; //multiplier for miners
         uint index; //index in payoutPool
         uint payout;//current payout of the api, zeroed once mined
         mapping(uint => uint) minedBlockNum;//[apiId][minedTimestamp]=>block.number
@@ -91,7 +91,7 @@ contract TellorData {
         mapping(uint => address[5]) minersbyvalue;  
     }    
     event NewValue(uint _apiId, uint _time, uint _value);//Emits upon a successful Mine, indicates the blocktime at point of the mine and the value mined
-    event DataRequested(address sender, string _sapi,uint _apiId, uint _value);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
+    event DataRequested(address sender, string _sapi,uint _granularity, uint _apiId, uint _value);//Emits upon someone adding value to a pool; msg.sender, amount added, and timestamp incentivized to be mined
     event NonceSubmitted(address _miner, string _nonce, uint _apiId, uint _value);//Emits upon each mine (5 total) and shows the miner, nonce, and value submitted
     event NewAPIonQinfo(uint _apiId, string _sapi, bytes32 _apiOnQ, uint _apiOnQPayout); //emits when a the payout of another request is higher after adding to the payoutPool or submitting a request
     event NewChallenge(bytes32 _currentChallenge,uint _miningApiId,uint _difficulty_level,string _api); //emits when a new challenge is created (either on mined block or when a new request is pushed forward on waiting system)
@@ -106,7 +106,6 @@ contract TellorData {
     event DisputeVoteTallied(uint _disputeID, int _result,address _reportedMiner,address _reportingParty, bool _active);//emitted upon dispute tally
     event NewTellorAddress(address _newTellor); //emmited when a proposed fork is voted true
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event newTellorContract(address indexed _tellorContract);
     /**
     * @dev Get Dispute information
     * @param _disputeId is the dispute id to check the outcome of
@@ -154,9 +153,9 @@ contract TellorData {
     * @return uint of index in PayoutPool array
     * @return uint of current payout for this api
     */
-    function getApiVars(uint _apiId) external view returns(string memory, bytes32, uint, uint) {
+    function getApiVars(uint _apiId) external view returns(string memory, bytes32,uint, uint, uint) {
         API storage _api = apiDetails[_apiId]; 
-        return (_api.apiString, _api.apiHash, _api.index,_api.payout);
+        return (_api.apiString, _api.apiHash, _api.granularity,_api.index,_api.payout);
     }
 
     /**
@@ -293,8 +292,8 @@ contract TellorData {
     * @dev Getter function for currentChallenge difficulty_level
     * @return current challenge, MiningApiID, level of difficulty_level
     */
-    function getVariables() external view returns(bytes32, uint, uint,string memory){    
-        return (currentChallenge,miningApiId,difficulty_level,apiDetails[miningApiId].apiString);
+    function getVariables() external view returns(bytes32, uint, uint,string memory,uint){    
+        return (currentChallenge,miningApiId,difficulty_level,apiDetails[miningApiId].apiString,apiDetails[miningApiId].granularity);
     }
 
     /**

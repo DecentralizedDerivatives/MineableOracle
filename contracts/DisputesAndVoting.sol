@@ -52,7 +52,7 @@ contract DisputesAndVoting is TokenAndStaking {
     * @param _propNewTellorAddress address for new proposed Tellor
     */
     function propFork(address _propNewTellorAddress) external {
-        doTransfer(msg.sender,address(this), 10000e18);//This is the fork fee
+        doTransfer(msg.sender,address(this), disputeFee);//This is the fork fee
         uint disputeId = disputesIds.length + 1;
         disputes[disputeId] = Dispute({
             isPropFork: true,
@@ -123,9 +123,8 @@ contract DisputesAndVoting is TokenAndStaking {
             }
         emit DisputeVoteTallied(_disputeId,disp.tally,disp.reportedMiner,disp.reportingParty,disp.disputeVotePassed); 
         } else {
-            uint minQuorum = (total_supply * 75 / 100);
-            require(disp.quorum > minQuorum);
-            /*Change new address*/
+            require(disp.quorum >  (total_supply * 50 / 100));
+            tellorContract = propForkAddress[_disputeId];
             emit NewTellorAddress(propForkAddress[_disputeId]);
         }
     }

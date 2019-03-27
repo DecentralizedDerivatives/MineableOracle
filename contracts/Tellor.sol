@@ -118,18 +118,20 @@ contract Tellor is DisputesAndVoting{
     * mine the apiOnQ, or the api with the highest payout pool
     * @return _apiId for the request
     */
-    function requestData(string calldata c_sapi,uint c_apiId, uint _tip) external {
+    function requestData(string calldata c_sapi,uint c_apiId,uint _granularity, uint _tip) external {
         uint _apiId = c_apiId;
+        require(_granularity > 0);
         if(_apiId == 0){
             string memory _sapi = c_sapi;
             require(bytes(_sapi).length > 0);
-            bytes32 _apiHash = sha256(abi.encodePacked(_sapi));
+            bytes32 _apiHash = sha256(abi.encodePacked(_sapi,_granularity));
             if(apiId[_apiHash] == 0){
                 requests++;
                 _apiId=requests;
                 apiDetails[_apiId] = API({
                     apiString : _sapi, 
                     apiHash: _apiHash,
+                    granularity:  _granularity,
                     payout: 0,
                     index: 0
                     });
@@ -144,7 +146,7 @@ contract Tellor is DisputesAndVoting{
             apiDetails[_apiId].payout = apiDetails[_apiId].payout.add(_tip);
         }
         updateAPIonQ(_apiId);
-        emit DataRequested(msg.sender,apiDetails[_apiId].apiString,_apiId,_tip);
+        emit DataRequested(msg.sender,apiDetails[_apiId].apiString,_granularity,_apiId,_tip);
     }
 
     /**
