@@ -26,7 +26,6 @@ contract DisputesAndVoting is TokenAndStaking {
         address[5] memory _miners = _api.minersbyvalue[_timestamp];
         bytes32 _hash = keccak256(abi.encodePacked(_miners[2],_apiId));
         require(disputeHashToId[_hash] == 0);
-        emit Print(_hash);
         doTransfer(msg.sender,address(this), disputeFee);
         uint disputeId = disputesIds.length + 1;
         disputeHashToId[_hash] = disputeId;
@@ -117,11 +116,12 @@ contract DisputesAndVoting is TokenAndStaking {
         require(now > disp.minExecutionDate); //Uncomment for production-commented out for testing 
         if (disp.isPropFork== false){
         StakeInfo storage stakes = staker[disp.reportedMiner];  
-            if (disp.tally != 0 ) { 
+            if (disp.tally > 0 ) { 
                 stakes.current_state = 0;
                 stakes.startDate = now -(now % 86400);
                 stakers--;
                 doTransfer(disp.reportedMiner,disp.reportingParty, stakeAmt);
+                transfer(disp.reportingParty, disputeFee);
                 disp.disputeVotePassed = true;
                 _api.values[disp.timestamp] = 0;
             } else {

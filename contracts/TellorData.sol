@@ -408,4 +408,5 @@ contract TellorData {
         return checkpoints[min].value;
     }
     event Print(bytes32 _hash);
+    event Print2(address _a);
 }
