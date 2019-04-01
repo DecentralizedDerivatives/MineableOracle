@@ -42,6 +42,7 @@ contract TellorData {
     /*TokenAndStaking*/ mapping(address => StakeInfo)  staker;//mapping from a persons address to their staking info
     /*DisputesAndVoting*/ mapping(uint => API) apiDetails;//mapping of apiID to details
     /*DisputesAndVoting*/mapping(uint => address) propForkAddress;//maps proposalID to struct propFork
+    /*DisputesAndVoting*/mapping(bytes32 => uint) disputeHashToId;//maps a hash to an ID for each dispute
 
     /*DisputesAndVoting*/ string public constant name = "Tellor Tributes"; //name of the Token
     /*DisputesAndVoting*/ string public constant symbol = "TT";//Token Symbol
@@ -54,6 +55,7 @@ contract TellorData {
     }
 
     /*DisputesAndVoting*/ struct Dispute {
+        bytes32 hash;
         bool executed;//is the dispute settled
         bool disputeVotePassed;//did the vote pass?
         bool isPropFork; //true for fork proposal NEW
@@ -185,6 +187,14 @@ contract TellorData {
     */
     function didVote(uint _disputeId, address _address) external view returns(bool){
         return disputes[_disputeId].voted[_address];
+    }
+    /**
+    * @dev Checks if a given hash of miner,apiId has been disputed
+    * @param _hash of sha256(abi.encodePacked(_miners[2],_apiId));
+    * @return uint disputeId
+    */
+    function getDisputeHashToId(bytes32 _hash) external view returns(uint){
+        return  disputeHashToId[_hash];
     }
 /**
      *@dev This function returns whether or not a given user is allowed to trade a given amount  
@@ -397,5 +407,5 @@ contract TellorData {
         }
         return checkpoints[min].value;
     }
-
+    event Print(bytes32 _hash);
 }

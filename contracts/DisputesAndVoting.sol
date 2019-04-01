@@ -23,10 +23,15 @@ contract DisputesAndVoting is TokenAndStaking {
         API storage _api = apiDetails[_apiId];
         require(block.number- _api.minedBlockNum[_timestamp]<= 144);
         require(_api.minedBlockNum[_timestamp] > 0);
+        address[5] memory _miners = _api.minersbyvalue[_timestamp];
+        bytes32 _hash = keccak256(abi.encodePacked(_miners[2],_apiId));
+        require(disputeHashToId[_hash] == 0);
+        emit Print(_hash);
         doTransfer(msg.sender,address(this), disputeFee);
         uint disputeId = disputesIds.length + 1;
-        address[5] memory _miners = _api.minersbyvalue[_timestamp];
+        disputeHashToId[_hash] = disputeId;
         disputes[disputeId] = Dispute({
+            hash:_hash,
             isPropFork: false,
             reportedMiner: _miners[2], 
             reportingParty: msg.sender,
@@ -52,9 +57,13 @@ contract DisputesAndVoting is TokenAndStaking {
     * @param _propNewTellorAddress address for new proposed Tellor
     */
     function propFork(address _propNewTellorAddress) external {
+        bytes32 _hash = keccak256(abi.encodePacked(_propNewTellorAddress));
+        require(disputeHashToId[_hash] == 0);
         doTransfer(msg.sender,address(this), disputeFee);//This is the fork fee
         uint disputeId = disputesIds.length + 1;
+        disputeHashToId[_hash] = disputeId;
         disputes[disputeId] = Dispute({
+            hash: _hash,
             isPropFork: true,
             reportedMiner: msg.sender, 
             reportingParty: msg.sender,
